@@ -1,0 +1,83 @@
+# Propuestas de Implementación y Guía de Inicio del Proyecto
+
+Este documento establece la estrategia técnica, el plan de trabajo por fases y la guía para integrar las distintas tecnologías del proyecto de Cuentas por Pagar.
+
+---
+
+## 1. Estrategia de Inicio (Paso a Paso)
+
+Para abordar el proyecto sin abrumarse, se recomienda seguir un enfoque modular en el siguiente orden:
+
+### Fase 1: Entorno de Desarrollo y Base de Datos (Semana 1)
+1. **Configurar Laragon / XAMPP:** Iniciar los servicios de Apache y MySQL.
+2. **Diseñar la Base de Datos:** Crear las tablas base en MySQL mediante phpMyAdmin:
+   * `usuarios`: ID, nombre, rol, credenciales.
+   * `ordenes_compra`: ID, proveedor, monto_autorizado, fecha_emision.
+   * `facturas`: ID, orden_id, proveedor, monto_facturado, fecha, estado (Pendiente, Aprobada, Rechazada), ruta_imagen.
+3. **Crear API Básica en PHP:** Redactar scripts en PHP para recibir datos e insertar/consultar registros en MySQL. Probar los endpoints con **Postman**.
+
+### Fase 2: Captura Móvil y Comunicación HTTP (Semana 2)
+1. **App Android Base:** Crear un nuevo proyecto en Java usando **Android Studio**.
+2. **Módulo de Cámara:** Implementar la captura de foto mediante el intent de la cámara (`MediaStore.ACTION_IMAGE_CAPTURE`) o seleccionando un archivo de la galería.
+3. **Envío de Imagen:** Configurar la librería **Volley** para realizar peticiones `POST` enviando la imagen codificada (Base64) o multipart hacia la API PHP.
+
+### Fase 3: Módulos de Procesamiento y Validación (Semana 3)
+1. **Script de Python (Extracción/OCR):** 
+   * Usar librerías como `pytesseract` o `EasyOCR` para leer la imagen subida al servidor y extraer texto, montos y números de folio.
+2. **Compilar Módulo en C (Evaluación de Riesgo):**
+   * Crear un programa ejecutable en C que reciba como parámetros el monto y el historial del proveedor para devolver un porcentaje de riesgo o anomalía.
+3. **Reglas de Inferencia en Prolog (Conciliación Lógica):**
+   * Crear un archivo `.pl` con hechos y reglas que comparen los datos de la factura extraídos por Python con la orden de compra registrada en MySQL.
+
+### Fase 4: Integración del Backend y Tableros (Semana 4)
+1. **Orquestación en PHP:** Hacer que el script PHP llame al script de Python, al ejecutable de C y al archivo de Prolog usando funciones como `exec()` o `shell_exec()`.
+2. **Tableros en Android:** Diseñar la pantalla principal en la app con gráficos o listas (`RecyclerView`) que filtren las facturas según su estado (Aprobada, Con Discrepancia, Pendiente).
+
+---
+
+## 2. Cómo Integrar las Herramientas
+
+La arquitectura opera de forma coordinada siguiendo este flujo de comunicación:
+
+```
+[Android (Java)] 
+       │ (1. Sube foto vía Volley)
+       ▼
+[PHP API en Laragon] ──── (2. Guarda imagen y registra datos básicos en MySQL)
+       │
+       ├─── (3. Ejecuta script) ──> [Python (OCR/Lectura)]
+       │                                     │ (Retorna datos extraídos)
+       │                                     ▼
+       ├─── (4. Ejecuta binario) ─> [Modelo en C (Puntuación de Riesgo)]
+       │                                     │ (Retorna nivel de riesgo)
+       │                                     ▼
+       └─── (5. Invocación) ──────> [Prolog (Reglas de Conciliación)]
+                                             │ (Retorna Aprobado/Inconsistencia)
+                                             ▼
+[Android (Java)] <── (6. Recibe respuesta/Alertas) ── [PHP (Actualiza MySQL)]
+```
+
+### Integración Práctica entre PHP y los Lenguajes Complementarios
+
+* **PHP ↔ Python:**
+  `$resultadoTexto = shell_exec("python3 procesar_factura.py ruta/imagen.jpg");`
+* **PHP ↔ C:**
+  `$scoring = shell_exec("./clasificador_riesgo " . $monto . " " . $historial);`
+* **PHP ↔ Prolog:**
+  `$validacion = shell_exec("swipl -g 'conciliar(" . $idOrden . ")." -t halt regla.pl");`
+
+---
+
+## 3. Propuestas de Valor y Funcionalidades Clave
+
+1. **Detección Automática de Duplicados:**
+   * Utilizar la lógica en Prolog para comprobar si una factura con el mismo folio o combinación de (monto + fecha + proveedor) ya fue registrada previamente.
+
+2. **Alerta Temprana de Vencimientos:**
+   * Configurar un tablero en la app de Android que marque en rojo las cuentas por pagar cuya fecha límite esté a menos de 3 días de vencer.
+
+3. **Análisis de Anomalías en Montos:**
+   * El módulo escrito en C evalúa si el promedio de cobro de un proveedor determinado ha sufrido un aumento repentino sin justificación.
+
+4. **Sincronización Off-line / On-line:**
+   * Permitir que el usuario capture fotos sin conexión a internet; cuando recupere la señal, las peticiones con Volley o Firebase procesarán la cola de facturas pendientes.
