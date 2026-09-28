@@ -1,0 +1,9 @@
+# Imágenes subidas vía API (datos de prueba, no código fuente)
+uploads/*
+!uploads/.gitignore
+
+# IDEs y sistema operativo
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
