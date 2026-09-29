@@ -10,6 +10,8 @@
         android:orientation="vertical"
         android:padding="16dp">
 
+        <!-- Servidor + recarga de órdenes -->
+
         <TextView
             android:id="@+id/txtTitulo"
             android:layout_width="match_parent"
@@ -19,14 +21,6 @@
             android:textSize="20sp"
             android:textStyle="bold" />
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            android:text="@string/subtitulo"
-            android:textSize="13sp" />
-
-        <!-- Servidor + recarga de órdenes -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -63,11 +57,11 @@
             android:id="@+id/imgPreview"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
             android:adjustViewBounds="true"
             android:background="@color/fondo_preview"
             android:contentDescription="@string/desc_preview"
-            android:maxHeight="320dp"
-            android:layout_marginBottom="12dp" />
+            android:maxHeight="320dp" />
 
         <Button
             android:id="@+id/btnFoto"
@@ -96,8 +90,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
+            android:textColor="@color/texto_normal"
             android:textIsSelectable="true"
-            android:textSize="14sp"
-            android:textColor="@color/texto_normal" />
+            android:textSize="14sp" />
     </LinearLayout>
 </ScrollView>

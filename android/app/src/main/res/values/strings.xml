@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">CPP Captura</string>
+    <string name="app_name">Cuentas</string>
     <string name="titulo">CPP · Captura de facturas</string>
     <string name="subtitulo">Sprint 2 — Cámara + envío Volley/Base64 (RF-M2 / RF-M4)</string>
     <string name="hint_servidor">IP del servidor (10.0.2.2 = este PC)</string>
