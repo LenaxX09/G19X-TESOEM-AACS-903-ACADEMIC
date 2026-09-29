@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="primario">#1A237E</color>
+    <color name="primario_oscuro">#0D1442</color>
+    <color name="acento">#FF6F00</color>
+    <color name="texto_normal">#212121</color>
+    <color name="verde_ok">#2E7D32</color>
+    <color name="rojo_error">#C62828</color>
+    <color name="fondo_preview">#EEEEEE</color>
+</resources>

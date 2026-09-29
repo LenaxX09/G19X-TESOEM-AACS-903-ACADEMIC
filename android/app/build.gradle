@@ -1,0 +1,48 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.cpp.captura'
+    compileSdk 36
+
+    defaultConfig {
+        applicationId "com.cpp.captura"
+        minSdk 24          // Android 7.0+ (cubre el perfil PyME/bodega del PRD)
+        targetSdk 36
+        versionCode 1
+        versionName "0.2.0-sprint2"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    // RF-M4: envío de la foto en Base64 mediante Volley
+    implementation 'com.android.volley:volley:1.2.1'
+    // Activity + permisos en tiempo de ejecución + FileProvider para la cámara
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'androidx.core:core:1.13.1'
+
+    // Volley arrastra kotlin-stdlib-jdk7/jdk8 1.6.21 que choca con el
+    // kotlin-stdlib 1.8.x → se alinean para evitar clases duplicadas
+    // (https://d.android.com/r/tools/classpath-sync-errors)
+    constraints {
+        implementation('org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22') {
+            because('alineación con kotlin-stdlib 1.8.22')
+        }
+        implementation('org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22') {
+            because('alineación con kotlin-stdlib 1.8.22')
+        }
+    }
+}

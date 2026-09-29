@@ -1,0 +1,5 @@
+// Proyecto Android del MVP CPP — Sprint 2 "Captura".
+// Requiere Gradle 8.13+ y JDK 17+ (Android Studio usa su JBR 21).
+plugins {
+    id 'com.android.application' version '8.13.0' apply false
+}

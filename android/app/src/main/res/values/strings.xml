@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">CPP Captura</string>
+    <string name="titulo">CPP · Captura de facturas</string>
+    <string name="subtitulo">Sprint 2 — Cámara + envío Volley/Base64 (RF-M2 / RF-M4)</string>
+    <string name="hint_servidor">IP del servidor (10.0.2.2 = este PC)</string>
+    <string name="btn_cargar">↻ Órdenes</string>
+    <string name="btn_foto">📷 Tomar foto</string>
+    <string name="btn_enviar">📤 Enviar factura</string>
+    <string name="desc_preview">Vista previa de la factura fotografiada</string>
+
+    <string name="sin_permiso_camara">Sin permiso de cámara no se puede fotografiar la factura (RF-M2).</string>
+    <string name="sin_app_camara">Este dispositivo no tiene ninguna app de cámara.</string>
+    <string name="foto_cancelada">Captura cancelada: no se tomó ninguna foto.</string>
+    <string name="foto_lista">Foto lista. Verifica la orden y pulsa «Enviar factura».</string>
+    <string name="falta_orden">Selecciona primero la orden de compra a la que corresponde la factura.</string>
+    <string name="falta_foto">Toma primero la foto de la factura.</string>
+    <string name="enviando">Enviando a %1$s …</string>
+    <string name="exito_envio">✅ Factura Nº %1$d registrada como «%2$s» en MySQL.\nVerifícalo con GET /api/facturas.php</string>
+    <string name="exito_toast">Factura enviada</string>
+    <string name="respuesta_rara">El servidor respondió, pero sin los datos esperados.</string>
+</resources>

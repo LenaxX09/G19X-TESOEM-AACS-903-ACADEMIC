@@ -96,7 +96,7 @@ Si algún día necesitas el otro MySQL84, detén antes el de Laragon.
 ## 7. Estado del proyecto y siguientes pasos
 
 - [x] S1 — Base: BD + seed + API + pruebas (este entregable)
-- [ ] S2 — Captura: app Android (cámara + Volley Base64) → la app apunta a `http://10.0.2.2/cpp/api/facturas.php` desde el emulador
+- [x] S2 — Captura: app Android (cámara + Volley Base64) → ver `SPRINT2_ANDROID.md`; la app apunta a `http://10.0.2.2/cpp/api/facturas.php` desde el emulador (o a la IP LAN del PC desde un móvil físico)
 - [ ] S3 — Motores: `procesar_factura.py`, `clasificador_riesgo.c` (GCC), `regla.pl` (SWI-Prolog)
 - [ ] S4 — Integración: orquestación PHP (`shell_exec`) + listado en Android
 
