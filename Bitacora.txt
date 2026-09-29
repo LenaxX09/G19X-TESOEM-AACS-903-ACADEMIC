@@ -1,0 +1,248 @@
+﻿================================================================================
+  BITACORA DEL PROYECTO CPP — Plataforma Inteligente de Cuentas por Pagar
+  Última actualización: 28/09/2026 19:45 · Editor: Cline
+================================================================================
+
+██████ INSTRUCCIÓN PARA CLINE (LEER PRIMERO EN CADA SESIÓN) ██████████████████
+
+  Este archivo es la MEMORIA del proyecto. Antes de trabajar:
+    1. Lee este archivo completo.
+    2. Revisa "SECCIÓN 2 · ESTADO" y "SECCIÓN 7 · SIGUIENTE PASO".
+    3. Verifica con `git log --oneline -5` y `git status` que coincide con
+       lo aquí anotado (si no coincide, pregunta al usuario qué pasó).
+
+  Al TERMINAR cada sesión de trabajo, actualiza OBLIGATORIAMENTE:
+    a) Sección 1  → nuevo resumen del estado actual.
+    b) Sección 2  → checkboxes y % de avance.
+    c) Sección 3  → nueva entrada fechada en el historial.
+    d) Sección 7  → reescribir "siguiente paso" con lo que toque ahora.
+    e) "Última actualización" del encabezado.
+
+  Regla de oro: la bitácora SIEMPRE debe reflejar la realidad del repo.
+
+████████████████████████████████████████████████████████████████████████████████
+
+
+────────────────────────────────────────────────────────────────────────────────
+SECCIÓN 1 · RESUMEN DEL ESTADO ACTUAL (30 segundos)
+────────────────────────────────────────────────────────────────────────────────
+
+  Proyecto   : Sistema móvil para capturar facturas, extraer datos por OCR,
+               calcular riesgo y conciliar contra órdenes de compra.
+  Avance     : ~50% del MVP (Sprints 1 y 2 de 4 COMPLETOS y verificados).
+  Funciona YA: BD MySQL + API PHP (crear/consultar facturas y órdenes) +
+               app Android que toma foto y la sube por Volley → queda
+               registrada como "Pendiente" en el servidor.
+  Siguiente  : SPRINT 3 — crear los 3 motores: procesar_factura.py (OCR),
+               clasificador_riesgo.c (riesgo %) y regla.pl (conciliación).
+  Git        : limpio (sin cambios sin confirmar) · 4 commits.
+
+
+────────────────────────────────────────────────────────────────────────────────
+SECCIÓN 2 · ESTADO POR SPRINT (tablero)
+────────────────────────────────────────────────────────────────────────────────
+
+  [X] S1 — Base ......... BD cpp + seed.sql + API PHP + pruebas C1    ✔ C1 OK
+  [X] S2 — Captura ...... App Android cámara + Volley Base64          ✔ C2 OK
+  [ ] S3 — Motores ...... Python OCR + C riesgo + Prolog reglas       → C3
+  [ ] S4 — Integración .. PHP orquesta (shell_exec) + lista Android   → C4 demo
+
+  Avance global del MVP:  [██████████----------] 50%
+
+  Nota: dentro de S3 queda pendiente el "spike OCR" (elegir pytesseract
+  vs EasyOCR probando 5 fotos reales) — se pospuso desde S1, hacerlo primero.
+
+────────────────────────────────────────────────────────────────────────────────
+SECCIÓN 3 · HISTORIAL DE AVANCES (cronológico)
+────────────────────────────────────────────────────────────────────────────────
+
+  ▸ 23/09/2026 — DOCUMENTACIÓN BASE (commit c59eb69)
+    - readme.md ............ descripción general del producto.
+    - propuestas.txt ....... estrategia técnica y plan de 4 fases.
+    - PRD_CPP.md .......... requisitos completos: 28 RF, KPIs, riesgos R1-R6.
+    - MVP_CPP.md .......... alcance del MVP: 18 RF plenos + 4 simplificados
+                            + 6 diferidos; sprints S1-S4; checkpoints C1-C4;
+                            CONTRATOS de los motores (§6.4) — clave para S3.
+
+  ▸ 28/09/2026 (17:26) — SPRINT 1 "BASE" COMPLETO (commit 737f586) — C1 superado
+    - database/seed.sql ... BD "cpp": tablas usuarios, ordenes_compra,
+                            facturas, historial_proveedor (con FK). Semillas:
+                            OC-001, OC-002, OC-003 + historial sintético por
+                            proveedor (para alimentar el módulo C en S3).
+    - api/config.php ...... credenciales MySQL (root/sin contraseña, BD cpp),
+                            UPLOAD_DIR, UMBRAL_RIESGO=40 y rutas FUTURAS de los
+                            motores (python, swipl, motores/*.py/.exe/.pl).
+    - api/db.php .......... conexión PDO singleton.
+    - api/responder.php ... respuestas JSON uniformes {codigo, mensaje, datos}.
+    - api/facturas.php .... POST {orden_id, imagen_base64} → guarda imagen en
+                            uploads/ y crea factura estado="Pendiente" (HTTP
+                            201). GET lista con filtros ?id= y ?estado=.
+                            Límite de imagen: 8 MB.
+    - api/ordenes.php ..... GET listado y detalle por ?id=, incluye conteo y
+                            promedio del historial del proveedor (datos que
+                            consumirá clasificador_riesgo en S3).
+    - INSTALACION.md ...... guía completa de instalación y pruebas.
+    - PROBLEMA RESUELTO: phpMyAdmin fallaba porque los servicios Windows
+      MySQL80/MySQL81/MySQL84 ocupaban el puerto 3306. Solución aplicada:
+      `net stop MySQL84` + `Set-Service MySQL84 -StartupType Manual`.
+      Regla: usar SIEMPRE el MySQL de Laragon (8.0.30, datos en
+      C:\laragon\data\mysql-8), nunca los servicios externos.
+    - Proyecto publicado en C:\laragon\www\cpp (Document Root o copia).
+    - C1 verificado desde PowerShell: POST crea factura 201 "Pendiente",
+      GET la lista correctamente.
+
+  ▸ 28/09/2026 (18:18) — SPRINT 2 "CAPTURA" COMPLETO (commit 6029d4e) — C2 OK
+    - android/ ............ proyecto Android Studio completo (Java):
+                            · com.cpp.captura.MainActivity (cámara + órdenes
+                              + envío Volley).
+                            · Al abrir descarga órdenes (GET ordenes.php) y
+                              llena spinner.
+                            · Tomar foto: ACTION_IMAGE_CAPTURE vía
+                              FileProvider en cache/ (sin permisos de
+                              almacenamiento; permiso cámara en runtime).
+                            · Enviar: reescala foto a ≤1600 px lado mayor
+                              (JPEG 85, ~200-600 KB) → Base64 → POST
+                              facturas.php → "✅ Factura Nº X «Pendiente»".
+                            · Campo "Servidor" editable y persistido:
+                              10.0.2.2 (emulador) o IP LAN (móvil físico,
+                              requiere regla firewall puerto 80).
+                            · Gradle 8.13 / AGP 8.13 · minSdk 24 /
+                              targetSdk 36 · Java 17 · Volley 1.2.1 ·
+                              versión 0.2.0-sprint2.
+                            · build.cmd para compilar APK por consola con el
+                              JBR 21 de Android Studio.
+    - SPRINT2_ANDROID.md .. guía de uso, IP, firewall y solución de problemas.
+    - Detalle corregido: conflicto de kotlin-stdlib (alineados a 1.8.22).
+
+  ▸ 28/09/2026 (19:14) — AJUSTES UI SPRINT 2 (commit addd9e7)
+    - activity_main.xml simplificado (-13 líneas) y strings.xml actualizado.
+
+  ▸ 28/09/2026 (19:30) — CREADA ESTA BITACORA (sin commit aún)
+
+  ▸ 28/09/2026 (19:45) — CREADO Explicacion.txt
+    - Guía didáctica del proyecto: explica qué es cada pieza, por qué se
+      hizo así y cómo funciona (para entender el proyecto de arriba a
+      abajo). Se actualiza cada sesión con la explicación de los cambios.
+      Bitacora = registro de ESTADO · Explicacion = guía para ENTENDER.
+
+────────────────────────────────────────────────────────────────────────────────
+SECCIÓN 4 · QUÉ FUNCIONA HOY (guía rápida de uso)
+────────────────────────────────────────────────────────────────────────────────
+
+  Backend (requiere Laragon iniciado: Apache + MySQL):
+    - phpMyAdmin:  http://localhost/phpmyadmin  (root, contraseña vacía)
+    - API órdenes: http://localhost/cpp/api/ordenes.php
+    - API facturas:
+        GET  http://localhost/cpp/api/facturas.php            (lista)
+        GET  ...?estado=Pendiente                             (filtro)
+        POST ...  Body JSON { "orden_id":1, "imagen_base64":"..." }
+    - Imágenes recibidas quedan en C:\laragon\www\cpp\uploads\
+
+  App Android (Android Studio → Open → C:\CPP\android):
+    - Emulador → Servidor: 10.0.2.2 · Móvil físico → IP LAN del PC.
+    - APK: android\app\build\outputs\apk\debug\app-debug.apk
+      (compilar: cd C:\CPP\android && .\gradlew.bat :app:assembleDebug)
+
+  Guías detalladas: INSTALACION.md (S1) y SPRINT2_ANDROID.md (S2).
+
+
+────────────────────────────────────────────────────────────────────────────────
+SECCIÓN 5 · ARQUITECTURA Y DECISIONES IMPORTANTES
+────────────────────────────────────────────────────────────────────────────────
+
+  Flujo objetivo (MVP):
+    [App Android] --foto Base64--> [API PHP] --> [MySQL]
+                                        |--(S3)--> Python OCR (texto → JSON)
+                                        |--(S3)--> C riesgo (porcentaje)
+                                        |--(S3)--> Prolog (APROBADA/DISCREPANCIA)
+    [App Android] <--estado final-- [PHP actualiza MySQL]
+
+  Decisiones tomadas:
+    - Envío de imagen en Base64 JSON (RF-M4 simplificado; multipart → v1.1).
+    - Estados de factura: Pendiente / Aprobada / Con Discrepancia.
+    - UMBRAL_RIESGO = 40 % (riesgo < 40 ⇒ aprobable) — configurable en
+      api/config.php.
+    - Contratos de los motores FIJADOS ANTES de programarlos (principio
+      contract-first, MVP §6.4):
+        Python (stdout 1 línea): {"proveedor":"...","fecha":"YYYY-MM-DD",
+                                 "monto":1234.56,"folio":"..."}
+        C (stdout 1 línea):      37.5        ← % de riesgo
+        Prolog (stdout 1 línea): APROBADA  ó  DISCREPANCIA:<motivo>
+    - Si un motor falla, la factura NO se pierde: queda "Pendiente" (RNF-5).
+    - Seguridad R3/RM4: al llegar S4, cast numérico y saneo de todo lo que
+      pase a shell_exec (usar escapeshellarg, nunca texto directo).
+    - MySQL: SIEMPRE el de Laragon; servicios MySQL8x de Windows en Manual.
+
+────────────────────────────────────────────────────────────────────────────────
+SECCIÓN 6 · ENTORNO DEL EQUIPO (referencias)
+────────────────────────────────────────────────────────────────────────────────
+
+    - Laragon ............. C:\laragon (PHP 8.1.10)
+    - MySQL (Laragon) ..... C:\laragon\bin\mysql\mysql-8.0.30-winx64
+                            datos: C:\laragon\data\mysql-8 · root sin contraseña
+    - Web root del proyecto C:\laragon\www\cpp  (copia de C:\CPP)
+    - Android Studio ...... JBR 21 · Gradle 8.13 · emulador API 30+
+    - Pendiente por verificar en S3: rutas reales de python, swipl y gcc.
+
+
+────────────────────────────────────────────────────────────────────────────────
+SECCIÓN 7 · SIGUIENTE PASO (empezar por aquí en la próxima sesión)
+────────────────────────────────────────────────────────────────────────────────
+
+  ★ SPRINT 3 — "MOTORES" (carpeta nueva: C:\CPP\motores\)
+
+    0) SPIKE OCR: instalar/probar pytesseract vs EasyOCR con 5 fotos reales
+       y elegir uno. (pytesseract necesita Tesseract-OCR instalado en Windows
+       + variable de entorno; EasyOCR es más pesado de instalar.)
+    1) motores/procesar_factura.py
+       CLI: python procesar_factura.py <ruta_imagen>
+       Salida (1 línea JSON): {"proveedor","fecha","monto","folio"}
+    2) motores/clasificador_riesgo.c  → compilar con GCC a .exe
+       CLI: clasificador_riesgo <monto> <promedio_historial>
+       Salida: porcentaje de riesgo (ej. 37.5). Detecta alza vs historial.
+    3) motores/regla.pl  (SWI-Prolog)
+       Hechos: factura(folio, monto, fecha, proveedor) + orden de compra.
+       Predicado conciliar(IdOrden). Salida: APROBADA | DISCREPANCIA:<motivo>.
+       Reglas: monto ≤ autorizado, riesgo < 40, coincidencia proveedor/fecha.
+    4) CHECKPOINT C3: probar cada módulo por CLI con datos reales de las
+       OC-001..OC-003 y satisfacer los contratos de la Sección 5.
+
+    → Después: S4 = orquestar los 3 desde PHP (shell_exec + escapeshellarg),
+      actualizar factura en MySQL, y lista con badges en Android (C4 = demo).
+
+    Datos de apoyo ya listos: api/config.php ya apunta a motores/*.py/.exe/.pl;
+    ordenes.php?id= devuelve historial_promedio por proveedor; seed tiene
+    historial sintético para el módulo C.
+
+
+────────────────────────────────────────────────────────────────────────────────
+SECCIÓN 8 · MAPA DEL REPOSITORIO
+────────────────────────────────────────────────────────────────────────────────
+
+    C:\CPP\
+    ├── readme.md, propuestas.txt, PRD_CPP.md, MVP_CPP.md  → documentación
+    ├── INSTALACION.md ......... guía Sprint 1 (BD + API)
+    ├── SPRINT2_ANDROID.md ..... guía Sprint 2 (app)
+    ├── Bitacora.txt ........... ESTE ARCHIVO (memoria/estado del proyecto)
+    ├── Explicacion.txt ........ guía didáctica de todo el proyecto
+    ├── api\ ................... config, db, responder, facturas.php, ordenes.php
+    ├── database\seed.sql ...... esquema + datos semilla
+    ├── uploads\ ............... imágenes recibidas (se llena en runtime)
+    ├── android\ ............... app Android (com.cpp.captura) + build.cmd
+    └── motores\ ............... (AÚN NO EXISTE — se crea en el Sprint 3)
+
+
+────────────────────────────────────────────────────────────────────────────────
+SECCIÓN 9 · HISTORIAL DE COMMITS
+────────────────────────────────────────────────────────────────────────────────
+
+    addd9e7  28/09/2026 19:14  Primer sprint - actualizacion 2      (UI S2)
+    6029d4e  28/09/2026 18:18  Sprint 2: app Android (RF-M2, RF-M4)
+    737f586  28/09/2026 17:26  Primer sprint - Primera actualización (S1)
+    c59eb69  23/09/2026 23:09  Primer avance de la documentación
+
+    Convención de commits sugerida: "Sprint N: descripción (RF-xx)".
+    Pendiente: hacer commit de ambos documentos con
+    `git add Bitacora.txt Explicacion.txt && git commit -m "Docs: bitacora y explicacion del proyecto"`.
+
+════════════════════════════ FIN DE LA BITACORA ═══════════════════════════════

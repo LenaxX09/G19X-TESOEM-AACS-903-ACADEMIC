@@ -1,0 +1,394 @@
+﻿================================================================================
+  EXPLICACIÓN DEL PROYECTO CPP — Todo lo construido, explicado paso a paso
+  Última actualización: 28/09/2026 19:45 · Editor: Cline
+================================================================================
+
+██████ INSTRUCCIÓN PARA CLINE (cómo mantener este archivo) ████████████████████
+
+  Este documento EXPLICA (la Bitacora.txt registra estados; este enseña).
+  En cada sesión de trabajo:
+    1. Si se crea/modifica algo del proyecto → agrega o actualiza la parte
+       correspondiente con una explicación sencilla (qué es, por qué se hizo
+       así, cómo funciona).
+    2. Agrega una entrada en "HISTORIAL DE EXPLICACIONES POR SESIÓN" al final.
+    3. Actualiza la fecha del encabezado.
+  Estilo: español claro, para alguien que está aprendiendo. Explicar el QUÉ,
+  el POR QUÉ y el CÓMO. Nada de tecnicismos sin explicar.
+
+████████████████████████████████████████████████████████████████████████████████
+
+
+══════════════════════════════════════════════════════════════════════════════
+ PARTE 0 · ¿DE QUÉ VA ESTE PROYECTO? (leer esto primero)
+══════════════════════════════════════════════════════════════════════════════
+
+0.1 EL PROBLEMA QUE RESUELVE
+─────────────────────────────
+En negocios pequeños, bodegas y oficinas, las cuentas por pagar se revisan a
+mano: alguien toma la factura en papel, la compara contra la orden de compra
+en una hoja de cálculo y decide si está bien o hay discrepancias. Eso es
+lento y propenso a errores: facturas duplicadas, montos que no coinciden,
+vencimientos que se pasan por alto.
+
+0.2 LA IDEA EN UNA FRASE
+────────────────────────
+"Le tomas una FOTO a la factura con el celular, y el sistema solo te dice
+si está APROBADA o tiene DISCREPANCIAS — sin que nadie la teclee."
+
+0.3 LAS 5 TECNOLOGÍAS Y EL PAPEL DE CADA UNA
+────────────────────────────────────────────
+Imagina una oficina automatizada donde cada empleado habla un idioma
+distinto pero todos trabajan en el mismo edificio:
+
+  ┌──────────────┬───────────────────────────────────────────────────────┐
+  │ Tecnología   │ Su trabajo en el proyecto                              │
+  ├──────────────┼───────────────────────────────────────────────────────┤
+  │ Android/Java │ El RECEPCIONISTA: toma la foto y la entrega al        │
+  │ (la app)     │ edificio. También mostrará los resultados.             │
+  │ PHP + MySQL  │ La OFICINA CENTRAL: recibe la foto, la guarda en el   │
+  │ (API + BD)   │ archivero (MySQL) y coordina a todos los especialistas│
+  │ Python       │ EL LECTOR (OCR): "lee" la imagen y extrae el texto    │
+  │              │ (proveedor, fecha, monto, folio).                     │
+  │ C (compilado)│ EL ANALISTA DE RIESGO: con el monto y el historial    │
+  │              │ del proveedor calcula un % de riesgo (alza sospechosa)│
+  │ Prolog       │ EL AUDITOR LÓGICO: con reglas decide APROBADA o       │
+  │              │ DISCREPANCIA comparando factura vs orden de compra.   │
+  └──────────────┴───────────────────────────────────────────────────────┘
+
+0.4 EL FLUJO COMPLETO (el objetivo final del MVP)
+─────────────────────────────────────────────────
+  1. Abres la app → eliges contra qué orden de compra vas a facturar.
+  2. Tomas foto de la factura.
+  3. La app la envía por internet (red local) al servidor PHP.
+  4. PHP la guarda en disco + registra "Pendiente" en MySQL.
+  5. (Sprint 3-4) Python lee la imagen → C calcula riesgo → Prolog decide.
+  6. PHP guarda el veredicto en MySQL.
+  7. La app muestra: ✅ Aprobada / ⚠️ Con Discrepancia.
+
+0.5 VOCABULARIO QUE USAREMOS (por si suena raro)
+────────────────────────────────────────────────
+  · API ....... "ventanilla" del servidor: URLs a las que la app pide cosas.
+  · Endpoint .. una URL concreta de la API (ej: /api/facturas.php).
+  · JSON ...... formato de texto para intercambiar datos {"clave": "valor"}.
+  · Base64 .... forma de convertir una FOTO (binario) a TEXTO para poder
+                enviarla dentro de un JSON.
+  · OCR ....... reconocimiento óptico de caracteres = "leer" texto de imágenes.
+  · Seed ...... datos de ejemplo con los que nace la base de datos.
+  · Sprint .... bloque de trabajo de ~1 semana con entrega verificable.
+  · Checkpoint (C1..C4) ... prueba que demuestra que el sprint funciona.
+  · MVP ....... versión mínima que ya demuestra el valor del producto.
+
+══════════════════════════════════════════════════════════════════════════════
+ PARTE 1 · LA DOCUMENTACIÓN (23/09/2026) — antes de programar, planear
+══════════════════════════════════════════════════════════════════════════════
+
+Antes de escribir una sola línea de código se redactaron 4 documentos. No es
+burocracia: en un proyecto con 5 tecnologías distintas, sin plan escrito es
+fácil perderse. Cada documento alimenta al siguiente:
+
+  propuestas.txt  →  readme.md  →  PRD_CPP.md  →  MVP_CPP.md
+  (la idea cruda)    (el pitch)    (QUÉ hacer)    (QUÉ hacer YA)
+
+  · propuestas.txt .. la idea original y el plan de 4 fases/semanas.
+  · readme.md ....... presentación del proyecto y su pila tecnológica.
+  · PRD_CPP.md ...... el "contrato" completo: 28 requisitos funcionales
+                      (RF-M* móvil, RF-B* backend, RF-D* datos, RF-O* OCR,
+                      RF-R* riesgo, RF-L* lógica), KPIs de éxito y riesgos.
+  · MVP_CPP.md ...... el recorte realista: qué 22 requisitos se hacen ahora
+                      (18 plenos + 4 simplificados) y cuáles 6 se dejan para
+                      la v1.0. Define los sprints S1-S4 y sus checkpoints.
+
+  Concepto clave — "contract-first": en el MVP (sección 6.4) se fijó ANTES
+  DE PROGRAMAR qué debe imprimir cada motor por pantalla (ver PARTE 5).
+  Así los 3 motores del Sprint 3 se pueden programar y probar por separado,
+  sabiendo exactamente qué esperará PHP de ellos.
+
+
+══════════════════════════════════════════════════════════════════════════════
+ PARTE 2 · SPRINT 1 — LA BASE: BASE DE DATOS + API (28/09/2026)
+══════════════════════════════════════════════════════════════════════════════
+
+Meta del sprint: que desde Postman (una app para probar APIs) se pudiera
+crear una factura de prueba y consultarla. Eso es el checkpoint C1. ✔ LOGRADO
+
+2.1 ¿QUÉ ES LARAGON Y POR QUÉ LO USAMOS?
+─────────────────────────────────────────
+Laragon instala en un solo paquete Apache + MySQL + PHP, es decir, todo el
+"servidor" de internet en tu propia PC (C:\laragon). Con Laragon iniciado,
+tu computadora sirve páginas web en http://localhost. El proyecto se publicó
+en C:\laragon\www\cpp, de modo que la API vive en http://localhost/cpp/api/.
+Ventaja: todo corre LOCAL, sin pagar hosting ni servicios en la nube.
+
+2.2 LA BASE DE DATOS (database/seed.sql)
+────────────────────────────────────────
+Un archivo .sql es una lista de instrucciones para MySQL. Este crea la base
+"cpp" y 4 tablas, y además inserta datos de ejemplo (por eso se llama "seed"
+= semilla: lo siembras todo de una vez). Es re-ejecutable: si lo importas
+otra vez, borra y recrea todo (solo para desarrollo).
+
+  TABLA               QUÉ GUARDA                      POR QUÉ EXISTE
+  ─────────────────────────────────────────────────────────────────────
+  usuarios            admin, capturista, revisor      El login llega en v1.0;
+                      (todos con password demo1234)   por ahora solo semilla.
+  ordenes_compra      OC-001 Papelería Central $5,000 La factura se compara
+                      OC-002 Ferretería $8,500        CONTRA estas órdenes.
+                      OC-003 Oficinas del Norte $3,200.50
+  facturas            cada foto enviada: estado,      El corazón del sistema:
+                      ruta_imagen, monto, folio,      aquí nace "Pendiente" y
+                      riesgo, motivo_discrepancia     aquí muere "Aprobada"/
+                                                       "Con Discrepancia".
+  historial_proveedor montos anteriores por proveedor  Alimenta al módulo C:
+                      (ej: 6 compras de Papelería      sin historial no se
+                      entre $3,600 y $4,200)          puede detectar alzas.
+
+  Detalles finos que ya quedaron listos para los sprints futuros:
+  · La columna facturas.procesado_en servirá para medir el KPI "procesar
+    en ≤ 30 segundos" (comparándola con creado_en).
+  · Las columnas folio, riesgo, proveedor_detectado esperan ser llenadas
+    por Python y C en el Sprint 3.
+  · La FK (llave foránea) facturas.orden_id → ordenes_compra.id impide
+    registrar una factura contra una orden inexistente (integridad).
+  · El historial fue calculado a propósito: Papelería Central promedia
+    ~$3,941, así una factura de $4,850 (+23%) dará riesgo BAJO y una de
+    $6,200 (+57%) dará riesgo ALTO. Sirve para la demo final.
+
+2.3 LOS ARCHIVOS PHP DE LA API (carpeta api/)
+────────────────────────────────────────────
+La API son 5 archivos pequeños, cada uno con UNA responsabilidad:
+
+  config.php ... EL PANEL DE AJUSTES. Todo lo que puede cambiar según la
+                 máquina vive aquí: usuario/contraseña de MySQL, carpeta de
+                 subidas, umbral de riesgo (40%) y las rutas FUTURAS de
+                 python/swipl/GCC. Si algo cambia, se edita SOLO este archivo.
+
+  db.php ........ EL PUENTE A MYSQL. Abre la conexión con PDO (la forma
+                 segura de hablar con bases de datos en PHP). Usa el patrón
+                 "singleton": crea UNA sola conexión y la reutiliza siempre,
+                 en lugar de abrir una nueva por cada consulta.
+
+  responder.php . EL MEGÁFONO. Toda respuesta de la API sale con el mismo
+                 formato JSON para que la app Android siempre la entienda:
+                   { "codigo": "OK"|"ERROR_...", "mensaje": "...", "datos": {...} }
+                 "codigo" es la palabra clave (OK, ERROR_VALIDACION...),
+                 "mensaje" es texto humano, "datos" trae la información.
+
+  facturas.php .. LA VENTANILLA PRINCIPAL (endpoint más importante):
+                   POST /api/facturas.php  → recibir una foto y registrar
+                                             la factura como "Pendiente".
+                   GET  /api/facturas.php  → listar facturas (más recientes
+                                             primero), con filtro opcional
+                                             ?estado=Pendiente
+                   GET  ...?id=5           → detalle de una factura.
+
+  ordenes.php ... LA VENTANILLA DE APOYO: GET devuelve las órdenes de compra
+                   (para que la app llene su lista desplegable) y, si pides
+                   ?id=1, incluye el promedio del historial del proveedor —
+                   exactamente el dato que el módulo C necesitará en S3.
+
+2.4 ASÍ FUNCIONA UN POST DE FACTURA, PASO A PASO (facturas.php)
+───────────────────────────────────────────────────────────────
+Cuando la app (o Postman) envía {"orden_id":1, "imagen_base64":"..."}:
+
+   1. Se lee el cuerpo JSON y se valida que orden_id sea entero ≥ 1.
+   2. Se pregunta a MySQL si esa orden existe (si no → error 422 y ya).
+   3. Se valida que imagen_base64 venga; si trae prefijo "data:image/..."
+      (formato data URI) se le quita, dejando solo el Base64 puro.
+   4. Se comprueba el tamaño: máximo ~8 MB decodificados (el Base64 infla
+      el texto ~40%, por eso se multiplica por 1.4 al medir).
+   5. base64_decode converte el TEXTO de vuelta a FOTO (bytes binarios).
+   6. TRUCO DE SEGURIDAD: no se confía en lo que el cliente dice que es;
+      se revisa la "firma de bytes" del archivo (FF D8 FF = JPEG real,
+      89 50 4E 47 = PNG real). Si no es ninguno → error 415.
+   7. Se genera nombre único: factura_20260928_191530_a3f2c1b7.jpg
+      (fecha + 8 caracteres aleatorios) y se guarda en uploads/.
+   8. INSERT en la tabla facturas: orden_id + ruta de la imagen + estado
+      'Pendiente'. MySQL devuelve el id nuevo de la factura.
+   9. Se responde 201 (creado) con el id, el estado y la orden.
+  Nota: si el texto OCR→riesgo→conciliación fallara algún día, la factura
+  NUNCA se pierde: queda como "Pendiente" para reintentar (decisión RNF-5).
+
+2.5 EL PROBLEMA DEL PUERTO 3306 (y cómo se resolvió)
+────────────────────────────────────────────────────
+Síntoma: phpMyAdmin no conectaba. Causa: en el equipo había instalados
+MySQL como servicios de Windows (MySQL80, MySQL81, MySQL84 en
+C:\Program Files\MySQL). Solo UN programa puede usar el puerto 3306
+("la puerta" por la que se habla con MySQL); cuando el servicio externo
+arrancaba primero, el MySQL de Laragon se quedaba fuera.
+
+Solución aplicada (como administrador):
+    net stop MySQL84                     → detener el intruso
+    Set-Service MySQL84 -StartupType Manual  → que no arranque solo
+
+Regla para siempre: este proyecto usa EXCLUSIVAMENTE el MySQL de Laragon
+(C:\laragon\bin\mysql\mysql-8.0.30-winx64, datos en C:\laragon\data\mysql-8,
+usuario root sin contraseña). Ver el puerto ocupado:
+    Get-NetTCPConnection -State Listen | ? LocalPort -eq 3306
+
+══════════════════════════════════════════════════════════════════════════════
+ PARTE 3 · SPRINT 2 — LA APP ANDROID "CAPTURA" (28/09/2026)
+══════════════════════════════════════════════════════════════════════════════
+
+Meta del sprint: que una foto REAL tomada con el celular llegue al servidor
+y apareciera como "Pendiente" en MySQL. Eso es el checkpoint C2. ✔ LOGRADO
+Todo el proyecto Android vive en C:\CPP\android (app "com.cpp.captura").
+
+3.1 QUÉ HACE LA APP, EN PALABRAS SIMPLES
+────────────────────────────────────────
+Tiene UNA pantalla con: un campo de texto "Servidor" (la IP de tu PC),
+una lista desplegable de órdenes de compra, un espacio para la foto, y dos
+botones: [Tomar foto] y [Enviar factura]. Al abrirla:
+   1. Descarga las órdenes desde GET /api/ordenes.php y llena el spinner.
+   2. Tomas la foto → se ve en pantalla (vista previa).
+   3. Enviar → "✅ Factura Nº X registrada como «Pendiente»" en verde.
+La IP queda GUARDADA (SharedPreferences), no se teclea cada vez.
+
+3.2 LAS PIEZAS CLAVE EXPLICADAS
+───────────────────────────────
+  · Volley (librería de Google) ... hace las peticiones HTTP por ti, en
+    segundo plano (sin congelar la pantalla). Usamos JsonObjectRequest
+    tanto para pedir las órdenes como para enviar la factura.
+
+  · La cámara (MediaStore.ACTION_IMAGE_CAPTURE) ... no programamos una
+    cámara: pedimos al sistema "ábreme la cámara" con un Intent. Android
+    abre la app de cámara que ya tenga el celular y nos devuelve la foto.
+
+  · FileProvider ... la cámara necesita un lugar donde DEJAR la foto. Por
+    seguridad, Android ya no deja escribir en cualquier carpeta, así que
+    la app presta una carpeta propia de caché mediante un "FileProvider"
+    (configurado en AndroidManifest.xml + res/xml/file_paths.xml). Así no
+    hacemos falta permisos de almacenamiento, solo el de CÁMARA.
+
+  · Permiso en tiempo de ejecución ... desde Android 6 los permisos
+    "peligrosos" (cámara, ubicación...) se piden EN VIVO con un diálogo:
+    "¿Permitir que CPP tome fotos?". El código lo pide y espera el
+    resultado antes de abrir la cámara.
+
+  · Compresión inteligente ... una foto de celular moderna pesa 3-8 MB.
+    La app la reescala a lado mayor ≤1600 px y la comprime a JPEG calidad
+    85 → queda en ~200-600 KB. Detalle técnico: usa inSampleSize para
+    decodificar la imagen YA reducida (si decodificaras completo y luego
+    reescalaras, la memoria explotaría). El envío es rápido y la calidad
+    sigue siendo suficiente para el OCR del Sprint 3.
+
+  · Base64 ... internet/JSON transporta TEXTO, no binario. Base64
+    convierte los bytes de la foto en letras (por eso "infla" ~40%).
+    El servidor hace la operación inversa (base64_decode).
+
+  · usesCleartextTraffic="true" ... Android 9+ bloquea por defecto el
+    HTTP sin cifrado. Nuestra API corre en http:// (Laragon local), así
+    que hay que permitirlo explícitamente en el AndroidManifest.
+
+3.3 ¿POR QUÉ 10.0.2.2? (la IP del emulador, explicación)
+─────────────────────────────────────────────────────────
+Dentro del emulador, "localhost" significa EL EMULADOR MISMO, no tu PC.
+Google reserva 10.0.2.2 como alias de "la máquina que hospeda al emulador"
+(tu PC). Por eso: emulador → 10.0.2.2 · móvil físico → la IP LAN real del
+PC (ipconfig → IPv4, ej. 192.168.1.20) + regla de firewall para el puerto
+80 si no conecta:
+    netsh advfirewall firewall add rule name="CPP Apache 80" dir=in
+        action=allow protocol=TCP localport=80
+
+3.4 VERSIONES Y HERRAMIENTAS DEL PROYECTO ANDROID
+─────────────────────────────────────────────────
+  Gradle 8.13 + AGP 8.13 (sistema de compilación) · Java 17 ·
+  minSdk 24 = corre desde Android 7.0 (cubre los celulares del perfil
+  PyME/bodega) · targetSdk/compileSdk 36 · Volley 1.2.1 ·
+  versión de la app: 0.2.0-sprint2.
+  Compilar APK por consola: cd C:\CPP\android && .\gradlew.bat
+  :app:assembleDebug → app\build\outputs\apk\debug\app-debug.apk
+  (build.cmd automatiza esto usando el JBR 21 que trae Android Studio).
+  Ajuste fino: Volley arrastra kotlin-stdlib viejos que chocan con otros
+  → se "alinearon" a 1.8.22 con constraints para evitar clases duplicadas.
+
+3.5 LA PANTALLA (activity_main.xml)
+───────────────────────────────────
+Es un ScrollView (para que quepa en pantallas pequeñas) que contiene:
+título → fila [campo Servidor + botón ↻] → Spinner de órdenes → ImageView
+de vista previa → botón Tomar foto → botón Enviar (deshabilitado hasta
+que haya foto) → ProgressBar (aparece solo durante el envío) → TextView
+de resultado (verde éxito / rojo error). Todos los textos viven en
+strings.xml (buena práctica: facilita traducir la app algún día).
+
+══════════════════════════════════════════════════════════════════════════════
+ PARTE 4 · CÓMO SE CONECTA TODO HOY (y qué falta)
+══════════════════════════════════════════════════════════════════════════════
+
+  LO QUE YA FUNCIONA (S1+S2):
+    [App Android] --JSON+Base64--> [PHP facturas.php] --> guarda archivo en
+    uploads/ + fila "Pendiente" en [MySQL] --> responde 201 --> la app
+    muestra ✅. Además: [App] puede pedir el listado GET facturas.php.
+
+  LO QUE FALTA (S3+S4) — el "cerebro":
+    MySQL(Pendiente) → [PHP] llama por shell_exec a:
+       · procesar_factura.py (lee la imagen, extrae datos)
+       · clasificador_riesgo.exe (calcula % de riesgo vs historial)
+       · regla.pl con SWI-Prolog (decide APROBADA / DISCREPANCIA)
+    → PHP guarda el veredicto en MySQL → la app lo muestra en una lista.
+
+══════════════════════════════════════════════════════════════════════════════
+ PARTE 5 · LO QUE VIENE, EXPLICADO (Sprint 3 y 4)
+══════════════════════════════════════════════════════════════════════════════
+
+SPRINT 3 — LOS TRES MOTORES (carpeta nueva motores/)
+Se llaman "motores" porque son programas independientes que PHP encenderá
+uno tras otro. Cada uno se prueba SOLO, por línea de comandos (checkpoint
+C3), y ya tiene su "contrato" (qué debe imprimir exactamente):
+
+  · procesar_factura.py (OCR, Python)
+      Recibe la ruta de una imagen y "lee" la factura. Usará pytesseract
+      (necesita instalar Tesseract-OCR en Windows) o EasyOCR. Imprime:
+        {"proveedor":"...","fecha":"YYYY-MM-DD","monto":4850.00,"folio":"F-123"}
+      Antes de programarlo hay que hacer el "spike": probar ambos OCR con
+      5 fotos reales y elegir el mejor (tarea pendiente).
+
+  · clasificador_riesgo.c (C, compilado con GCC)
+      Recibe 2 números: el monto de la factura y el promedio histórico del
+      proveedor. Devuelve un % de riesgo: si la factura se dispara por
+      ENCIMA del historial (alza sospechosa), el riesgo sube. Ej: imprime
+      "37.5". Regla del proyecto: riesgo < 40% = confiable.
+
+  · regla.pl (Prolog, corre con SWI-Prolog)
+      Se le "declaran" hechos (la factura extraída y la orden de compra) y
+      con reglas lógicas concluye: imprime "APROBADA" o
+      "DISCREPANCIA:<motivo>" (ej: monto excede la orden, proveedor no
+      coincide, riesgo alto). Prolog brilla aquí: expresar reglas de
+      negocio como lógica pura.
+
+SPRINT 4 — INTEGRACIÓN Y DEMO
+PHP orquesta todo: tras recibir la factura llama con shell_exec a los 3
+motores, les pasa datos validados (¡seguridad: escapeshellarg para que
+nadie inyecte comandos!), guarda el veredicto en MySQL y la app muestra
+una lista con badges de color por estado. Checkpoint C4 = demo completa.
+
+DATOS QUE YA ESPERAN A LOS MOTORES:
+  · api/config.php ya tiene las constantes PYTHON_BIN, SWIPL_BIN y las
+    rutas motores/*.py, *.exe, *.pl.
+  · ordenes.php?id=1 ya devuelve historial_promedio del proveedor.
+  · La BD ya tiene historial sembrado para calcular riesgos creíbles.
+
+══════════════════════════════════════════════════════════════════════════════
+ HISTORIAL DE EXPLICACIONES POR SESIÓN (agregar una entrada por sesión)
+══════════════════════════════════════════════════════════════════════════════
+
+  SESIÓN 1 — 23/09/2026 (documentación)
+    Se redactaron propuestas.txt, readme.md, PRD_CPP.md y MVP_CPP.md.
+    Explicado en: PARTE 1.
+
+  SESIÓN 2 — 28/09/2026 (Sprint 1: base de datos + API)
+    Se creó seed.sql (BD cpp con 4 tablas + semillas), la API PHP con
+    5 archivos (config, db, responder, facturas, ordenes) e INSTALACION.md.
+    Se resolvió el conflicto del puerto 3306 con los MySQL de Windows.
+    Checkpoint C1 superado. Explicado en: PARTE 2 (secciones 2.1 a 2.5).
+
+  SESIÓN 3 — 28/09/2026 (Sprint 2: app Android)
+    Se creó el proyecto Android completo: MainActivity (cámara+Volley),
+    layout, manifest, recursos, build.cmd y SPRINT2_ANDROID.md. Ajuste
+    final de UI. Checkpoint C2 superado. Explicado en: PARTE 3.
+
+  SESIÓN 4 — 28/09/2026 (documentación de memoria)
+    Se crearon Bitacora.txt (registro de estado y avances) y este archivo
+    Explicacion.txt (guía didáctica del proyecto). Próximo: Sprint 3.
+
+══════════════════════════════ FIN DE LA EXPLICACIÓN ══════════════════════════
+  Archivos hermanos: Bitacora.txt (estado/avances) · INSTALACION.md (S1)
+  · SPRINT2_ANDROID.md (S2) · MVP_CPP.md (plan completo) · PRD_CPP.md (requisitos)
