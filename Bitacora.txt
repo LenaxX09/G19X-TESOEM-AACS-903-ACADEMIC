@@ -1,6 +1,6 @@
 ﻿================================================================================
   BITACORA DEL PROYECTO CPP — Plataforma Inteligente de Cuentas por Pagar
-  Última actualización: 30/09/2026 16:24 · Editor: Cline
+  Última actualización: 30/09/2026 16:45 · Editor: Cline
 ================================================================================
 
 ██████ INSTRUCCIÓN PARA CLINE (LEER PRIMERO EN CADA SESIÓN) ██████████████████
@@ -29,18 +29,19 @@ SECCIÓN 1 · RESUMEN DEL ESTADO ACTUAL (30 segundos)
 
   Proyecto   : Sistema móvil para capturar facturas, extraer datos por OCR,
                calcular riesgo y conciliar contra órdenes de compra.
-  Avance     : ~55% del MVP (S1-S2 completos; S3 en curso: entorno listo
-                y spike OCR resuelto).
+  Avance     : ~75% del MVP (S1, S2 y S3 COMPLETOS; queda S4).
   Funciona YA: BD MySQL + API PHP (crear/consultar facturas y órdenes) +
                app Android que toma foto y la sube por Volley → queda
-               registrada como "Pendiente" en el servidor.
-  Nuevo 30/09: entorno de motores instalado/verificado (Python 3.12.10,
-                Tesseract 5.4.0+spa, EasyOCR 1.7.2, GCC, SWI-Prolog) y
-                SPIKE OCR decidido: GANA PYTESSERACT (100% de campos a
-                1.2 s/foto; easyocr 95% a 29 s/foto, roza el KPI de 30 s).
-  Siguiente  : programar los 3 motores: procesar_factura.py (pytesseract),
-               clasificador_riesgo.c (riesgo %) y regla.pl (conciliación).
-  Git        : limpio · 8 commits (docs de la sesión incluidas).
+               registrada como "Pendiente" en el servidor. Y LOS 3
+                MOTORES funcionan por CLI: OCR (pytesseract) + riesgo (C) + conciliación (Prolog), encadenados de punta a punta.
+  Nuevo 30/09: (tarde) los 3 MOTORES creados y verificados - C3 SUPERADO:
+                 procesar_factura.py (JSON 5/5 fotos), clasificador_riesgo.c
+                 (.exe; riesgos 27.3/53.0 según lo previsto) y regla.pl
+                 (6/6 veredictos). Cadena completa = guion de demo §9.2.
+                (primera parte) spike OCR → pytesseract + entorno.
+  Siguiente  : SPRINT 4 - PHP orquesta los 3 (shell_exec + escapeshellarg),
+                actualiza MySQL y la app muestra lista con badges → C4.
+  Git        : limpio · 11 commits.
 
 
 ────────────────────────────────────────────────────────────────────────────────
@@ -49,14 +50,14 @@ SECCIÓN 2 · ESTADO POR SPRINT (tablero)
 
   [X] S1 — Base ......... BD cpp + seed.sql + API PHP + pruebas C1    ✔ C1 OK
   [X] S2 — Captura ...... App Android cámara + Volley Base64          ✔ C2 OK
-  [~] S3 — Motores ...... EN CURSO: entorno ✔ + spike OCR ✔          → C3
+  [X] S3 — Motores ...... OCR Python + riesgo C + Prolog ✔           ✔ C3 OK
   [ ] S4 — Integración .. PHP orquesta (shell_exec) + lista Android   → C4 demo
 
-  Avance global del MVP:  [███████████---------] 55%
+  Avance global del MVP:  [███████████████-----] 75%
 
-  Nota: spike OCR RESUELTO el 30/09/2026 → GANA PYTESSERACT (100% de
-  campos a 1.17 s/foto; easyocr 95% a 29.1 s). Detalle: motores/spike/
-  SPIKE_OCR.md y resultado_spike.json. Quedan los 3 motores y el C3.
+  Nota: C3 SUPERADO — los 3 motores cumplen sus contratos §6.4 y la cadena
+  completa funciona por CLI (foto → JSON → riesgo % → APROBADA/DISCREPANCIA).
+  Falta S4: PHP orquesta los motores + lista con badges en la app Android.
 
 ────────────────────────────────────────────────────────────────────────────────
 SECCIÓN 3 · HISTORIAL DE AVANCES (cronológico)
@@ -157,6 +158,28 @@ SECCIÓN 3 · HISTORIAL DE AVANCES (cronológico)
       1/2/3/6/7/8/9 + PARTE 6 + SESIÓN 5) y commiteados en 97e6590, tras el
       commit del código del spike (f62cfec).
 
+  ▸ 30/09/2026 (16:36) — SPRINT 3 "MOTORES" COMPLETO (commit 15fd5ca) — C3 SUPERADO
+    - motores/procesar_factura.py (MOTOR 1, OCR): CLI <ruta_imagen> → 1 línea
+      JSON del contrato. Reutiliza extraer_campos() del spike. Probado con
+      las 5 fotos del spike: 5/5 correctas (proveedor/fecha/monto/folio);
+      si la imagen no existe → {"error":...} + exit 1 (RNF-5).
+    - motores/clasificador_riesgo.c (MOTOR 2, riesgo): compilado con GCC a
+      clasificador_riesgo.exe (fuera de git por motores/.gitignore; si se
+      clona el repo hay que recompilar con GCC_BIN). Fórmula: base 10 +
+      0.75×alza% (0.25×baja%), tope [0,100], 50.0 si no hay historial.
+      Verificado: 4850/3941.67→27.3 (bajo), 6200/3941.67→53.0 (alto),
+      3200.5/3200→10.0, 8990/8125→18.0, sin args → uso + exit 1.
+    - motores/regla.pl (MOTOR 3, conciliación, SWI-Prolog): recibe por argv
+      los datos de factura + orden + riesgo. Reglas en orden: monto ≤
+      autorizado → riesgo < 40 → proveedor (comparación tolerante:
+      mayúsculas, sin acentos, prefijo de 8) → fecha en [orden−15d,
+      orden+90d] (fechas → días julianos). 6/6 veredictos correctos:
+      APROBADA · MONTO_EXCEDE_ORDEN · RIESGO_ALTO · PROVEEDOR_NO_COINCIDE
+      · FECHA_FUERA_DE_RANGO · ARGUMENTOS_INVALIDOS.
+    - CADENA COMPLETA por CLI (= guion de demo MVP §9.2): factura_01 →
+      OCR(4850, F-1001) → riesgo 27.3 → APROBADA · factura_02 → OCR(6200)
+      → 53.0 → DISCREPANCIA:MONTO_EXCEDE_ORDEN. CHECKPOINT C3 SUPERADO.
+
 ────────────────────────────────────────────────────────────────────────────────
 SECCIÓN 4 · QUÉ FUNCIONA HOY (guía rápida de uso)
 ────────────────────────────────────────────────────────────────────────────────
@@ -225,30 +248,33 @@ SECCIÓN 6 · ENTORNO DEL EQUIPO (referencias)
 SECCIÓN 7 · SIGUIENTE PASO (empezar por aquí en la próxima sesión)
 ────────────────────────────────────────────────────────────────────────────────
 
-  ★ SPRINT 3 — "MOTORES" (carpeta C:\CPP\motores\) — entorno YA listo
+  ★ SPRINT 4 — "INTEGRACIÓN Y DEMO" (PHP orquesta los 3 motores)
 
-    0) [✔ HECHO 30/09] SPIKE OCR → GANA PYTESSERACT (100% a 1.17 s/foto).
-       Ver motores/spike/SPIKE_OCR.md. Reutilizar el extractor de campos del
-       spike (extraer_campos de spike_ocr.py) dentro de procesar_factura.py.
-    1) motores/procesar_factura.py (Python + pytesseract, lang spa)
-       CLI: python procesar_factura.py <ruta_imagen>
-       Salida (1 línea JSON): {"proveedor","fecha","monto","folio"}
-    2) motores/clasificador_riesgo.c → compilar con GCC (C:\MinGW\bin) a .exe
-       CLI: clasificador_riesgo <monto> <promedio_historial>
-       Salida: porcentaje de riesgo (ej. 37.5). Detecta alza vs historial.
-    3) motores/regla.pl  (SWI-Prolog)
-       Hechos: factura(folio, monto, fecha, proveedor) + orden de compra.
-       Predicado conciliar(IdOrden). Salida: APROBADA | DISCREPANCIA:<motivo>.
-       Reglas: monto ≤ autorizado, riesgo < 40, coincidencia proveedor/fecha.
-    4) CHECKPOINT C3: probar cada módulo por CLI con datos reales de las
-       OC-001..OC-003 y satisfacer los contratos de la Sección 5.
+    Los 3 motores YA existen, cumplen sus contratos §6.4 y la cadena completa
+    funciona por CLI (C3 ✔). Ahora hay que automatizarla y mostrarla:
 
-    → Después: S4 = orquestar los 3 desde PHP (shell_exec + escapeshellarg),
-      actualizar factura en MySQL, y lista con badges en Android (C4 = demo).
+    1) API: procesar la factura tras recibirla (extender facturas.php o crear
+       api/procesar.php). Cadena a ejecutar:
+         a) OCR ....... "PYTHON_BIN" RUTA_MOTOR_OCR <ruta_imagen>
+                        → JSON {proveedor, fecha, monto, folio}
+         b) Riesgo .... RUTA_BIN_RIESGO <monto> <promedio_historial>
+                        (promedio ya lo devuelve ordenes.php?id=)
+         c) Conciliar . "SWIPL_BIN" RUTA_REGLA_PROLOG <orden_id> <folio>
+                        <monto> <fecha> <proveedor> <riesgo> <monto_aut>
+                        <proveedor_orden> <fecha_orden>
+                        → APROBADA | DISCREPANCIA:<motivo>
+         d) UPDATE facturas (estado, motivo, folio, monto, proveedor_detectado,
+                        fecha_documento, riesgo, procesado_en=NOW()) → KPI-1
+    2) SEGURIDAD (R3/RM4): escapeshellarg en TODOS los argumentos; rutas de
+       binarios entre comillas dobles (tienen espacios); cast numérico de
+       montos/riesgo; si un motor falla → factura queda "Pendiente" (RNF-5).
+    3) App Android: pantalla LISTA (GET facturas.php ya lo da todo): renglones
+       con badges ✅ Aprobada / ⚠️ Con Discrepancia / ⏳ Pendiente.
+    4) CHECKPOINT C4: demo completa con el guion §9.2 (A aprobada, B excede,
+       C proveedor distinto) vista en el móvil.
 
-    Datos de apoyo ya listos: api/config.php ya apunta a motores/*.py/.exe/.pl;
-    ordenes.php?id= devuelve historial_promedio por proveedor; seed tiene
-    historial sintético para el módulo C.
+    Nota: el .exe NO está en git (motores/.gitignore) — si se clona el repo,
+    recompilar con GCC_BIN: gcc -O2 -Wall -o clasificador_riesgo.exe *.c
 
 
 ────────────────────────────────────────────────────────────────────────────────
@@ -265,14 +291,16 @@ SECCIÓN 8 · MAPA DEL REPOSITORIO
     ├── database\seed.sql ...... esquema + datos semilla
     ├── uploads\ ............... imágenes recibidas (se llena en runtime)
     ├── android\ ............... app Android (com.cpp.captura) + build.cmd
-    └── motores\ ............... spike/ (S3): scripts, fotos de prueba y
-                                 decisión OCR → aquí nacerán los 3 motores
+    └── motores\ ............... spike/ (pruebas) + los 3 motores:
+                                 procesar_factura.py, clasificador_riesgo.c/.exe, regla.pl
 
 
 ────────────────────────────────────────────────────────────────────────────────
 SECCIÓN 9 · HISTORIAL DE COMMITS
 ────────────────────────────────────────────────────────────────────────────────
 
+    15fd5ca  30/09/2026 16:36  Sprint 3: los 3 motores (OCR pytesseract +
+                               riesgo C + reglas Prolog) — C3 superado
     97e6590  30/09/2026 16:20  Docs: bitacora y explicacion — entorno S3 +
                                spike OCR (pytesseract)
     f62cfec  30/09/2026 16:17  Sprint 3: spike OCR — entorno motores +

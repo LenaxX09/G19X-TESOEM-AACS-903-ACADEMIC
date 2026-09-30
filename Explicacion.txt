@@ -1,6 +1,6 @@
 ﻿================================================================================
   EXPLICACIÓN DEL PROYECTO CPP — Todo lo construido, explicado paso a paso
-  Última actualización: 30/09/2026 16:24 · Editor: Cline
+  Última actualización: 30/09/2026 16:45 · Editor: Cline
 ================================================================================
 
 ██████ INSTRUCCIÓN PARA CLINE (cómo mantener este archivo) ████████████████████
@@ -430,6 +430,82 @@ Aprendizaje de la jornada: las instalaciones en segundo plano pueden
 morir sin avisar (le pasó a la primera descarga del modelo español);
 siempre verificar que el archivo .traineddata quedó bien descargado.
 
+═══════════════════════════════════════════════════════════════════════════════
+ PARTE 7 · LOS TRES MOTORES EXPLICADOS (30/09/2026, tarde) — C3 superado
+═══════════════════════════════════════════════════════════════════════════════
+
+Con la decisión del spike (pytesseract) se programaron los 3 motores y se
+pasó el checkpoint C3. Cada motor es un programa INDEPENDIENTE que PHP
+"encenderá" uno tras otro en el Sprint 4 (por eso cada uno se prueba solo,
+por línea de comandos). Los tres cumplen el contrato fijado en el MVP §6.4.
+
+7.1 MOTOR 1 · procesar_factura.py (Python + pytesseract) — EL LECTOR
+────────────────────────────────────────────────────────────────────
+    CLI    : python procesar_factura.py <ruta_imagen>
+    Salida : UNA línea JSON {"proveedor","fecha","monto","folio"}
+  Reutiliza tal cual extraer_campos(), la misma lógica que logró 100% en el
+  spike: las regex buscan la línea "TOTAL" para el monto, "Folio" para el
+  folio, la primera fecha del texto y la primera línea con letras para el
+  proveedor. Detalles pensados para el Sprint 4:
+  · Un campo que no se pueda leer viaja como null (decidir qué hacer con
+    los nulls será de PHP, no del OCR).
+  · Si la imagen no existe o el OCR revienta: {"error":"..."} y código de
+    salida 1 → PHP sabrá que falló y la factura queda "Pendiente" (RNF-5).
+  · Verificado: las 5 fotos del spike → 5/5 JSON correctos.
+
+7.2 MOTOR 2 · clasificador_riesgo.c (C, compilado con GCC) — EL ANALISTA
+─────────────────────────────────────────────────────────────────────────
+    CLI    : clasificador_riesgo <monto_factura> <promedio_historial>
+    Salida : el % de riesgo con un decimal (ej. 27.3)
+  La fórmula se diseñó para poder EXPLICARLA en una defensa del proyecto:
+    desviación d = (monto − promedio) / promedio × 100
+    · d ≥ 0 (factura POR ENCIMA del historial): riesgo = 10 + 0.75·d
+    · d < 0 (por debajo): riesgo = 10 + 0.25·d (baja menos de lo que sube)
+    · tope [0,100]; sin historial → 50.0 (conservador: no aprueba solo)
+  La base 10 es el "riesgo residual normal". Con el seed de la BD:
+    4,850 vs 3,941.67 (+23.1%) → 27.3 BAJO  |  6,200 (+57.3%) → 53.0 ALTO.
+  Se compila con el GCC MinGW del equipo; el .exe queda FUERA de git
+  (motores/.gitignore): si alguien clona el repo, debe recompilarlo.
+
+7.3 MOTOR 3 · regla.pl (SWI-Prolog) — EL AUDITOR LÓGICO
+───────────────────────────────────────────────────────
+    CLI    : swipl regla.pl <id> <folio> <monto> <fecha> <proveedor>
+                            <riesgo> <monto_autorizado>
+                            <proveedor_orden> <fecha_orden>
+    Salida : APROBADA  ó  DISCREPANCIA:<motivo>
+  Aquí Prolog muestra su ventaja: las reglas de negocio se escriben CASI
+  como se dirían en español, y el orden de las cláusulas con "!" (corte)
+  define la prioridad del motivo:
+    1) monto > autorizado ................ DISCREPANCIA:MONTO_EXCEDE_ORDEN
+    2) riesgo ≥ 40 ....................... DISCREPANCIA:RIESGO_ALTO
+    3) proveedor distinto ................ DISCREPANCIA:PROVEEDOR_NO_COINCIDE
+    4) fecha fuera de [orden−15d, orden+90d] → DISCREPANCIA:FECHA_FUERA_DE_RANGO
+    5) si nada falla ..................... APROBADA
+  Dos detalles dignos de explicar:
+  · PROVEEDOR TOLERANTE: el OCR lee "PAPELERÍA CENTRAL, S.A. DE C.V." y la
+    BD guarda "Papelería Central". Se normaliza todo (mayúsculas, sin
+    acentos, solo letras/números) y se pide que un prefijo de 8 caracteres
+    de uno aparezca contenido en el otro: los acentos y el ", S.A." no
+    rompen la comparación.
+  · FECHAS COMPARABLES: "2026-09-20" se convierte a número de día juliano
+    (fórmula de ~4 líneas) para poder sumar/restar tolerancias en días.
+
+7.4 EL CHECKPOINT C3: LOS TRES SUMADOS
+───────────────────────────────────────
+  Se probó cada motor por separado (JSON 5/5 · riesgos según lo previsto ·
+  6/6 veredictos, incluido el de argumentos inválidos) y luego LA CADENA
+  COMPLETA, tal como la orquestará PHP en el Sprint 4:
+    factura_01.jpg → OCR(4850, F-1001) → C(27.3)  → Prolog: APROBADA
+    factura_02.jpg → OCR(6200, F-2047) → C(53.0)  → DISCREPANCIA:MONTO_EXCEDE_ORDEN
+  Es exactamente el guion de demo del MVP (§9.2). C3 SUPERADO ✔.
+
+7.5 LO QUE FALTA (Sprint 4)
+───────────────────────────
+  Que PHP ejecute esa cadena automáticamente al recibir la foto (con la
+  seguridad de escapeshellarg en cada argumento), actualice MySQL con el
+  veredicto y la app Android muestre la lista con badges de color.
+  Esa es la demo final: checkpoint C4.
+
 ══════════════════════════════════════════════════════════════════════════════
  HISTORIAL DE EXPLICACIONES POR SESIÓN (agregar una entrada por sesión)
 ══════════════════════════════════════════════════════════════════════════════
@@ -460,6 +536,14 @@ siempre verificar que el archivo .traineddata quedó bien descargado.
     sintéticas degradadas: GANA PYTESSERACT (100% a 1.17 s/foto vs
     easyocr 95% a 29 s). Código: motores/spike/ (commit f62cfec).
     Explicado en: PARTE 6.
+
+  SESIÓN 6 — 30/09/2026, tarde (Sprint 3: los 3 motores + checkpoint C3)
+    Creados motores/procesar_factura.py (OCR; reutiliza el extractor del
+    spike), motores/clasificador_riesgo.c (compilado a .exe con GCC) y
+    motores/regla.pl (SWI-Prolog; conciliación tolerante en proveedor y
+    fechas). C3 superado: contratos §6.4 al 100% y cadena completa
+    foto→JSON→riesgo→veredicto idéntica al guion de demo §9.2
+    (commit 15fd5ca). Explicado en: PARTE 7.
 
 ══════════════════════════════ FIN DE LA EXPLICACIÓN ══════════════════════════
   Archivos hermanos: Bitacora.txt (estado/avances) · INSTALACION.md (S1)
