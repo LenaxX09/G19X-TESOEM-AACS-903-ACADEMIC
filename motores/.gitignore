@@ -1,0 +1,3 @@
+# Binarios y cachés generados al compilar/ejecutar los motores
+*.exe
+__pycache__/
