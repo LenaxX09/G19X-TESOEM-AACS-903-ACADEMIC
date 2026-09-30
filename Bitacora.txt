@@ -1,6 +1,6 @@
 ﻿================================================================================
   BITACORA DEL PROYECTO CPP — Plataforma Inteligente de Cuentas por Pagar
-  Última actualización: 30/09/2026 16:45 · Editor: Cline
+  Última actualización: 30/09/2026 17:35 · Editor: Cline
 ================================================================================
 
 ██████ INSTRUCCIÓN PARA CLINE (LEER PRIMERO EN CADA SESIÓN) ██████████████████
@@ -29,19 +29,27 @@ SECCIÓN 1 · RESUMEN DEL ESTADO ACTUAL (30 segundos)
 
   Proyecto   : Sistema móvil para capturar facturas, extraer datos por OCR,
                calcular riesgo y conciliar contra órdenes de compra.
-  Avance     : ~75% del MVP (S1, S2 y S3 COMPLETOS; queda S4).
-  Funciona YA: BD MySQL + API PHP (crear/consultar facturas y órdenes) +
-               app Android que toma foto y la sube por Volley → queda
-               registrada como "Pendiente" en el servidor. Y LOS 3
-                MOTORES funcionan por CLI: OCR (pytesseract) + riesgo (C) + conciliación (Prolog), encadenados de punta a punta.
-  Nuevo 30/09: (tarde) los 3 MOTORES creados y verificados - C3 SUPERADO:
+  Avance     : ~95% del MVP (S1-S4 completos; el guion §9.2 corre 100% por
+               HTTP —solo falta verlo en el móvil para cerrar C4).
+  Funciona YA: TODO el pipeline AUTOMÁTICO por HTTP: POST foto →
+               procesar.php?id → OCR → riesgo → Prolog → MySQL actualizado
+               con veredicto en ~1.2 s (KPI-1 ✔). Guion §9.2 verificado:
+               A=APROBADA 27.3 · B=MONTO_EXCEDE 53.0 · C=NO_COINCIDE.
+               RNF-5 probado (foto corrupta → queda «Pendiente»). App
+               0.4.0-sprint4: al enviar dispara el pipeline y muestra el
+               veredicto; pantalla LISTA con badges ✅⚠️⏳ (compilada OK).
+  Nuevo 30/09: (tarde-noche) SPRINT 4: api/procesar.php (orquestador RF-B3
+               con escapeshellarg/casts), desplegar.ps1 (www←api+db+motores),
+               ListadoActivity + badges, foto demo B (Papelería 6,200).
+               (tarde) los 3 MOTORES creados y verificados - C3 SUPERADO:
                  procesar_factura.py (JSON 5/5 fotos), clasificador_riesgo.c
                  (.exe; riesgos 27.3/53.0 según lo previsto) y regla.pl
                  (6/6 veredictos). Cadena completa = guion de demo §9.2.
                 (primera parte) spike OCR → pytesseract + entorno.
-  Siguiente  : SPRINT 4 - PHP orquesta los 3 (shell_exec + escapeshellarg),
-                actualiza MySQL y la app muestra lista con badges → C4.
-  Git        : limpio · 11 commits.
+  Siguiente  : Instalar app-debug.apk 0.4.0 en emulador/móvil → DEMO VISUAL
+               C4 (guion 9.2 en vivo, pasos en SPRINT4_DEMO.md) - cerrar el MVP,
+               recoger retroalimentacion H4 y arrancar la v1.0 (MVP secc. 13).
+  Git        : limpio · 12 commits (47060db = Sprint 4; docs pend. anotar).
 
 
 ────────────────────────────────────────────────────────────────────────────────
@@ -51,13 +59,14 @@ SECCIÓN 2 · ESTADO POR SPRINT (tablero)
   [X] S1 — Base ......... BD cpp + seed.sql + API PHP + pruebas C1    ✔ C1 OK
   [X] S2 — Captura ...... App Android cámara + Volley Base64          ✔ C2 OK
   [X] S3 — Motores ...... OCR Python + riesgo C + Prolog ✔           ✔ C3 OK
-  [ ] S4 — Integración .. PHP orquesta (shell_exec) + lista Android   → C4 demo
+  [X] S4 — Integración .. procesar.php orquesta + lista con badges   ✔ C4*
 
-  Avance global del MVP:  [███████████████-----] 75%
+  Avance global del MVP:  [██████████████████--] 95%
 
-  Nota: C3 SUPERADO — los 3 motores cumplen sus contratos §6.4 y la cadena
-  completa funciona por CLI (foto → JSON → riesgo % → APROBADA/DISCREPANCIA).
-  Falta S4: PHP orquesta los motores + lista con badges en la app Android.
+  Nota: C4* — guion §9.2 ejecutado 100% por HTTP sin errores (A/B/C, fallo
+  simulado RNF-5, idempotencia, modo batch, KPI-1 de 1-2 s). Falta
+  ÚNICAMENTE la pasada visual en el móvil/emulador con el APK 0.4.0-sprint4
+  (guion en SPRINT4_DEMO.md §3) para marcar el checklist 9.1 completo.
 
 ────────────────────────────────────────────────────────────────────────────────
 SECCIÓN 3 · HISTORIAL DE AVANCES (cronológico)
@@ -180,6 +189,43 @@ SECCIÓN 3 · HISTORIAL DE AVANCES (cronológico)
       OCR(4850, F-1001) → riesgo 27.3 → APROBADA · factura_02 → OCR(6200)
       → 53.0 → DISCREPANCIA:MONTO_EXCEDE_ORDEN. CHECKPOINT C3 SUPERADO.
 
+  ▸ 30/09/2026 (17:20) — SPRINT 4 "INTEGRACIÓN Y DEMO" (commit 47060db) — C4 servidor superado
+    - api/procesar.php NUEVO (RF-B3): orquesta los 3 motores con shell_exec
+      + escapeshellarg en TODOS los args (R3/RM4), casts numéricos, fecha
+      regex-validada y proveedores → ASCII (cmd.exe lee la línea como ANSI
+      y manguéa los acentos UTF-8). Modos: ?id=N (idempotente: devuelve
+      YA_PROCESADA) y SIN id (procesa TODAS las Pendientes, errores por
+      factura). UPDATE con procesado_en=NOW(); KPI-1 (segundos_desde_
+      creacion) medido con el reloj de MySQL (TIMESTAMPDIFF) para evitar
+      desfases de zona horaria entre PHP y MySQL.
+    - Fallos → la factura QUEDA «Pendiente» (RNF-5): 500 MOTOR_*_FALLO
+      (con salida del motor) o 422 OCR_INCOMPLETO (con campos_faltantes).
+    - desplegar.ps1 NUEVO: sincroniza api+database+motores a
+      C:\laragon\www\cpp (el .exe del riesgo viaja; spike\ no). Hallazgo:
+      en www FALTABA la carpeta motores\ (solo se había publicado S1).
+    - Android 0.4.0-sprint4 (versionCode 2): MainActivity, tras el POST,
+      llama a procesar.php y muestra el veredicto (✅/⚠️/⏳ + riesgo +
+      duración); NUEVA ListadoActivity (RecyclerView+CardView) con badges,
+      proveedor OCR, folio, monto, riesgo y motivo (RF-M5 / RF-M6 simpl.).
+      Nuevas deps: recyclerview 1.3.2 + cardview 1.0.0. BUILD SUCCESSFUL.
+    - motores/spike/generar_fotos_demo.py NUEVO: genera la factura B del
+      guion §9.2 (Papelería 6,200 → factura_06.jpg) reutilizando el
+      dibujante/degradación del spike.
+    - VERIFICACIÓN C4 POR HTTP (guion §9.2 completo, sin errores):
+        A: factura_01→OC-001 = APROBADA · riesgo 27.3 · 1.21 s
+        B: factura_06→OC-001 = DISCREPANCIA:MONTO_EXCEDE_ORDEN · riesgo 53.0
+        C: factura_04→OC-002 = DISCREPANCIA:PROVEEDOR_NO_COINCIDE
+        + foto corrupta (209 B) = MOTOR_OCR_FALLO y queda Pendiente (RNF-5)
+        + id=999 → 404 · reprocesar la #4 → YA_PROCESADA · modo batch OK
+        + POST+procesar inmediato = 2 s (kpi1_ok=true)
+    - Sorpresas resueltas en vivo: (1) PowerShell 5.1 lee .ps1 sin BOM
+      como ANSI → caracteres "→/·" rompían el parser (script en ASCII);
+      (2) el "wrap extra de comillas" para cmd.exe en realidad ROMPE la
+      línea (probado con 4 variantes): popen de PHP ya cita bien — queda
+      documentado en procesar.php; (3) OPcache de Apache sirvió el
+      procesar.php viejo unos segundos tras el deploy (se revalida solo);
+      (4) CardView usa atributos app:, no android: (error de linking).
+
 ────────────────────────────────────────────────────────────────────────────────
 SECCIÓN 4 · QUÉ FUNCIONA HOY (guía rápida de uso)
 ────────────────────────────────────────────────────────────────────────────────
@@ -191,14 +237,21 @@ SECCIÓN 4 · QUÉ FUNCIONA HOY (guía rápida de uso)
         GET  http://localhost/cpp/api/facturas.php            (lista)
         GET  ...?estado=Pendiente                             (filtro)
         POST ...  Body JSON { "orden_id":1, "imagen_base64":"..." }
+    - API pipeline (S4, RF-B3): GET procesar.php?id=N procesa ESA factura
+      (OCR→riesgo→Prolog, idempotente) y SIN ?id procesa todas las
+      «Pendientes». Devuelve veredicto + riesgo + duración (KPI-1).
     - Imágenes recibidas quedan en C:\laragon\www\cpp\uploads\
 
   App Android (Android Studio → Open → C:\CPP\android):
     - Emulador → Servidor: 10.0.2.2 · Móvil físico → IP LAN del PC.
-    - APK: android\app\build\outputs\apk\debug\app-debug.apk
+    - APK: android\app\build\outputs\apk\debug\app-debug.apk (0.4.0-sprint4)
       (compilar: cd C:\CPP\android && .\gradlew.bat :app:assembleDebug)
+    - Al ENVIAR la foto la app llama sola a procesar.php y muestra el
+      veredicto (✅/⚠️/⏳ + riesgo); botón «📋 Ver facturas» → lista con
+      badges ✅⚠️⏳ (RF-M5).
 
-  Guías detalladas: INSTALACION.md (S1) y SPRINT2_ANDROID.md (S2).
+  Guías detalladas: INSTALACION.md (S1) · SPRINT2_ANDROID.md (S2) ·
+                    SPRINT4_DEMO.md (S4: demo C4 paso a paso).
 
 
 ────────────────────────────────────────────────────────────────────────────────
@@ -248,33 +301,31 @@ SECCIÓN 6 · ENTORNO DEL EQUIPO (referencias)
 SECCIÓN 7 · SIGUIENTE PASO (empezar por aquí en la próxima sesión)
 ────────────────────────────────────────────────────────────────────────────────
 
-  ★ SPRINT 4 — "INTEGRACIÓN Y DEMO" (PHP orquesta los 3 motores)
+  ★ CIERRE DEL MVP — demo VISUAL en el móvil + retroalimentación (H4)
 
-    Los 3 motores YA existen, cumplen sus contratos §6.4 y la cadena completa
-    funciona por CLI (C3 ✔). Ahora hay que automatizarla y mostrarla:
+     El servidor ya ejecuta TODO el guion §9.2 sin errores (ver historial de
+     hoy en la Sección 3). Solo falta verlo en la pantalla del móvil:
 
-    1) API: procesar la factura tras recibirla (extender facturas.php o crear
-       api/procesar.php). Cadena a ejecutar:
-         a) OCR ....... "PYTHON_BIN" RUTA_MOTOR_OCR <ruta_imagen>
-                        → JSON {proveedor, fecha, monto, folio}
-         b) Riesgo .... RUTA_BIN_RIESGO <monto> <promedio_historial>
-                        (promedio ya lo devuelve ordenes.php?id=)
-         c) Conciliar . "SWIPL_BIN" RUTA_REGLA_PROLOG <orden_id> <folio>
-                        <monto> <fecha> <proveedor> <riesgo> <monto_aut>
-                        <proveedor_orden> <fecha_orden>
-                        → APROBADA | DISCREPANCIA:<motivo>
-         d) UPDATE facturas (estado, motivo, folio, monto, proveedor_detectado,
-                        fecha_documento, riesgo, procesado_en=NOW()) → KPI-1
-    2) SEGURIDAD (R3/RM4): escapeshellarg en TODOS los argumentos; rutas de
-       binarios entre comillas dobles (tienen espacios); cast numérico de
-       montos/riesgo; si un motor falla → factura queda "Pendiente" (RNF-5).
-    3) App Android: pantalla LISTA (GET facturas.php ya lo da todo): renglones
-       con badges ✅ Aprobada / ⚠️ Con Discrepancia / ⏳ Pendiente.
-    4) CHECKPOINT C4: demo completa con el guion §9.2 (A aprobada, B excede,
-       C proveedor distinto) vista en el móvil.
+     1) Instalar android\app\build\outputs\apk\debug\app-debug.apk
+        (0.4.0-sprint4) en el emulador o móvil físico. Servidor: 10.0.2.2
+        (emulador) o IP LAN del PC (móvil físico + firewall puerto 80).
+     2) DEMO (guion §9.2, detalle en SPRINT4_DEMO.md §3):
+          A: Papelería 4,850 vs OC-001  → «✅ APROBADA · riesgo 27.3 %»
+          B: Papelería 6,200 vs OC-001  → «⚠️ MONTO_EXCEDE_ORDEN · 53.0 %»
+          C: factura de OTRO proveedor  → «⚠️ PROVEEDOR_NO_COINCIDE»
+          Botón «📋 Ver facturas» → lista con badges ✅⚠️⏳ (valida H4).
+          (Fotos sintéticas listas en motores\spike\fotos\: 01=A, 06=B, 04=C.)
+     3) Si algo queda «Pendiente»: es RNF-5 a propósito → en el listado,
+        «↻ Actualizar» reintenta (procesar.php sin ?id procesa todas).
+     4) Con la demo vista: marcar C4 definitivo (Sección 2 y checklist
+        MVP 9.1) y recoger retroalimentación de 2-3 usuarios (H4). Después
+        arrancar la v1.0 según MVP §13 (login, galería, filtros, alertas…).
 
-    Nota: el .exe NO está en git (motores/.gitignore) — si se clona el repo,
-    recompilar con GCC_BIN: gcc -O2 -Wall -o clasificador_riesgo.exe *.c
+     Notas de entorno: tras desplegar.ps1, OPcache puede servir PHP viejo
+     2-3 s (reintentar). mysqld de Laragon se arrancó a mano esta sesión
+     (Get-Process mysqld para verificar). El .exe NO está en git
+     (motores/.gitignore) — si se clona el repo, recompilar con GCC_BIN:
+     gcc -O2 -Wall -o clasificador_riesgo.exe clasificador_riesgo.c
 
 
 ────────────────────────────────────────────────────────────────────────────────
@@ -285,20 +336,30 @@ SECCIÓN 8 · MAPA DEL REPOSITORIO
     ├── readme.md, propuestas.txt, PRD_CPP.md, MVP_CPP.md  → documentación
     ├── INSTALACION.md ......... guía Sprint 1 (BD + API)
     ├── SPRINT2_ANDROID.md ..... guía Sprint 2 (app)
+    ├── SPRINT4_DEMO.md ........ guía Sprint 4 (demo C4 paso a paso)
+    ├── desplegar.ps1 .......... publica api+database+motores en www\cpp
     ├── Bitacora.txt ........... ESTE ARCHIVO (memoria/estado del proyecto)
     ├── Explicacion.txt ........ guía didáctica de todo el proyecto
-    ├── api\ ................... config, db, responder, facturas.php, ordenes.php
+    ├── api\ ................... config, db, responder, facturas.php,
+    │                          ordenes.php y procesar.php (orquestador S4)
     ├── database\seed.sql ...... esquema + datos semilla
     ├── uploads\ ............... imágenes recibidas (se llena en runtime)
-    ├── android\ ............... app Android (com.cpp.captura) + build.cmd
-    └── motores\ ............... spike/ (pruebas) + los 3 motores:
-                                 procesar_factura.py, clasificador_riesgo.c/.exe, regla.pl
+    ├── android\ ............... app 0.4.0: MainActivity (envía y procesa) +
+    │                          ListadoActivity con badges + build.cmd
+    └── motores\ ............... spike/ (pruebas + fotos demo §9.2) + los 3
+                                 motores: procesar_factura.py,
+                                 clasificador_riesgo.c/.exe, regla.pl
 
 
 ────────────────────────────────────────────────────────────────────────────────
 SECCIÓN 9 · HISTORIAL DE COMMITS
 ────────────────────────────────────────────────────────────────────────────────
 
+    47060db  30/09/2026 17:20  Sprint 4: PHP orquesta los 3 motores
+                               (procesar.php) + listado Android con badges
+                               (RF-B3, RF-M5) — C4 servidor verificado
+    e415ccb  30/09/2026 16:45  Docs: bitácora y explicación — S3 completo
+                               y C3 superado (PARTE 7)
     15fd5ca  30/09/2026 16:36  Sprint 3: los 3 motores (OCR pytesseract +
                                riesgo C + reglas Prolog) — C3 superado
     97e6590  30/09/2026 16:20  Docs: bitacora y explicacion — entorno S3 +

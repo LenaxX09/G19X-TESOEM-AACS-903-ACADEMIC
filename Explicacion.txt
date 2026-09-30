@@ -1,6 +1,6 @@
 ﻿================================================================================
   EXPLICACIÓN DEL PROYECTO CPP — Todo lo construido, explicado paso a paso
-  Última actualización: 30/09/2026 16:45 · Editor: Cline
+  Última actualización: 30/09/2026 17:45 · Editor: Cline
 ================================================================================
 
 ██████ INSTRUCCIÓN PARA CLINE (cómo mantener este archivo) ████████████████████
@@ -506,6 +506,101 @@ por línea de comandos). Los tres cumplen el contrato fijado en el MVP §6.4.
   veredicto y la app Android muestre la lista con badges de color.
   Esa es la demo final: checkpoint C4.
 
+═══════════════════════════════════════════════════════════════════════════════
+ PARTE 8 · SPRINT 4 — PHP ORQUESTA TODO Y LA APP MUESTRA EL RESULTADO (30/09/2026, noche)
+═══════════════════════════════════════════════════════════════════════════════
+
+Meta del sprint: que al LLEGAR una foto el servidor solito ejecute la cadena
+OCR → riesgo → conciliación, guarde el veredicto y el usuario lo VEA en el
+móvil. Checkpoint C4 = guion de demo §9.2 corrido completo. ✔ LOGRADO por
+HTTP; falta únicamente la pasada visual con el APK instalado.
+
+8.1 EL NUEVO JEFE DE ORQUESTA: api/procesar.php (RF-B3)
+────────────────────────────────────────────────────
+PHP ya sabía RECIBIR fotos (facturas.php) y CONSULTAR (GET); ahora también
+PROCESA. procesar.php acepta ?id=N (una factura Pendiente) o SIN id (TODAS
+las Pendientes, para reintentos en bloque) y ejecuta, en orden, los 3
+motores por línea de comandos con shell_exec — como se ensayó en C3, pero
+automático:
+   1) OCR ....... python procesar_factura.py <imagen>  → JSON
+   2) Riesgo .... clasificador_riesgo.exe <monto> <promedio>  → "27.3"
+   3) Conciliar . swipl regla.pl <factura + orden + riesgo>  → APROBADA/…
+   4) UPDATE facturas SET ..., procesado_en=NOW()  (KPI-1)
+Si todo sale bien devuelve el veredicto CON medidores: duracion_pipeline_s
+(~1.2 s de media) y segundos_desde_creacion (el KPI-1 real, ≤ 30 s). Ese
+último se calcula con TIMESTAMPDIFF DENTRO de MySQL: como PHP y MySQL
+pueden vivir en zonas horarias distintas, si PHP midiera con su propio
+reloj el resultado saldría desfasado horas (pasó y se corrigió así).
+
+8.2 LA SEGURIDAD PROMETIDA (R3/RM4 → RNF-4)
+───────────────────────────────────────────
+Ejecutar comandos con datos "del mundo" es peligroso: si alguien fingiera
+que el monto es "4850 & borrar_todo", un PHP ingenuo lo ejecutaría. Las
+defensas aplicadas:
+   · escapeshellarg() envuelve CADA argumento dinámico: las comillas y
+     símbolos del atacante quedan convertidos en texto inofensivo.
+   · Cast numérico: monto/promedio/riesgo pasan por (float) y salen con
+     sprintf("%.2F") — solo pueden ser NÚMEROS, nunca comandos.
+   · La fecha se valida con regex YYYY-MM-DD y el folio se recorta.
+   · Los PROVEEDORES se convierten a ASCII (iconv TRANSLIT) antes de
+     pasarlos a Prolog: cmd.exe lee la línea de comandos con la página de
+     códigos ANSI y los bytes UTF-8 de "Ferretería" llegarían manguados,
+     rompiendo la comparación tolerante de regla.pl. ASCII es "idempotente"
+     para su normaliza() (normalizar algo ya normalizado no lo cambia).
+   · Aprendizaje en vivo: la teoría decía "envuelve el comando completo en
+     comillas extra para cmd.exe"; la PRÁCTICA (pruebas A/B/C/D) mostró que
+     popen de PHP ya arma bien la línea y que el wrap extra la ROMPE. Quedó
+     documentado en el código para no recaer.
+
+8.3 CUANDO ALGO FALLA: NADA SE PIERDE (RNF-5)
+─────────────────────────────────────────────
+Regla del PRD: "el fallo de un módulo no pierde la factura". Implementación:
+si un motor no responde lo esperado, procesar.php NO TOCA MySQL y la factura
+sigue «Pendiente», con diagnóstico amable:
+   · 500 MOTOR_*_FALLO — el motor reventó (probado con una imagen corrupta
+     de 209 bytes: pytesseract dijo "broken data stream").
+   · 422 OCR_INCOMPLETO — el OCR corrió pero no leyó monto/fecha/proveedor;
+     datos.campos_faltantes dice CUÁLES faltan.
+Reintentar = volver a llamar a procesar.php (una por ?id o todas juntas).
+Además es IDEMPOTENTE: reprocesar una factura ya procesada devuelve
+YA_PROCESADA con su estado, no la vuelve a tocar.
+8.4 EL LISTADO CON BADGES EN EL MÓVIL (RF-M5 / hipótesis H4)
+────────────────────────────────────────────────────────────
+Nueva pantalla ListadoActivity con RecyclerView + CardView (como pedía el
+MVP §6.3): cada factura es una tarjeta con badge ✅ Aprobada / ⚠️ Con
+Discrepancia / ⏳ Pendiente y, debajo, proveedor leído por el OCR, folio,
+monto, % de riesgo y —si la hay— la causa (Motivo: MONTO_EXCEDE_ORDEN…).
+MainActivity también cambió: tras «Enviar factura» ya no se queda en
+"Pendiente": llama sola a procesar.php y muestra el veredicto con riesgo y
+duración. Botón «📋 Ver facturas» abre el listado. Versión 0.4.0-sprint4
+(versionCode 2, dos dependencias nuevas: recyclerview y cardview).
+
+8.5 EL DESEMPLIEGUE (desplegar.ps1) — y un hallazgo importante
+──────────────────────────────────────────────────────────────
+El servidor web NO lee C:\CPP sino su copia en C:\laragon\www\cpp… y esa
+copia ¡NO TENÍA la carpeta motores\! (en S1 solo se publicaron api\ y
+database\). Sin motores\ junto a api\, las rutas relativas de config.php
+apuntarían a la nada. desplegar.ps1 sincroniza api + database + motores
+(excepto spike\) con robocopy — corre cada vez que cambie el backend.
+Detalles del día: los .ps1 del proyecto van en ASCII puro (PowerShell 5.1
+lee los sin-BOM como ANSI y los "→/·" rompían el parser) y tras desplegar,
+OPcache de Apache puede servir el PHP viejo unos segundos (se revalida solo).
+
+8.6 EL CHECKPOINT C4 (guion §9.2, ejecutado por HTTP sin errores)
+─────────────────────────────────────────────────────────────────
+   A: factura_01 (Papelería 4,850) vs OC-001 → APROBADA · riesgo 27.3 · 1.21 s
+   B: factura_06 (Papelería 6,200) vs OC-001 → DISCREPANCIA:MONTO_EXCEDE_
+      ORDEN · riesgo 53.0 (¡exactamente el riesgo ALTO que predijo el seed!)
+   C: factura_04 (Papelería 3,680) vs OC-002 (Ferretería) → DISCREPANCIA:
+      PROVEEDOR_NO_COINCIDE
+   + paso 5 opcional: foto corrupta → MOTOR_OCR_FALLO y queda Pendiente ✔
+   + id=999 → 404 · reprocesar una Aprobada → YA_PROCESADA · batch ✔
+   + KPI-1: POST + procesar inmediato = 2 s (kpi1_ok: true) ✔
+   (La factura B se generó con motores/spike/generar_fotos_demo.py, que
+   reutiliza el dibujante de facturas sintéticas del spike.)
+Falta solo VERLO en el móvil: guion paso a paso en SPRINT4_DEMO.md.
+
+
 ══════════════════════════════════════════════════════════════════════════════
  HISTORIAL DE EXPLICACIONES POR SESIÓN (agregar una entrada por sesión)
 ══════════════════════════════════════════════════════════════════════════════
@@ -544,7 +639,16 @@ por línea de comandos). Los tres cumplen el contrato fijado en el MVP §6.4.
     fechas). C3 superado: contratos §6.4 al 100% y cadena completa
     foto→JSON→riesgo→veredicto idéntica al guion de demo §9.2
     (commit 15fd5ca). Explicado en: PARTE 7.
+  SESIÓN 7 — 30/09/2026, noche (Sprint 4: integración y demo — C4 servidor)
+    Creados api/procesar.php (orquestador RF-B3 con la seguridad R3/RM4 y
+    modo "todas las Pendientes"), desplegar.ps1 (publica api+database+
+    motores en www\cpp; faltaba motores\), ListadoActivity con badges
+    (RF-M5), la llamada al pipeline desde MainActivity tras el envío y la
+    foto demo B (generar_fotos_demo.py). Guion §9.2 ejecutado 100% por
+    HTTP sin errores (commit 47060db). Explicado en: PARTE 8.
+
 
 ══════════════════════════════ FIN DE LA EXPLICACIÓN ══════════════════════════
   Archivos hermanos: Bitacora.txt (estado/avances) · INSTALACION.md (S1)
-  · SPRINT2_ANDROID.md (S2) · MVP_CPP.md (plan completo) · PRD_CPP.md (requisitos)
+  · SPRINT2_ANDROID.md (S2) · SPRINT4_DEMO.md (S4) · MVP_CPP.md (plan
+  completo) · PRD_CPP.md (requisitos)
