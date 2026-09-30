@@ -1,0 +1,205 @@
+{
+  "resumen": {
+    "pytesseract": {
+      "precision_pct": 100.0,
+      "tiempo_medio_s": 1.17,
+      "init_modelos_s": 0.0,
+      "lento_para_kpi_30s": false
+    },
+    "easyocr": {
+      "precision_pct": 95.0,
+      "tiempo_medio_s": 29.1,
+      "init_modelos_s": 21.5,
+      "lento_para_kpi_30s": false
+    }
+  },
+  "recomendado": "pytesseract",
+  "detalle": {
+    "pytesseract": {
+      "factura_01.jpg": {
+        "ok": {
+          "folio": true,
+          "fecha": true,
+          "monto": true,
+          "proveedor": true
+        },
+        "extraido": {
+          "proveedor": "PAPELERIA CENTRAL, S.A, DE C.V.",
+          "fecha": "2026-09-20",
+          "monto": 4850.0,
+          "folio": "F-1001"
+        },
+        "seg": 1.17,
+        "error": null
+      },
+      "factura_02.jpg": {
+        "ok": {
+          "folio": true,
+          "fecha": true,
+          "monto": true,
+          "proveedor": true
+        },
+        "extraido": {
+          "proveedor": "FERRETERIA EL TORNILLO, S.A.",
+          "fecha": "2026-09-22",
+          "monto": 6200.0,
+          "folio": "F-2047"
+        },
+        "seg": 1.17,
+        "error": null
+      },
+      "factura_03.jpg": {
+        "ok": {
+          "folio": true,
+          "fecha": true,
+          "monto": true,
+          "proveedor": true
+        },
+        "extraido": {
+          "proveedor": "OFICINAS DEL NORTE, S. DE R.L.",
+          "fecha": "2026-09-25",
+          "monto": 3200.5,
+          "folio": "F-0315"
+        },
+        "seg": 1.12,
+        "error": null
+      },
+      "factura_04.jpg": {
+        "ok": {
+          "folio": true,
+          "fecha": true,
+          "monto": true,
+          "proveedor": true
+        },
+        "extraido": {
+          "proveedor": "PAPELERIA CENTRAL, S.A, DE C.V.",
+          "fecha": "2026-09-12",
+          "monto": 3680.0,
+          "folio": "F-1042"
+        },
+        "seg": 1.32,
+        "error": null
+      },
+      "factura_05.jpg": {
+        "ok": {
+          "folio": true,
+          "fecha": true,
+          "monto": true,
+          "proveedor": true
+        },
+        "extraido": {
+          "proveedor": "FERRETERIA EL TORNILLO, S.A.",
+          "fecha": "2026-09-26",
+          "monto": 8990.0,
+          "folio": "F-2088"
+        },
+        "seg": 1.07,
+        "error": null
+      }
+    },
+    "easyocr": {
+      "factura_01.jpg": {
+        "ok": {
+          "folio": true,
+          "fecha": true,
+          "monto": true,
+          "proveedor": true
+        },
+        "extraido": {
+          "proveedor": "PAPELERIA",
+          "fecha": "2026-09-20",
+          "monto": 4850.0,
+          "folio": "F-1001"
+        },
+        "seg": 30.8,
+        "error": null
+      },
+      "factura_02.jpg": {
+        "ok": {
+          "folio": true,
+          "fecha": true,
+          "monto": true,
+          "proveedor": true
+        },
+        "extraido": {
+          "proveedor": "FERRETERIA EL TORNILLO; S.A.",
+          "fecha": "2026-09-22",
+          "monto": 6200.0,
+          "folio": "F-2047"
+        },
+        "seg": 28.66,
+        "error": null
+      },
+      "factura_03.jpg": {
+        "ok": {
+          "folio": true,
+          "fecha": true,
+          "monto": true,
+          "proveedor": true
+        },
+        "extraido": {
+          "proveedor": "DEL NORTE, S. DE RL",
+          "fecha": "2026-09-25",
+          "monto": 3200.5,
+          "folio": "F-0315"
+        },
+        "seg": 29.69,
+        "error": null
+      },
+      "factura_04.jpg": {
+        "ok": {
+          "folio": true,
+          "fecha": true,
+          "monto": true,
+          "proveedor": true
+        },
+        "extraido": {
+          "proveedor": "PAPELERIA CENTRAL, S.A DE C.V",
+          "fecha": "2026-09-12",
+          "monto": 3680.0,
+          "folio": "F-1042"
+        },
+        "seg": 28.02,
+        "error": null
+      },
+      "factura_05.jpg": {
+        "ok": {
+          "folio": true,
+          "fecha": true,
+          "monto": true,
+          "proveedor": false
+        },
+        "extraido": {
+          "proveedor": "FERRETERHA EL TORNILLO; S.A.",
+          "fecha": "2026-09-26",
+          "monto": 8990.0,
+          "folio": "F-2088"
+        },
+        "seg": 28.35,
+        "error": null
+      }
+    }
+  },
+  "textos_ocr": {
+    "factura_01.jpg": {
+      "pytesseract": "PAPELERÍA CENTRAL, S.A, DE C.v.\n\nAv. Reforma 123, Col. Centro, CDMX\n\nRFC: PCA7990101»ABC\n\nFACTUR A Folio: F-1001\n\nFecha de emisión: 20/09/2026\n\nCONCEPTO CANT. PRECIO IMPORTE\n\nResma Papel carta 759 10 485.00 4,850.00\nTOTAL: $ 4,850.00\n",
+      "easyocr": "PAPELERIA\nAv. Reforma\nS.A DE C.V\nCol.\nRFC:\nCDMX\nPCA-990101-ABC\nFACTURA\nFecha de emisión: 20/09/2026\nFolio: F-1001\nCONCEPTO\nResma\nCANT\nPRECIO\npapel carta\nIMPORTE\n10\n485.00\n4,850.00\nEste documento\nTOTAL:\n$ 4,850.00\nes una\nrepresentación\nimpresa de\nCFDI\nCENTRAL,\n123,\nCentro,\n759\nuna"
+    },
+    "factura_02.jpg": {
+      "pytesseract": "FERRETERÍA EL TORNILLO, S.A.\nCalle 5 de Mayo 45, Guadalajara\nRFC: FTO-020515-XY9\nFACTURA Folio: F-2047\nFecha de emisión: 22/09/2026\nCONCEPTO CANT. PRECIO IMPORTE\nTaladro percutor 650W 2 13,100.00 6,200.00\nTOTAL: $ 6,200.00\n",
+      "easyocr": "FERRETERíA EL TORNILLO; S.A.\nCalle 5 de Mayo 45, Guadalajara\nRFC:\nFTO-020515-XY9\nFolio: F-2047\nFACTU RA\nFecha de emisión: 22/09/2026\nPRECIO\nIMPORTE\nCANT.\nCONCEPTO\n3,100.00\n6,200.00\n2\nTaladro\n650W\nTOTAL:\n$\n6,200.00\nimpresa de una CFDI\nEste documento es una\nrepresentación\npercutor"
+    },
+    "factura_03.jpg": {
+      "pytesseract": "OFICINAS DEL NORTE, S. DE R.L.\n\nBivd. Norte 88, Monterrey\n\nRFC: ODN—871120—OWE\n\nFACTURA Folio: F-0315\nFecha de emisión: 25/09/2026\n\nCONCEPTO CANT. PRECIO IMPORTE\nTóner compatible HP 85A 3 850.00 2,550.00\nCaja de grapas 13 50.04 650.52\n\nTOTAL: $ 3,200.50\n",
+      "easyocr": "DEL NORTE, S. DE RL\nOFICINAS\nBlvd. Norte 88, Monterrey\nRFC: ODN-871120-QWE\nFolio: F-0315\nFACTU RA\nFecha de emisión: 25/09/2026\nIMPORTE\nCANT.\nPRECIO\nCONCEPTO\n850.00\n2,550.00\n3\nTóner\nHP 85A\n50.04\n650.52\n13\nCaja de grapas\nTOTAL:\n$\n3,200.50\nimpresa de una CFDI\nEste documento es una\nrepresentación\ncompatible"
+    },
+    "factura_04.jpg": {
+      "pytesseract": "PAPELERÍA CENTRAL, S.A, DE C.v.\n\nAv. Reforma 123, Col Centro, COMX\n\nRFC: PCA-9901OLABC\n\nFACTURA Folio: F-1042\n\nFecha de emisión: 2026-09-12\n\nCONCEPTO CANT, PRECIO IMPORTE\n\nCuaderno profesional 20 184.00 3,680.00\nTOTAL: $ 3,680.00\n",
+      "easyocr": "PAPELERIA CENTRAL, S.A DE C.V\nReforma\nCol. Centro; CDMX\nRFC:\nPCA-990101-ABC\nFACTURA\nFecha de emisión: 2026-09-12\nFolio: F-1042\nCONCEPTO\nCANT\nPRECIO\nIMPORTE\nCuaderno profesional\n20\n184.00\n3,680.00\nTOTAL:\n$ 3,680.00\nEste documento es una representación\nimpresa de una CFDI\nAv.\n123,"
+    },
+    "factura_05.jpg": {
+      "pytesseract": "FERRETERÍA EL TORNILLO, S.A.\n\nCalle 5 de Mayo 45, Guadalajara\n\nRFC: FTO-020515-XY9\n\nFACTURA Folio: F-2088\nFecha de emisión: 26/09/2026\n\nCONCEPTO CANT. PRECIO IMPORTE\nKit llaves combinadas 24 pzas 1 8,990.00 8,990.00\n\nTOTAL: $ 8,990.00\n",
+      "easyocr": "FERRETERHA EL TORNILLO; S.A.\nCalle 5 de Mayo 45, Guadalajara\nRFC: FTO-020515-XY9\nFolio: F-2088\nFACTU RA\nFecha de emisión: 26/09/2026\nCANT.\nPRECIO\nIMPORTE\nCONCEPTO\n00\n8,990.00\nKit llaves combinadas 24 pzas\nTOTAL:\n$ 8,990.00\n representación impresa de una CFDI\nEste documento es una\n8,990."
+    }
+  }
+}

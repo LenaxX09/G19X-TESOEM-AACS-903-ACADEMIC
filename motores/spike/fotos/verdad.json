@@ -1,0 +1,32 @@
+{
+  "factura_01.jpg": {
+    "proveedor": "PAPELERÍA CENTRAL, S.A. DE C.V.",
+    "fecha": "2026-09-20",
+    "monto": 4850.0,
+    "folio": "F-1001"
+  },
+  "factura_02.jpg": {
+    "proveedor": "FERRETERÍA EL TORNILLO, S.A.",
+    "fecha": "2026-09-22",
+    "monto": 6200.0,
+    "folio": "F-2047"
+  },
+  "factura_03.jpg": {
+    "proveedor": "OFICINAS DEL NORTE, S. DE R.L.",
+    "fecha": "2026-09-25",
+    "monto": 3200.5,
+    "folio": "F-0315"
+  },
+  "factura_04.jpg": {
+    "proveedor": "PAPELERÍA CENTRAL, S.A. DE C.V.",
+    "fecha": "2026-09-12",
+    "monto": 3680.0,
+    "folio": "F-1042"
+  },
+  "factura_05.jpg": {
+    "proveedor": "FERRETERÍA EL TORNILLO, S.A.",
+    "fecha": "2026-09-26",
+    "monto": 8990.0,
+    "folio": "F-2088"
+  }
+}
