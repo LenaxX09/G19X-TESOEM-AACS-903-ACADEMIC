@@ -1,6 +1,6 @@
 ﻿================================================================================
   EXPLICACIÓN DEL PROYECTO CPP — Todo lo construido, explicado paso a paso
-  Última actualización: 28/09/2026 19:45 · Editor: Cline
+  Última actualización: 30/09/2026 16:35 · Editor: Cline
 ================================================================================
 
 ██████ INSTRUCCIÓN PARA CLINE (cómo mantener este archivo) ████████████████████
@@ -366,6 +366,70 @@ DATOS QUE YA ESPERAN A LOS MOTORES:
   · ordenes.php?id=1 ya devuelve historial_promedio del proveedor.
   · La BD ya tiene historial sembrado para calcular riesgos creíbles.
 
+═══════════════════════════════════════════════════════════════════════════════
+ PARTE 6 · EL SPIKE OCR EXPLICADO (30/09/2026) — ¿pytesseract o EasyOCR?
+═══════════════════════════════════════════════════════════════════════════════
+
+6.1 ¿QUÉ ES UN "SPIKE"?
+──────────────────────
+Un spike es un experimento corto que se hace ANTES de comprometerse con
+una tecnología, para responder una pregunta concreta (aquí: "¿qué OCR
+usamos?"). El MVP dejó este spike pendiente desde el Sprint 1 y era el
+paso 0 del Sprint 3. Se resolvió HOY: GANA PYTESSERACT.
+
+6.2 LO QUE SE INSTALÓ (y aprendizajes de la instalación)
+────────────────────────────────────────────────────────
+  · Python 3.12.10 ... no había Python (solo el "alias" del Microsoft
+    Store, que no es Python de verdad). Instalado con winget. Detalle
+    curioso: la instalación silenciosa NO incluye pip; se reparó con
+    "python -m ensurepip --upgrade".
+  · Tesseract-OCR 5.4.0 ... el "cerebro" OCR: pytesseract es solo el
+    puente de Python hacia este .exe. Instalado con winget (build de
+    UB-Mannheim). Trae solo inglés; se le bajó el modelo ESPAÑOL
+    (spa.traineddata, 17.4 MB) del repositorio oficial tessdata.
+  · EasyOCR 1.7.2 ...... el competidor (redes neuronales). Arrastra
+    PyTorch (~2 GB descomprimidos). Solo CPU en este equipo.
+  · GCC MinGW 6.3.0 y SWI-Prolog ya existían — se verificaron sus rutas
+    y quedaron fijadas en api/config.php (era pendiente de S6 Bitácora).
+
+6.3 ¿Y LAS 5 FOTOS REALES? → SINTÉTICAS PERO DEGRADADAS
+──────────────────────────────────────────────────────
+El spike pedía fotos reales, pero en uploads/ solo había 3 JPEG "dummy"
+de 209 bytes (las pruebas C2 validaron conectividad, no contenido).
+Solución: generar_fotos_prueba.py DIBUJA 5 facturas con los datos del
+seed (mismos proveedores y montos: $4,850 riesgo bajo, $6,200 alto...) y
+luego las "estropea" como una foto real: rotación 2-4.5°, inclinación,
+desenfoque, ruido, brillo/contraste variables, JPEG 82-90 y 1600 px de
+lado mayor — exactamente lo que envía la app Android. Cuando existan
+fotos reales: copiarlas a fotos/, actualizar verdad.json y re-ejecutar
+spike_ocr.py (acepta --fotos CARPETA).
+
+6.4 CÓMO SE COMPARÓ (para que el duelo sea justo)
+─────────────────────────────────────────────────
+Cada OCR devuelve TEXTO plano, no campos. Para no favorecer a ninguno,
+ambos pasan por el MISMO extractor (extraer_campos de spike_ocr.py):
+regex que buscan folio, fecha, monto (línea "TOTAL") y proveedor
+(primera línea con letras). Se puntúa contra verdad.json (4 campos × 5
+fotos = 20 puntos) y se cronometra por foto (KPI: ≤ 30 s por factura).
+
+6.5 RESULTADO Y DECISIÓN
+────────────────────────
+   Motor         Precisión       Tiempo/foto   Init de modelos
+   pytesseract   100% (20/20)    1.17 s        0 s
+   easyocr        95% (19/20)   29.10 s       +21.5 s
+  EasyOCR confundió un proveedor ("FERRETERÍA" → "FERRETERHA") y a 29 s
+  por foto se come CASI todo el presupuesto del KPI... ¡y aún faltarían
+  los otros 2 motores y PHP! DECISIÓN: pytesseract. Ficha completa de la
+  decisión y cómo reproducirla: motores/spike/SPIKE_OCR.md.
+
+6.6 QUEDA PARA LA PRÓXIMA SESIÓN
+───────────────────────────────
+Programar procesar_factura.py reutilizando el extractor del spike,
+después clasificador_riesgo.c y regla.pl, y pasar el checkpoint C3.
+Aprendizaje de la jornada: las instalaciones en segundo plano pueden
+morir sin avisar (le pasó a la primera descarga del modelo español);
+siempre verificar que el archivo .traineddata quedó bien descargado.
+
 ══════════════════════════════════════════════════════════════════════════════
  HISTORIAL DE EXPLICACIONES POR SESIÓN (agregar una entrada por sesión)
 ══════════════════════════════════════════════════════════════════════════════
@@ -388,6 +452,14 @@ DATOS QUE YA ESPERAN A LOS MOTORES:
   SESIÓN 4 — 28/09/2026 (documentación de memoria)
     Se crearon Bitacora.txt (registro de estado y avances) y este archivo
     Explicacion.txt (guía didáctica del proyecto). Próximo: Sprint 3.
+
+  SESIÓN 5 — 30/09/2026 (Sprint 3: entorno de motores + spike OCR)
+    Se instaló Python 3.12.10, Tesseract 5.4.0 (+ modelo español) y
+    EasyOCR 1.7.2; se verificaron GCC MinGW y SWI-Prolog (rutas reales
+    fijadas en api/config.php). Spike OCR resuelto con 5 facturas
+    sintéticas degradadas: GANA PYTESSERACT (100% a 1.17 s/foto vs
+    easyocr 95% a 29 s). Código: motores/spike/ (commit f62cfec).
+    Explicado en: PARTE 6.
 
 ══════════════════════════════ FIN DE LA EXPLICACIÓN ══════════════════════════
   Archivos hermanos: Bitacora.txt (estado/avances) · INSTALACION.md (S1)

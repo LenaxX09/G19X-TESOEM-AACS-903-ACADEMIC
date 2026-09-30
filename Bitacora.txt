@@ -1,6 +1,6 @@
 ﻿================================================================================
   BITACORA DEL PROYECTO CPP — Plataforma Inteligente de Cuentas por Pagar
-  Última actualización: 28/09/2026 19:45 · Editor: Cline
+  Última actualización: 30/09/2026 16:35 · Editor: Cline
 ================================================================================
 
 ██████ INSTRUCCIÓN PARA CLINE (LEER PRIMERO EN CADA SESIÓN) ██████████████████
@@ -29,13 +29,18 @@ SECCIÓN 1 · RESUMEN DEL ESTADO ACTUAL (30 segundos)
 
   Proyecto   : Sistema móvil para capturar facturas, extraer datos por OCR,
                calcular riesgo y conciliar contra órdenes de compra.
-  Avance     : ~50% del MVP (Sprints 1 y 2 de 4 COMPLETOS y verificados).
+  Avance     : ~55% del MVP (S1-S2 completos; S3 en curso: entorno listo
+                y spike OCR resuelto).
   Funciona YA: BD MySQL + API PHP (crear/consultar facturas y órdenes) +
                app Android que toma foto y la sube por Volley → queda
                registrada como "Pendiente" en el servidor.
-  Siguiente  : SPRINT 3 — crear los 3 motores: procesar_factura.py (OCR),
+  Nuevo 30/09: entorno de motores instalado/verificado (Python 3.12.10,
+                Tesseract 5.4.0+spa, EasyOCR 1.7.2, GCC, SWI-Prolog) y
+                SPIKE OCR decidido: GANA PYTESSERACT (100% de campos a
+                1.2 s/foto; easyocr 95% a 29 s/foto, roza el KPI de 30 s).
+  Siguiente  : programar los 3 motores: procesar_factura.py (pytesseract),
                clasificador_riesgo.c (riesgo %) y regla.pl (conciliación).
-  Git        : limpio (sin cambios sin confirmar) · 4 commits.
+  Git        : limpio · 7 commits (el de docs de esta sesión suma 8).
 
 
 ────────────────────────────────────────────────────────────────────────────────
@@ -44,13 +49,14 @@ SECCIÓN 2 · ESTADO POR SPRINT (tablero)
 
   [X] S1 — Base ......... BD cpp + seed.sql + API PHP + pruebas C1    ✔ C1 OK
   [X] S2 — Captura ...... App Android cámara + Volley Base64          ✔ C2 OK
-  [ ] S3 — Motores ...... Python OCR + C riesgo + Prolog reglas       → C3
+  [~] S3 — Motores ...... EN CURSO: entorno ✔ + spike OCR ✔          → C3
   [ ] S4 — Integración .. PHP orquesta (shell_exec) + lista Android   → C4 demo
 
-  Avance global del MVP:  [██████████----------] 50%
+  Avance global del MVP:  [███████████---------] 55%
 
-  Nota: dentro de S3 queda pendiente el "spike OCR" (elegir pytesseract
-  vs EasyOCR probando 5 fotos reales) — se pospuso desde S1, hacerlo primero.
+  Nota: spike OCR RESUELTO el 30/09/2026 → GANA PYTESSERACT (100% de
+  campos a 1.17 s/foto; easyocr 95% a 29.1 s). Detalle: motores/spike/
+  SPIKE_OCR.md y resultado_spike.json. Quedan los 3 motores y el C3.
 
 ────────────────────────────────────────────────────────────────────────────────
 SECCIÓN 3 · HISTORIAL DE AVANCES (cronológico)
@@ -125,6 +131,29 @@ SECCIÓN 3 · HISTORIAL DE AVANCES (cronológico)
       abajo). Se actualiza cada sesión con la explicación de los cambios.
       Bitacora = registro de ESTADO · Explicacion = guía para ENTENDER.
 
+  ▸ 30/09/2026 (verificación git) — COMMITS NO REGISTRADOS EN SU MOMENTO
+    - 2dd494f (28/09 19:35) — commit de Bitacora.txt + Explicacion.txt
+      (era el pendiente anotado al final de la Sección 9).
+    - 55afc05 (28/09 20:14) — ajuste de 1 línea en activity_main.xml (UI S2),
+      hecho DESPUÉS de la última actualización de esta bitácora.
+
+  ▸ 30/09/2026 — SPRINT 3 INICIADO: ENTORNO + SPIKE OCR RESUELTO (commit f62cfec)
+    - Instalado/verificado (resolvía el pendiente de la Sección 6): Python
+      3.12.10 (winget; pip requirió ensurepip), Tesseract-OCR 5.4.0 (winget
+      UB-Mannheim) + tessdata\spa.traineddata 17.4 MB, EasyOCR 1.7.2 (torch
+      2.14.1 CPU). GCC MinGW 6.3.0 y SWI-Prolog ya existían en el equipo.
+    - api/config.php: PYTHON_BIN y SWIPL_BIN con rutas REALES + nueva GCC_BIN
+      (con nota para S4: comillas dobles + escapeshellarg en shell_exec).
+    - motores/spike/ NUEVA: generar_fotos_prueba.py (5 facturas sintéticas
+      con datos del seed y degradación tipo foto — no había fotos reales:
+      en uploads/ solo quedaban dummy de 209 B de las pruebas C2),
+      spike_ocr.py (compara ambos motores usando el MISMO extractor de
+      campos), fotos/ + verdad.json, resultado_spike.json y SPIKE_OCR.md.
+    - RESULTADO DEL SPIKE: pytesseract 100% (20/20 campos) a 1.17 s/foto;
+      easyocr 95% (falló 1 proveedor: "FERRETERHA") a 29.10 s/foto + 21.5 s
+      de init de modelos. DECISIÓN: pytesseract (EasyOCR roza el KPI ≤30 s).
+    - Con fotos reales bastará re-ejecutar: python spike_ocr.py --fotos CARPETA.
+
 ────────────────────────────────────────────────────────────────────────────────
 SECCIÓN 4 · QUÉ FUNCIONA HOY (guía rápida de uso)
 ────────────────────────────────────────────────────────────────────────────────
@@ -182,22 +211,26 @@ SECCIÓN 6 · ENTORNO DEL EQUIPO (referencias)
                             datos: C:\laragon\data\mysql-8 · root sin contraseña
     - Web root del proyecto C:\laragon\www\cpp  (copia de C:\CPP)
     - Android Studio ...... JBR 21 · Gradle 8.13 · emulador API 30+
-    - Pendiente por verificar en S3: rutas reales de python, swipl y gcc.
+    - Rutas verificadas el 30/09/2026 (S3) — ya fijadas en api/config.php:
+        Python 3.12.10 . C:\Users\acaba\AppData\Local\Programs\Python\Python312
+        SWI-Prolog ...... C:\Program Files\swipl\bin\swipl.exe
+        GCC MinGW 6.3.0 . C:\MinGW\bin\gcc.exe
+        Tesseract 5.4.0 .. C:\Program Files\Tesseract-OCR (+ spa.traineddata)
 
 
 ────────────────────────────────────────────────────────────────────────────────
 SECCIÓN 7 · SIGUIENTE PASO (empezar por aquí en la próxima sesión)
 ────────────────────────────────────────────────────────────────────────────────
 
-  ★ SPRINT 3 — "MOTORES" (carpeta nueva: C:\CPP\motores\)
+  ★ SPRINT 3 — "MOTORES" (carpeta C:\CPP\motores\) — entorno YA listo
 
-    0) SPIKE OCR: instalar/probar pytesseract vs EasyOCR con 5 fotos reales
-       y elegir uno. (pytesseract necesita Tesseract-OCR instalado en Windows
-       + variable de entorno; EasyOCR es más pesado de instalar.)
-    1) motores/procesar_factura.py
+    0) [✔ HECHO 30/09] SPIKE OCR → GANA PYTESSERACT (100% a 1.17 s/foto).
+       Ver motores/spike/SPIKE_OCR.md. Reutilizar el extractor de campos del
+       spike (extraer_campos de spike_ocr.py) dentro de procesar_factura.py.
+    1) motores/procesar_factura.py (Python + pytesseract, lang spa)
        CLI: python procesar_factura.py <ruta_imagen>
        Salida (1 línea JSON): {"proveedor","fecha","monto","folio"}
-    2) motores/clasificador_riesgo.c  → compilar con GCC a .exe
+    2) motores/clasificador_riesgo.c → compilar con GCC (C:\MinGW\bin) a .exe
        CLI: clasificador_riesgo <monto> <promedio_historial>
        Salida: porcentaje de riesgo (ej. 37.5). Detecta alza vs historial.
     3) motores/regla.pl  (SWI-Prolog)
@@ -229,20 +262,26 @@ SECCIÓN 8 · MAPA DEL REPOSITORIO
     ├── database\seed.sql ...... esquema + datos semilla
     ├── uploads\ ............... imágenes recibidas (se llena en runtime)
     ├── android\ ............... app Android (com.cpp.captura) + build.cmd
-    └── motores\ ............... (AÚN NO EXISTE — se crea en el Sprint 3)
+    └── motores\ ............... spike/ (S3): scripts, fotos de prueba y
+                                 decisión OCR → aquí nacerán los 3 motores
 
 
 ────────────────────────────────────────────────────────────────────────────────
 SECCIÓN 9 · HISTORIAL DE COMMITS
 ────────────────────────────────────────────────────────────────────────────────
 
-    addd9e7  28/09/2026 19:14  Primer sprint - actualizacion 2      (UI S2)
-    6029d4e  28/09/2026 18:18  Sprint 2: app Android (RF-M2, RF-M4)
-    737f586  28/09/2026 17:26  Primer sprint - Primera actualización (S1)
+    f62cfec  30/09/2026 16:17  Sprint 3: spike OCR — entorno motores +
+                               comparativa (elige pytesseract)
+    55afc05  28/09/2026 20:14  actualizacion activity_main.xml        (UI S2)
+    2dd494f  28/09/2026 19:35  Documentos de entendimiento de la
+                               aplicacion y avances (Bitacora+Explicacion)
+    addd9e7  28/09/2026 19:14  Primer sprint - actualizacion 2        (UI S2)
+    6029d4e  28/09/2026 18:18  Sprint 2: app Android captura + envío
+                               Volley (RF-M2, RF-M4)
+    737f586  28/09/2026 17:26  Primer sprint - Primera actualización   (S1)
     c59eb69  23/09/2026 23:09  Primer avance de la documentación
 
-    Convención de commits sugerida: "Sprint N: descripción (RF-xx)".
-    Pendiente: hacer commit de ambos documentos con
-    `git add Bitacora.txt Explicacion.txt && git commit -m "Docs: bitacora y explicacion del proyecto"`.
+    Convención de commits: "Sprint N: descripción (RF-xx)". (El commit
+    "Docs" de esta sesión se anotará en la próxima actualización.)
 
 ════════════════════════════ FIN DE LA BITACORA ═══════════════════════════════
