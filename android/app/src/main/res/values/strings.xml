@@ -2,7 +2,7 @@
 <resources>
     <string name="app_name">Cuentas</string>
     <string name="titulo">CPP · Captura de facturas</string>
-    <string name="subtitulo">Sprint 2 — Cámara + envío Volley/Base64 (RF-M2 / RF-M4)</string>
+    <string name="subtitulo">Sprint 4 — Captura + procesamiento automático (RF-M2 / RF-M4 / RF-B3)</string>
     <string name="hint_servidor">IP del servidor (10.0.2.2 = este PC)</string>
     <string name="btn_cargar">↻ Órdenes</string>
     <string name="btn_foto">📷 Tomar foto</string>
@@ -16,7 +16,25 @@
     <string name="falta_orden">Selecciona primero la orden de compra a la que corresponde la factura.</string>
     <string name="falta_foto">Toma primero la foto de la factura.</string>
     <string name="enviando">Enviando a %1$s …</string>
-    <string name="exito_envio">✅ Factura Nº %1$d registrada como «%2$s» en MySQL.\nVerifícalo con GET /api/facturas.php</string>
-    <string name="exito_toast">Factura enviada</string>
+    <string name="exito_toast">Foto recibida por el servidor</string>
     <string name="respuesta_rara">El servidor respondió, pero sin los datos esperados.</string>
+
+    <!-- Sprint 4: procesamiento (GET /api/procesar.php) y veredicto -->
+    <string name="procesando">🔎 Procesando factura Nº %1$d (OCR → riesgo → conciliación)…</string>
+    <string name="procesada_ok">✅ Factura Nº %1$d APROBADA · riesgo %2$s %% · pipeline %3$s s.\nTambién quedó en el listado (botón «Ver facturas»).</string>
+    <string name="procesada_discrepancia">⚠️ Factura Nº %1$d CON DISCREPANCIA\n%2$s\nriesgo %3$s %% · pipeline %4$s s</string>
+    <string name="procesada_pendiente">⏳ Factura Nº %1$d sigue «%2$s». Reintenta desde el listado.</string>
+    <string name="queda_pendiente">⏳ Factura Nº %1$d registrada, pero quedó «Pendiente»: falló el pipeline (%2$s).\nPulsa «Ver facturas» y actualiza para reintentar.</string>
+
+    <!-- Sprint 4: pantalla de listado (RF-M5) -->
+    <string name="btn_lista">📋 Ver facturas</string>
+    <string name="titulo_listado">CPP · Facturas</string>
+    <string name="subtitulo_listado">Sprint 4 — RF-M5: estado de conciliación por factura</string>
+    <string name="btn_actualizar">↻ Actualizar</string>
+    <string name="sin_facturas">Todavía no hay facturas registradas.\nToma una foto y envíala desde la pantalla de captura.</string>
+    <string name="cargando_listado">Consultando %1$s …</string>
+    <string name="error_listado">No se pudo consultar el listado:\n%1$s</string>
+    <string name="fila_titulo">Nº %1$d · %2$s · %3$s</string>
+    <string name="fila_estado">%1$s · riesgo %2$s %%</string>
+    <string name="fila_motivo">Motivo: %1$s</string>
 </resources>

@@ -10,8 +10,8 @@ android {
         applicationId "com.cpp.captura"
         minSdk 24          // Android 7.0+ (cubre el perfil PyME/bodega del PRD)
         targetSdk 36
-        versionCode 1
-        versionName "0.2.0-sprint2"
+        versionCode 2
+        versionName "0.4.0-sprint4"
     }
 
     buildTypes {
@@ -33,6 +33,9 @@ dependencies {
     // Activity + permisos en tiempo de ejecución + FileProvider para la cámara
     implementation 'androidx.appcompat:appcompat:1.7.0'
     implementation 'androidx.core:core:1.13.1'
+    // Sprint 4: lista de facturas con badges (RF-M5 / RF-M6 simplificado)
+    implementation 'androidx.recyclerview:recyclerview:1.3.2'
+    implementation 'androidx.cardview:cardview:1.0.0'
 
     // Volley arrastra kotlin-stdlib-jdk7/jdk8 1.6.21 que choca con el
     // kotlin-stdlib 1.8.x → se alinean para evitar clases duplicadas

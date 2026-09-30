@@ -103,7 +103,8 @@ function recibirFactura(): void
         'estado'     => 'Pendiente',
         'orden'      => $orden,
         'ruta_imagen' => 'uploads/' . $nombreArchivo,
-        'nota'       => 'El pipeline OCR → riesgo → conciliación (RF-B3) se activa en el Sprint 4.',
+        'nota'       => 'Pipeline listo (Sprint 4): llamar a /api/procesar.php?id='
+                      . $facturaId . ' para ejecutar OCR → riesgo → conciliación (RF-B3).',
     ]);
 }
 // ============================================================================

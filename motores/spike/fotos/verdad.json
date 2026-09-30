@@ -28,5 +28,11 @@
     "fecha": "2026-09-26",
     "monto": 8990.0,
     "folio": "F-2088"
+  },
+  "factura_06.jpg": {
+    "proveedor": "PAPELERÍA CENTRAL, S.A. DE C.V.",
+    "fecha": "2026-09-21",
+    "monto": 6200.0,
+    "folio": "F-1002"
   }
 }

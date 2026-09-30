@@ -53,7 +53,10 @@ import java.util.List;
  *   3. "Enviar": comprime la foto (JPEG 85, lado mayor ≤ 1600 px), la codifica
  *      en Base64 y hace POST /api/facturas.php { orden_id, imagen_base64 }
  *      con Volley (RF-M4, versión simplificada solo Base64).
- *   4. Muestra el resultado: id de factura + estado "Pendiente" (checkpoint C2).
+ *   4. Sprint 4 (RF-B3): al recibir el id, llama a GET /api/procesar.php?id=N
+ *      (OCR → riesgo → conciliación en el servidor) y muestra el veredicto:
+ *      ✅ Aprobada / ⚠️ Con Discrepancia, con % de riesgo y duración.
+ *   5. Botón "Ver facturas" → ListadoActivity con badges (RF-M5).
  *
  * Servidor: Laragon en el PC de desarrollo.
  *   - Emulador:     usar 10.0.2.2 (alias del host local).
@@ -77,6 +80,7 @@ public class MainActivity extends AppCompatActivity {
     private Button btnCargar;
     private Button btnFoto;
     private Button btnEnviar;
+    private Button btnLista;
     private ProgressBar barraEnvio;
     private TextView txtResultado;
 
@@ -121,6 +125,7 @@ public class MainActivity extends AppCompatActivity {
         btnCargar = findViewById(R.id.btnCargar);
         btnFoto = findViewById(R.id.btnFoto);
         btnEnviar = findViewById(R.id.btnEnviar);
+        btnLista = findViewById(R.id.btnLista);
         barraEnvio = findViewById(R.id.barraEnvio);
         txtResultado = findViewById(R.id.txtResultado);
 
@@ -133,6 +138,7 @@ public class MainActivity extends AppCompatActivity {
         });
         btnFoto.setOnClickListener(v -> pedirCamara());
         btnEnviar.setOnClickListener(v -> enviarFactura());
+        btnLista.setOnClickListener(v -> abrirListado());
 
         spOrdenes.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
@@ -324,16 +330,13 @@ public class MainActivity extends AppCompatActivity {
         JsonObjectRequest peticion = new JsonObjectRequest(Request.Method.POST,
                 urlBase() + "/facturas.php", cuerpo,
                 response -> {
-                    finEnvio(true);
                     JSONObject datos = response.optJSONObject("datos");
                     int idFactura = datos != null ? datos.optInt("factura_id", -1) : -1;
-                    String estado = datos != null ? datos.optString("estado", "?") : "?";
                     if ("OK".equals(response.optString("codigo")) && idFactura > 0) {
-                        txtResultado.setTextColor(
-                                ContextCompat.getColor(this, R.color.verde_ok));
-                        txtResultado.setText(getString(R.string.exito_envio, idFactura, estado));
-                        Toast.makeText(this, R.string.exito_toast, Toast.LENGTH_LONG).show();
+                        Toast.makeText(this, R.string.exito_toast, Toast.LENGTH_SHORT).show();
+                        procesarFactura(idFactura);   // Sprint 4: OCR → riesgo → conciliación
                     } else {
+                        finEnvio(false);
                         mostrarError(getString(R.string.respuesta_rara));
                     }
                 },
@@ -353,6 +356,72 @@ public class MainActivity extends AppCompatActivity {
         btnFoto.setEnabled(true);
         // Tras un envío exitoso hay que tomar otra foto para volver a enviar
         btnEnviar.setEnabled(!exito);
+    }
+
+    // ========================================================================
+    // Sprint 4 — Procesar la factura subida (GET /api/procesar.php, RF-B3)
+    // ========================================================================
+
+    /** Abre la pantalla del listado con badges (RF-M5) con el servidor actual. */
+    private void abrirListado() {
+        guardarServidor();
+        startActivity(new Intent(this, ListadoActivity.class)
+                .putExtra("servidor", host()));
+    }
+
+    /** Dispara el pipeline OCR → riesgo → conciliación y muestra el veredicto. */
+    private void procesarFactura(int idFactura) {
+        txtResultado.setTextColor(ContextCompat.getColor(this, R.color.texto_normal));
+        txtResultado.setText(getString(R.string.procesando, idFactura));
+
+        JsonObjectRequest peticion = new JsonObjectRequest(Request.Method.GET,
+                urlBase() + "/procesar.php?id=" + idFactura, null,
+                response -> {
+                    finEnvio(true);
+                    JSONObject datos = response.optJSONObject("datos");
+                    // «YA_PROCESADA» trae la factura anidada; «OK» la trae plana.
+                    if (datos != null && !datos.has("estado") && datos.has("factura")) {
+                        datos = datos.optJSONObject("factura");
+                    }
+                    mostrarVeredicto(idFactura, datos);
+                },
+                error -> {
+                    finEnvio(true);
+                    // RNF-5: la factura NO se perdió; quedó «Pendiente» en el servidor.
+                    txtResultado.setTextColor(ContextCompat.getColor(this, R.color.ambar_alerta));
+                    txtResultado.setText(getString(R.string.queda_pendiente,
+                            idFactura, mensajeVolley(error)));
+                });
+
+        // El pipeline tarda ~1-3 s, pero se deja el margen completo del KPI-1
+        peticion.setRetryPolicy(new DefaultRetryPolicy(TIMEOUT_MS, 0, 1.0f));
+        peticion.setTag(TAG);
+        cola.add(peticion);
+    }
+
+    /** Traduce la respuesta de procesar.php al mensaje final del usuario. */
+    private void mostrarVeredicto(int idFactura, JSONObject datos) {
+        String estado = datos != null ? datos.optString("estado", "") : "";
+        String motivo = datos != null ? datos.optString("motivo_discrepancia", "") : "";
+        String riesgo = datos != null ? datos.optString("riesgo", "?") : "?";
+        String duracion = datos != null ? datos.optString("duracion_pipeline_s", "?") : "?";
+
+        switch (estado) {
+            case "Aprobada":
+                txtResultado.setTextColor(ContextCompat.getColor(this, R.color.verde_ok));
+                txtResultado.setText(getString(R.string.procesada_ok, idFactura, riesgo, duracion));
+                break;
+            case "Con Discrepancia":
+                txtResultado.setTextColor(ContextCompat.getColor(this, R.color.ambar_alerta));
+                txtResultado.setText(getString(R.string.procesada_discrepancia,
+                        idFactura, motivo.isEmpty() ? "?" : motivo, riesgo, duracion));
+                break;
+            default:   // sigue «Pendiente» (p. ej. OCR incompleto) u otro estado
+                txtResultado.setTextColor(ContextCompat.getColor(this, R.color.gris_pendiente));
+                txtResultado.setText(getString(R.string.procesada_pendiente,
+                        idFactura, estado.isEmpty() ? "?" : estado));
+                break;
+        }
     }
 
     // ========================================================================

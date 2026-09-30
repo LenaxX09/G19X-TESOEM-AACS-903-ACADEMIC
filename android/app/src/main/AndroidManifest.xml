@@ -25,6 +25,11 @@
             </intent-filter>
         </activity>
 
+        <!-- Sprint 4: listado de facturas con badges (RF-M5) -->
+        <activity
+            android:name=".ListadoActivity"
+            android:parentActivityName=".MainActivity" />
+
         <!-- Comparte la foto temporal con la app de cámara (RF-M2) -->
         <provider
             android:name="androidx.core.content.FileProvider"

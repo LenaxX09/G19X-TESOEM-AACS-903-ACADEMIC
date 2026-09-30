@@ -77,6 +77,15 @@
             android:enabled="false"
             android:text="@string/btn_enviar" />
 
+        <!-- Sprint 4: listado con badges (RF-M5) -->
+        <Button
+            android:id="@+id/btnLista"
+            style="?android:attr/borderlessButtonStyle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/btn_lista" />
+
         <ProgressBar
             android:id="@+id/barraEnvio"
             android:layout_width="wrap_content"
