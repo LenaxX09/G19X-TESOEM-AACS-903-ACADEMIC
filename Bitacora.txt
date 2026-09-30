@@ -1,6 +1,6 @@
 ﻿================================================================================
   BITACORA DEL PROYECTO CPP — Plataforma Inteligente de Cuentas por Pagar
-  Última actualización: 30/09/2026 16:35 · Editor: Cline
+  Última actualización: 30/09/2026 16:24 · Editor: Cline
 ================================================================================
 
 ██████ INSTRUCCIÓN PARA CLINE (LEER PRIMERO EN CADA SESIÓN) ██████████████████
@@ -40,7 +40,7 @@ SECCIÓN 1 · RESUMEN DEL ESTADO ACTUAL (30 segundos)
                 1.2 s/foto; easyocr 95% a 29 s/foto, roza el KPI de 30 s).
   Siguiente  : programar los 3 motores: procesar_factura.py (pytesseract),
                clasificador_riesgo.c (riesgo %) y regla.pl (conciliación).
-  Git        : limpio · 7 commits (el de docs de esta sesión suma 8).
+  Git        : limpio · 8 commits (docs de la sesión incluidas).
 
 
 ────────────────────────────────────────────────────────────────────────────────
@@ -153,6 +153,9 @@ SECCIÓN 3 · HISTORIAL DE AVANCES (cronológico)
       easyocr 95% (falló 1 proveedor: "FERRETERHA") a 29.10 s/foto + 21.5 s
       de init de modelos. DECISIÓN: pytesseract (EasyOCR roza el KPI ≤30 s).
     - Con fotos reales bastará re-ejecutar: python spike_ocr.py --fotos CARPETA.
+    - Cierre de sesión: Bitacora.txt y Explicacion.txt actualizados (Secciones
+      1/2/3/6/7/8/9 + PARTE 6 + SESIÓN 5) y commiteados en 97e6590, tras el
+      commit del código del spike (f62cfec).
 
 ────────────────────────────────────────────────────────────────────────────────
 SECCIÓN 4 · QUÉ FUNCIONA HOY (guía rápida de uso)
@@ -270,6 +273,8 @@ SECCIÓN 8 · MAPA DEL REPOSITORIO
 SECCIÓN 9 · HISTORIAL DE COMMITS
 ────────────────────────────────────────────────────────────────────────────────
 
+    97e6590  30/09/2026 16:20  Docs: bitacora y explicacion — entorno S3 +
+                               spike OCR (pytesseract)
     f62cfec  30/09/2026 16:17  Sprint 3: spike OCR — entorno motores +
                                comparativa (elige pytesseract)
     55afc05  28/09/2026 20:14  actualizacion activity_main.xml        (UI S2)
@@ -282,6 +287,7 @@ SECCIÓN 9 · HISTORIAL DE COMMITS
     c59eb69  23/09/2026 23:09  Primer avance de la documentación
 
     Convención de commits: "Sprint N: descripción (RF-xx)". (El commit
-    "Docs" de esta sesión se anotará en la próxima actualización.)
+    "Docs" de pulido final de esta sesión se anotará en la próxima
+    actualización, igual que se hizo antes con 2dd494f y 97e6590.)
 
 ════════════════════════════ FIN DE LA BITACORA ═══════════════════════════════
