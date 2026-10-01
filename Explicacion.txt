@@ -1,6 +1,6 @@
 ﻿================================================================================
   EXPLICACIÓN DEL PROYECTO CPP — Todo lo construido, explicado paso a paso
-  Última actualización: 01/10/2026 16:50 · Editor: Cline
+  Última actualización: 01/10/2026 18:00 · Editor: Cline
 ================================================================================
 
 ██████ INSTRUCCIÓN PARA CLINE (cómo mantener este archivo) ████████████████████
@@ -686,8 +686,10 @@ resolución") y/o guiar la captura (marco, enfoque).
 ─────────────────────────
 El MVP demostró la idea de punta a punta. La v1.0 (MVP §13) suma login
 (RF-M1), envío multipart (RF-M4 pleno), filtros y alertas. RF-M3 ya no
-está pendiente: se entregó hoy. Nota de proceso: desde el 01/10 los
-COMMITS los hace el usuario; Cline edita y documenta.
+está pendiente: se entregó hoy. Nota de proceso: los commits los hace el
+usuario SALVO petición explícita — así nació hoy el commit 791a32b
+«primer prototipo del proyecto» (lo ejecutó Cline a petición del
+usuario, con un commit docs detrás). Working tree limpio.
 
 
 ══════════════════════════════════════════════════════════════════════════════
@@ -742,8 +744,10 @@ COMMITS los hace el usuario; Cline edita y documenta.
     reescalado exacto a 1600 px; 0.4.3 rotación EXIF) y RF-M3 adelantado
     (0.5.0: botón «Elegir de galería», ACTION_GET_CONTENT). Hallazgo:
     imágenes de chat (~473×631 px) confunden dígitos en el OCR; con las
-    originales, 100%. C4 DEFINITIVO y checklist 9.1 completo. Commit a
-    cargo del usuario. Explicado en: PARTE 9.
+    originales, 100%. C4 DEFINITIVO y checklist 9.1 completo. Commit del
+    prototipo hecho al cierre de la sesión por Cline a petición explícita
+    del usuario (791a32b «primer prototipo del proyecto»). Explicado en:
+    PARTE 9.
 
 
 ══════════════════════════════ FIN DE LA EXPLICACIÓN ══════════════════════════

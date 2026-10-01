@@ -1,6 +1,6 @@
 ﻿================================================================================
   BITACORA DEL PROYECTO CPP — Plataforma Inteligente de Cuentas por Pagar
-  Última actualización: 01/10/2026 16:45 · Editor: Cline
+  Última actualización: 01/10/2026 18:00 · Editor: Cline
 ================================================================================
 
 ██████ INSTRUCCIÓN PARA CLINE (LEER PRIMERO EN CADA SESIÓN) ██████████████████
@@ -44,10 +44,11 @@ SECCIÓN 1 · RESUMEN DEL ESTADO ACTUAL (30 segundos)
                 imágenes comprimidas por chat (~473×631 px) confunden
                 dígitos en el OCR (2026→2025); con el original (1202×1600)
                 lee 100% incluso tras el JPEG-85 de la app.
-  Siguiente  : MVP CERRADO. 1) Commit a cargo del usuario. 2) Retro H4
-                con 2-3 usuarios. 3) Arrancar la v1.0 (MVP §13).
-  Git        : 13 commits (e2edd42 último) + 5 archivos de la app 0.5.0 sin
-                commit aún → el commit lo hace el usuario (nueva regla).
+  Siguiente  : MVP CERRADO Y COMMITEADO. 1) Retro H4 con 2-3 usuarios.
+                2) Arrancar la v1.0 (MVP §13).
+  Git        : 791a32b «primer prototipo del proyecto» (commit 14, hecho
+                por Cline a petición explícita del usuario) + commit 15 de
+                docs · working tree LIMPIO.
 
 
 ────────────────────────────────────────────────────────────────────────────────
@@ -341,24 +342,20 @@ SECCIÓN 6 · ENTORNO DEL EQUIPO (referencias)
 SECCIÓN 7 · SIGUIENTE PASO (empezar por aquí en la próxima sesión)
 ────────────────────────────────────────────────────────────────────────────────
 
-  ★ POST-MVP: commit del usuario + retroalimentación H4 + arranque v1.0
+  ★ POST-MVP: retroalimentación H4 + arranque v1.0 (commit YA HECHO)
 
-     El MVP quedó CERRADO (C4 definitivo el 01/10/2026 en móvil físico).
-     Siguiente ruta:
+     El MVP quedó CERRADO (C4 definitivo el 01/10/2026 en móvil físico) y
+     COMMITEADO: a petición explícita del usuario, Cline hizo el commit
+     791a32b «primer prototipo del proyecto» (7 archivos: app 0.5.0-sprint4
+     + Bitacora + Explicacion) más un commit docs posterior. Siguiente ruta:
 
-     1) COMMIT (lo hace el usuario; Cline ya no commitea): 5 archivos de
-        la app 0.5.0-sprint4 (manifest <queries> cámara+galería, reescalado
-        exacto, rotación EXIF, botón galería RF-M3, build.gradle vc 6) +
-        Bitacora.txt + Explicacion.txt de hoy. Sugerencia de mensaje:
-        "Sprint 4 cierre: demo C4 en movil fisico - hotfixes de camara,
-        escala y EXIF + RF-M3 galeria (app 0.5.0-sprint4)".
-     2) Retro H4 con 2-3 usuarios ajenos, guion SPRINT4_DEMO.md §3. Usar
+     1) Retro H4 con 2-3 usuarios ajenos, guion SPRINT4_DEMO.md §3. Usar
         las fotos de /sdcard/Download del móvil demo o facturas IMPRESAS:
         la foto-de-monitor NO da resolución suficiente para el OCR.
-     3) Arrancar v1.0 (MVP §13): login RF-M1, multipart RF-M4 pleno,
+     2) Arrancar v1.0 (MVP §13): login RF-M1, multipart RF-M4 pleno,
         filtros, alertas, dashboard. (RF-M3 galería quedó cumplido HOY:
         moverlo de "diferido" a "hecho" al planear la v1.0.)
-     4) Si se clona el repo en otra máquina: recompilar
+     3) Si se clona el repo en otra máquina: recompilar
         clasificador_riesgo.exe (GCC) y el APK (android\build.cmd).
 
      Notas de entorno: tras desplegar.ps1, OPcache puede servir PHP viejo
@@ -395,6 +392,15 @@ SECCIÓN 8 · MAPA DEL REPOSITORIO
 SECCIÓN 9 · HISTORIAL DE COMMITS
 ────────────────────────────────────────────────────────────────────────────────
 
+    (HEAD)   01/10/2026 18:00  Docs: bitacora y explicacion - registrado el
+                               commit del prototipo (791a32b) y regla de
+                               commits afinada (hash de este docs: anotarlo
+                               la próxima sesión, práctica del 4d91a03)
+    791a32b  01/10/2026 17:54  «primer prototipo del proyecto» — cierre C4:
+                               app 0.5.0-sprint4 (manifest <queries>, build.
+                               gradle vc 6, MainActivity, layout, strings)
+                               + Bitacora + Explicacion. Commiteado por
+                               Cline a petición explícita del usuario.
     e2edd42  30/09/2026 17:45  Docs: bitacora y explicacion - S4 completo
                                (PARTE 8) + guia SPRINT4_DEMO.md - C4
                                servidor superado
@@ -418,8 +424,11 @@ SECCIÓN 9 · HISTORIAL DE COMMITS
     737f586  28/09/2026 17:26  Primer sprint - Primera actualización   (S1)
     c59eb69  23/09/2026 23:09  Primer avance de la documentación
 
-     Convención de commits: "Sprint N: descripción (RF-xx)".
-     NOTA (01/10/2026): a partir de hoy los commits los hace EL USUARIO;
-     Cline edita archivos y actualiza docs, pero NO commitea. El commit
-     del cierre C4 (app 0.5.0-sprint4 + docs) está pendiente a su cargo.
+     Convención de commits: "Sprint N: descripción (RF-xx)" (excepción
+     aceptada: el commit del prototipo, con el mensaje que pidió el
+     usuario).
+     NOTA (01/10/2026, actualizada esa misma tarde): por defecto los
+     commits los hace EL USUARIO; Cline commitea SOLO cuando el usuario
+     se lo pide de forma explícita — como hoy con 791a32b «primer
+     prototipo del proyecto». Ya NO queda ningún commit pendiente.
 ════════════════════════════ FIN DE LA BITACORA ═══════════════════════════════
