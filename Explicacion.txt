@@ -1,6 +1,6 @@
 ﻿================================================================================
   EXPLICACIÓN DEL PROYECTO CPP — Todo lo construido, explicado paso a paso
-  Última actualización: 30/09/2026 17:45 · Editor: Cline
+  Última actualización: 01/10/2026 16:50 · Editor: Cline
 ================================================================================
 
 ██████ INSTRUCCIÓN PARA CLINE (cómo mantener este archivo) ████████████████████
@@ -598,7 +598,96 @@ OPcache de Apache puede servir el PHP viejo unos segundos (se revalida solo).
    + KPI-1: POST + procesar inmediato = 2 s (kpi1_ok: true) ✔
    (La factura B se generó con motores/spike/generar_fotos_demo.py, que
    reutiliza el dibujante de facturas sintéticas del spike.)
-Falta solo VERLO en el móvil: guion paso a paso en SPRINT4_DEMO.md.
+    ¡Y al cierre del 01/10 YA SE VIO EN EL MÓVIL! → PARTE 9.
+
+
+═══════════════════════════════════════════════════════════════════════════════
+ PARTE 9 · EL CIERRE EN UN MÓVIL REAL (01/10/2026) — la demo C4 y sus lecciones
+═══════════════════════════════════════════════════════════════════════════════
+
+Meta del día: ejecutar el guion §9.2 EN VIVO en un teléfono físico (un
+Motorola conectado por Wi-Fi al PC con Laragon). Se logró: los 4 veredictos
+se vieron en pantalla y el MVP quedó CERRADO. Pero el camino enseñó 4
+lecciones que ningún emulador habría mostrado — esta parte las explica.
+
+9.1 EL "TEATRO" DE LA DEMO (preparación)
+─────────────────────────────────────────
+Un móvil físico ve al PC por la IP del Wi-Fi (192.168.1.48), no por
+"localhost". Hizo falta: Laragon arrancado (mysqld + Apache a mano), una
+regla del firewall de Windows abriendo el puerto 80 (netsh advfirewall),
+el APK instalado por adb y —detalle que ahorra sustos— probar la API con
+CURL DESDE EL TELÉFONO (adb shell) antes de culpar a la app. Las fotos
+demo se copiaron por adb a /sdcard/Download del móvil.
+
+9.2 HOTFIX 0.4.1 — LA CÁMARA "INVISIBLE" (visibilidad de paquetes)
+───────────────────────────────────────────────────────────────────
+Síntoma: al pulsar «Tomar foto», "el dispositivo no tiene ninguna app de
+cámara"... ¡sí la tenía! Causa: desde Android 11, una app con targetSdk
+30+ NO VE el resto de las apps salvo que lo declare en el manifest con
+<queries>. Sin eso, resolveActivity() devuelve null aunque la cámara
+exista. Solución: declarar el intent android.media.action.IMAGE_CAPTURE
+en <queries>. Lección: el emulador suele tener "todo visible" y no
+reproduce este filtro; solo el móvil real lo destapó.
+
+9.3 HOTFIX 0.4.2 — POTENCIAS DE 2 (inSampleSize) VS REESCALADO EXACTO
+──────────────────────────────────────────────────────────────────────
+Síntoma: la foto de la cámara llegaba al servidor a 1024×461 px en vez
+de 1600: el OCR no podía leerla. Causa: decodificar() solo usaba
+inSampleSize, que reduce EN POTENCIAS DE 2 (1, 2, 4, 8…): una foto de
+4128 px cae a 1024, tirando el 36% de la resolución objetivo. Solución:
+muestrear hasta ≤2×maxLado y luego Bitmap.createScaledBitmap al tamaño
+EXACTO. Lección: "reducir un poco" y "reducir a la mitad" no son lo
+mismo cuando el consumidor es un OCR.
+
+9.4 HOTFIX 0.4.3 — EXIF: LA FOTO QUE LLEGA "ACOSTADA"
+─────────────────────────────────────────────────────
+Síntoma: foto tomada en vertical → la app la mostraba horizontal. Causa:
+muchas cámaras guardan los píxeles girados y anotan la rotación en el
+metadato EXIF Orientation... que BitmapFactory IGNORA. Solución:
+orientarSegunExif() (androidx.exifinterface 1.3.7) rota el bitmap ANTES
+de reescalar; el JPEG enviado viaja ya vertical, sin depender de
+metadatos que el servidor no sabría interpretar.
+
+9.5 RF-M3 ADELANTADO — EL BOTÓN «ELEGIR DE GALERÍA»
+───────────────────────────────────────────────────
+El PRD traía RF-M3 (elegir imagen de la galería) diferido a la v1.0; la
+demo lo adelantó porque fotografiar el MONITOR baja demasiado la
+resolución. Cómo funciona: Intent.ACTION_GET_CONTENT tipo image/* abre
+el selector del sistema SIN permisos de almacenamiento (devuelve un
+content:// con lectura temporal); la app copia el stream a su caché y de
+ahí sigue el MISMO pipeline que la cámara (EXIF → 1600 px → JPEG 85 →
+Base64). Un solo pipeline, dos fuentes: buen diseño para la v1.0.
+
+9.6 LA LECCIÓN MÁS GRANDE: LA FUENTE DE LA IMAGEN MANDA
+────────────────────────────────────────────────────────
+Las primeras pruebas fallaron por «FECHA_FUERA_DE_RANGO»: el OCR leía
+"2025" donde decía "2026" y "F-1004" donde decía "F-1001". ¿Los motores
+estaban mal? NO: las imágenes habían pasado por un CHAT (WhatsApp), que
+las re-comprimió a ~473×631 px. Con el archivo ORIGINAL (1202×1600) el
+OCR leyó TODO, incluso después del JPEG-85 de la app (verificado en el
+PC). Moraleja para el producto real: la calidad de captura es parte del
+requisito; en la v1.0 conviene avisar al usuario ("imagen de baja
+resolución") y/o guiar la captura (marco, enfoque).
+
+9.7 EL RESULTADO: TABLA FINAL DE LA DEMO (8 facturas en MySQL)
+───────────────────────────────────────────────────────────────
+  #5  A: Papelería 4,850 vs OC-001 → ✅ APROBADA · 27.3  (caso A exacto)
+  #8  B: Papelería 6,200 vs OC-001 → ⚠️ MONTO_EXCEDE_ORDEN · 53.0 (B exacto)
+  #7  B vs OC-002 (Ferretería)     → ⚠️ PROVEEDOR_NO_COINCIDE · 4.1 (caso C)
+  #1/#4 imágenes de chat degradadas → ⚠️ FECHA_FUERA_DE_RANGO (RNF-5 real)
+  #2/#3 JOYA: la MISMA factura Ferretería 6,200 rechazada contra la orden
+       EQUIVOCADA (#2) y APROBADA contra la correcta (#3): explica el
+       negocio por sí sola.
+  #6  C: Papelería 3,680 vs OC-001 → ✅ APROBADA · 8.3 (su orden correcta)
+  Pipeline 1-3 s por factura (KPI-1 ✔) · listado con badges ✅⚠️⏳ (H4 ✔).
+  Con esto el checklist 9.1 del MVP quedó COMPLETO: C4 DEFINITIVO.
+
+9.8 Y AHORA, ¿QUÉ? (v1.0)
+─────────────────────────
+El MVP demostró la idea de punta a punta. La v1.0 (MVP §13) suma login
+(RF-M1), envío multipart (RF-M4 pleno), filtros y alertas. RF-M3 ya no
+está pendiente: se entregó hoy. Nota de proceso: desde el 01/10 los
+COMMITS los hace el usuario; Cline edita y documenta.
 
 
 ══════════════════════════════════════════════════════════════════════════════
@@ -646,6 +735,15 @@ Falta solo VERLO en el móvil: guion paso a paso en SPRINT4_DEMO.md.
     (RF-M5), la llamada al pipeline desde MainActivity tras el envío y la
     foto demo B (generar_fotos_demo.py). Guion §9.2 ejecutado 100% por
     HTTP sin errores (commit 47060db). Explicado en: PARTE 8.
+
+  SESIÓN 8 — 01/10/2026 (demo C4 en móvil físico: CIERRE DEL MVP)
+    Guion §9.2 corrido EN VIVO en un Motorola (Wi-Fi → 192.168.1.48).
+    En el camino: 3 hotfixes de la app (0.4.1 <queries> cámara; 0.4.2
+    reescalado exacto a 1600 px; 0.4.3 rotación EXIF) y RF-M3 adelantado
+    (0.5.0: botón «Elegir de galería», ACTION_GET_CONTENT). Hallazgo:
+    imágenes de chat (~473×631 px) confunden dígitos en el OCR; con las
+    originales, 100%. C4 DEFINITIVO y checklist 9.1 completo. Commit a
+    cargo del usuario. Explicado en: PARTE 9.
 
 
 ══════════════════════════════ FIN DE LA EXPLICACIÓN ══════════════════════════

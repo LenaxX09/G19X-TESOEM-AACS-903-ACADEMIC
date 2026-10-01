@@ -1,6 +1,6 @@
 ﻿================================================================================
   BITACORA DEL PROYECTO CPP — Plataforma Inteligente de Cuentas por Pagar
-  Última actualización: 30/09/2026 17:35 · Editor: Cline
+  Última actualización: 01/10/2026 16:45 · Editor: Cline
 ================================================================================
 
 ██████ INSTRUCCIÓN PARA CLINE (LEER PRIMERO EN CADA SESIÓN) ██████████████████
@@ -29,27 +29,25 @@ SECCIÓN 1 · RESUMEN DEL ESTADO ACTUAL (30 segundos)
 
   Proyecto   : Sistema móvil para capturar facturas, extraer datos por OCR,
                calcular riesgo y conciliar contra órdenes de compra.
-  Avance     : ~95% del MVP (S1-S4 completos; el guion §9.2 corre 100% por
-               HTTP —solo falta verlo en el móvil para cerrar C4).
-  Funciona YA: TODO el pipeline AUTOMÁTICO por HTTP: POST foto →
-               procesar.php?id → OCR → riesgo → Prolog → MySQL actualizado
-               con veredicto en ~1.2 s (KPI-1 ✔). Guion §9.2 verificado:
-               A=APROBADA 27.3 · B=MONTO_EXCEDE 53.0 · C=NO_COINCIDE.
-               RNF-5 probado (foto corrupta → queda «Pendiente»). App
-               0.4.0-sprint4: al enviar dispara el pipeline y muestra el
-               veredicto; pantalla LISTA con badges ✅⚠️⏳ (compilada OK).
-  Nuevo 30/09: (tarde-noche) SPRINT 4: api/procesar.php (orquestador RF-B3
-               con escapeshellarg/casts), desplegar.ps1 (www←api+db+motores),
-               ListadoActivity + badges, foto demo B (Papelería 6,200).
-               (tarde) los 3 MOTORES creados y verificados - C3 SUPERADO:
-                 procesar_factura.py (JSON 5/5 fotos), clasificador_riesgo.c
-                 (.exe; riesgos 27.3/53.0 según lo previsto) y regla.pl
-                 (6/6 veredictos). Cadena completa = guion de demo §9.2.
-                (primera parte) spike OCR → pytesseract + entorno.
-  Siguiente  : Instalar app-debug.apk 0.4.0 en emulador/móvil → DEMO VISUAL
-               C4 (guion 9.2 en vivo, pasos en SPRINT4_DEMO.md) - cerrar el MVP,
-               recoger retroalimentacion H4 y arrancar la v1.0 (MVP secc. 13).
-  Git        : limpio · 12 commits (47060db = Sprint 4; docs pend. anotar).
+  Avance     : 100% del MVP — S1-S4 completos y C4 DEFINITIVO: guion §9.2
+                corrido EN VIVO en un móvil físico (Motorola, Wi-Fi LAN).
+  Funciona YA: TODO el pipeline visto en el móvil: foto/galería → POST →
+                OCR → riesgo → Prolog → veredicto con badges en 1-3 s.
+                Trío §9.2 exacto: A=✅APROBADA 27.3 · B=⚠️MONTO_EXCEDE 53.0
+                · PROVEEDOR_NO_COINCIDE ✔ + FECHA_FUERA_DE_RANGO (RNF-5).
+  Nuevo 01/10: DEMO C4 en móvil físico + 3 hotfixes y 1 función nueva:
+                0.4.1 <queries> cámara (Android 11+ no la veía) · 0.4.2
+                reescalado EXACTO a 1600 px (inSampleSize va por potencias
+                de 2) · 0.4.3 rotación EXIF (fotos verticales acostadas) ·
+                0.5.0 RF-M3 ADELANTADO: botón «Elegir de galería» (la foto
+                de monitor no da resolución para el OCR). Hallazgo clave:
+                imágenes comprimidas por chat (~473×631 px) confunden
+                dígitos en el OCR (2026→2025); con el original (1202×1600)
+                lee 100% incluso tras el JPEG-85 de la app.
+  Siguiente  : MVP CERRADO. 1) Commit a cargo del usuario. 2) Retro H4
+                con 2-3 usuarios. 3) Arrancar la v1.0 (MVP §13).
+  Git        : 13 commits (e2edd42 último) + 5 archivos de la app 0.5.0 sin
+                commit aún → el commit lo hace el usuario (nueva regla).
 
 
 ────────────────────────────────────────────────────────────────────────────────
@@ -59,14 +57,14 @@ SECCIÓN 2 · ESTADO POR SPRINT (tablero)
   [X] S1 — Base ......... BD cpp + seed.sql + API PHP + pruebas C1    ✔ C1 OK
   [X] S2 — Captura ...... App Android cámara + Volley Base64          ✔ C2 OK
   [X] S3 — Motores ...... OCR Python + riesgo C + Prolog ✔           ✔ C3 OK
-  [X] S4 — Integración .. procesar.php orquesta + lista con badges   ✔ C4*
+  [X] S4 — Integración .. procesar.php orquesta + lista con badges   ✔ C4 OK
 
-  Avance global del MVP:  [██████████████████--] 95%
+  Avance global del MVP:  [████████████████████] 100%
 
-  Nota: C4* — guion §9.2 ejecutado 100% por HTTP sin errores (A/B/C, fallo
-  simulado RNF-5, idempotencia, modo batch, KPI-1 de 1-2 s). Falta
-  ÚNICAMENTE la pasada visual en el móvil/emulador con el APK 0.4.0-sprint4
-  (guion en SPRINT4_DEMO.md §3) para marcar el checklist 9.1 completo.
+  Nota: C4 DEFINITIVO (01/10) — guion §9.2 visto EN VIVO en móvil físico
+  (Motorola por Wi-Fi): A=✅ 27.3 · B=⚠️ 53.0 MONTO_EXCEDE · PROVEEDOR_NO_
+  COINCIDE · listado con badges (H4). De paso: FECHA_FUERA_DE_RANGO real y
+  2 aprobadas más (8.3 / 4.1). Checklist 9.1 COMPLETO.
 
 ────────────────────────────────────────────────────────────────────────────────
 SECCIÓN 3 · HISTORIAL DE AVANCES (cronológico)
@@ -226,6 +224,48 @@ SECCIÓN 3 · HISTORIAL DE AVANCES (cronológico)
       procesar.php viejo unos segundos tras el deploy (se revalida solo);
       (4) CardView usa atributos app:, no android: (error de linking).
 
+  ▸ 01/10/2026 — DEMO C4 EN MÓVIL FÍSICO: CIERRE DEL MVP (app 0.5.0) — C4 DEFINITIVO
+    - Entorno: Laragon arrancado a mano (mysqld 8.0.30 + httpd 2.4.54),
+      regla firewall "CPP Apache 80" creada (netsh, admin). Motorola
+      ZY22K2DGCZ por Wi-Fi (teléfono 192.168.1.49 ↔ PC 192.168.1.48);
+      conectividad verificada con curl DESDE el teléfono. Demo reseteada
+      (TRUNCATE facturas + uploads limpio) para empezar de cero.
+    - HOTFIX 0.4.1 (vc 3): Android 11+ filtra la visibilidad de paquetes
+      → resolveActivity() no veía la cámara del móvil ("sin app de
+      cámara"). Solución: <queries> con android.media.action.IMAGE_CAPTURE
+      en el manifest (la cámara com.motorola.camera3 SÍ existía).
+    - HOTFIX 0.4.2 (vc 4): decodificar() usaba SOLO inSampleSize (reduce
+      en POTENCIAS DE 2): una foto de 4128 px quedaba en 1024 en vez de
+      1600 (36% de resolución perdida). Ahora: muestreo hasta ≤2×maxLado
+      + createScaledBitmap EXACTO a maxLado.
+    - HOTFIX 0.4.3 (vc 5): BitmapFactory IGNORA el tag EXIF Orientation →
+      las fotos verticales de la cámara llegaban acostadas. Solución:
+      orientarSegunExif() con androidx.exifinterface 1.3.7 (rota 90/180/
+      270 antes de reescalar; el JPEG viaja ya vertical).
+    - RF-M3 ADELANTADO de la v1.0 (0.5.0, vc 6): botón «🖼️ Elegir de
+      galería» (ACTION_GET_CONTENT image/* + CATEGORY_OPENABLE, sin
+      permisos de almacenamiento): copia el stream a cache/ y sigue el
+      MISMO pipeline (EXIF → 1600 px → JPEG 85). <queries> para
+      GET_CONTENT en manifest. Motivo: fotografiar el monitor baja
+      demasiado la resolución para el OCR. Fotos demo empujadas por adb
+      a /sdcard/Download (A/B/C).
+    - HALLAZGO (lección para el PRD): las imágenes que pasan por chat
+      (WhatsApp) llegan a ~473×631 px y el OCR confunde dígitos parecidos
+      (2026→2025, F-1001→F-1004) → FECHA_FUERA_DE_RANGO espurio. Con el
+      archivo ORIGINAL (1202×1600) el OCR lee 100%, incluso tras el
+      JPEG-85 de la app (verificado en PC). Regla: la fuente de la imagen
+      importa más que el motor.
+    - RESULTADO FINAL en MySQL (8 facturas): trío §9.2 EXACTO con
+      imágenes originales → #5 A=✅APROBADA 27.3 · #8 B=⚠️MONTO_EXCEDE_
+      ORDEN 53.0 · #7 ⚠️PROVEEDOR_NO_COINCIDE (4.1). Extras: #1/#4
+      ⚠️FECHA_FUERA_DE_RANGO (imágenes degradadas) · #2/#3 JOYA DE DEMO:
+      la misma factura Ferretería 6,200 rechazada contra la orden
+      EQUIVOCADA y aprobada contra la CORRECTA · #6 ✅ 8.3. Pipeline 1-3 s
+      (KPI-1 ✔), listado con badges visto en el móvil (H4 ✔).
+    - NUEVA REGLA DE TRABAJO: Cline edita archivos y actualiza docs,
+      pero NO HACE COMMITS: los hace el usuario. Pendiente de commit:
+      5 archivos de la app 0.5.0-sprint4 + Bitacora.txt + Explicacion.txt.
+
 ────────────────────────────────────────────────────────────────────────────────
 SECCIÓN 4 · QUÉ FUNCIONA HOY (guía rápida de uso)
 ────────────────────────────────────────────────────────────────────────────────
@@ -301,25 +341,25 @@ SECCIÓN 6 · ENTORNO DEL EQUIPO (referencias)
 SECCIÓN 7 · SIGUIENTE PASO (empezar por aquí en la próxima sesión)
 ────────────────────────────────────────────────────────────────────────────────
 
-  ★ CIERRE DEL MVP — demo VISUAL en el móvil + retroalimentación (H4)
+  ★ POST-MVP: commit del usuario + retroalimentación H4 + arranque v1.0
 
-     El servidor ya ejecuta TODO el guion §9.2 sin errores (ver historial de
-     hoy en la Sección 3). Solo falta verlo en la pantalla del móvil:
+     El MVP quedó CERRADO (C4 definitivo el 01/10/2026 en móvil físico).
+     Siguiente ruta:
 
-     1) Instalar android\app\build\outputs\apk\debug\app-debug.apk
-        (0.4.0-sprint4) en el emulador o móvil físico. Servidor: 10.0.2.2
-        (emulador) o IP LAN del PC (móvil físico + firewall puerto 80).
-     2) DEMO (guion §9.2, detalle en SPRINT4_DEMO.md §3):
-          A: Papelería 4,850 vs OC-001  → «✅ APROBADA · riesgo 27.3 %»
-          B: Papelería 6,200 vs OC-001  → «⚠️ MONTO_EXCEDE_ORDEN · 53.0 %»
-          C: factura de OTRO proveedor  → «⚠️ PROVEEDOR_NO_COINCIDE»
-          Botón «📋 Ver facturas» → lista con badges ✅⚠️⏳ (valida H4).
-          (Fotos sintéticas listas en motores\spike\fotos\: 01=A, 06=B, 04=C.)
-     3) Si algo queda «Pendiente»: es RNF-5 a propósito → en el listado,
-        «↻ Actualizar» reintenta (procesar.php sin ?id procesa todas).
-     4) Con la demo vista: marcar C4 definitivo (Sección 2 y checklist
-        MVP 9.1) y recoger retroalimentación de 2-3 usuarios (H4). Después
-        arrancar la v1.0 según MVP §13 (login, galería, filtros, alertas…).
+     1) COMMIT (lo hace el usuario; Cline ya no commitea): 5 archivos de
+        la app 0.5.0-sprint4 (manifest <queries> cámara+galería, reescalado
+        exacto, rotación EXIF, botón galería RF-M3, build.gradle vc 6) +
+        Bitacora.txt + Explicacion.txt de hoy. Sugerencia de mensaje:
+        "Sprint 4 cierre: demo C4 en movil fisico - hotfixes de camara,
+        escala y EXIF + RF-M3 galeria (app 0.5.0-sprint4)".
+     2) Retro H4 con 2-3 usuarios ajenos, guion SPRINT4_DEMO.md §3. Usar
+        las fotos de /sdcard/Download del móvil demo o facturas IMPRESAS:
+        la foto-de-monitor NO da resolución suficiente para el OCR.
+     3) Arrancar v1.0 (MVP §13): login RF-M1, multipart RF-M4 pleno,
+        filtros, alertas, dashboard. (RF-M3 galería quedó cumplido HOY:
+        moverlo de "diferido" a "hecho" al planear la v1.0.)
+     4) Si se clona el repo en otra máquina: recompilar
+        clasificador_riesgo.exe (GCC) y el APK (android\build.cmd).
 
      Notas de entorno: tras desplegar.ps1, OPcache puede servir PHP viejo
      2-3 s (reintentar). mysqld de Laragon se arrancó a mano esta sesión
@@ -355,6 +395,9 @@ SECCIÓN 8 · MAPA DEL REPOSITORIO
 SECCIÓN 9 · HISTORIAL DE COMMITS
 ────────────────────────────────────────────────────────────────────────────────
 
+    e2edd42  30/09/2026 17:45  Docs: bitacora y explicacion - S4 completo
+                               (PARTE 8) + guia SPRINT4_DEMO.md - C4
+                               servidor superado
     47060db  30/09/2026 17:20  Sprint 4: PHP orquesta los 3 motores
                                (procesar.php) + listado Android con badges
                                (RF-B3, RF-M5) — C4 servidor verificado
@@ -375,8 +418,8 @@ SECCIÓN 9 · HISTORIAL DE COMMITS
     737f586  28/09/2026 17:26  Primer sprint - Primera actualización   (S1)
     c59eb69  23/09/2026 23:09  Primer avance de la documentación
 
-    Convención de commits: "Sprint N: descripción (RF-xx)". (El commit
-    "Docs" de pulido final de esta sesión se anotará en la próxima
-    actualización, igual que se hizo antes con 2dd494f y 97e6590.)
-
+     Convención de commits: "Sprint N: descripción (RF-xx)".
+     NOTA (01/10/2026): a partir de hoy los commits los hace EL USUARIO;
+     Cline edita archivos y actualiza docs, pero NO commitea. El commit
+     del cierre C4 (app 0.5.0-sprint4 + docs) está pendiente a su cargo.
 ════════════════════════════ FIN DE LA BITACORA ═══════════════════════════════

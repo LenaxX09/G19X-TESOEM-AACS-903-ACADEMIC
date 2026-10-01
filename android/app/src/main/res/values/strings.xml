@@ -2,15 +2,18 @@
 <resources>
     <string name="app_name">Cuentas</string>
     <string name="titulo">CPP · Captura de facturas</string>
-    <string name="subtitulo">Sprint 4 — Captura + procesamiento automático (RF-M2 / RF-M4 / RF-B3)</string>
+    <string name="subtitulo">Sprint 4 — Captura + procesamiento automático (RF-M2 / RF-M3 / RF-M4 / RF-B3)</string>
     <string name="hint_servidor">IP del servidor (10.0.2.2 = este PC)</string>
     <string name="btn_cargar">↻ Órdenes</string>
     <string name="btn_foto">📷 Tomar foto</string>
+    <string name="btn_galeria">🖼️ Elegir de galería</string>
     <string name="btn_enviar">📤 Enviar factura</string>
     <string name="desc_preview">Vista previa de la factura fotografiada</string>
 
     <string name="sin_permiso_camara">Sin permiso de cámara no se puede fotografiar la factura (RF-M2).</string>
     <string name="sin_app_camara">Este dispositivo no tiene ninguna app de cámara.</string>
+    <string name="sin_app_galeria">Este dispositivo no tiene selector de imágenes.</string>
+    <string name="galeria_error">No se pudo leer la imagen elegida de la galería.</string>
     <string name="foto_cancelada">Captura cancelada: no se tomó ninguna foto.</string>
     <string name="foto_lista">Foto lista. Verifica la orden y pulsa «Enviar factura».</string>
     <string name="falta_orden">Selecciona primero la orden de compra a la que corresponde la factura.</string>

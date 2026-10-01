@@ -1,11 +1,13 @@
 package com.cpp.captura;
 
 import android.Manifest;
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
@@ -25,6 +27,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
+import androidx.exifinterface.media.ExifInterface;
 
 import com.android.volley.DefaultRetryPolicy;
 import com.android.volley.NetworkResponse;
@@ -40,7 +43,9 @@ import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -50,6 +55,9 @@ import java.util.List;
  * Flujo:
  *   1. Carga las órdenes de compra desde GET /api/ordenes.php.
  *   2. "Tomar foto": MediaStore.ACTION_IMAGE_CAPTURE + FileProvider (RF-M2).
+ *      2b. "Elegir de galería": ACTION_GET_CONTENT image/* (RF-M3, adelantado
+ *          de la v1.0 en la demo con móvil real: fotografiar la pantalla baja
+ *          demasiado la resolución y el OCR no lee fecha/monto).
  *   3. "Enviar": comprime la foto (JPEG 85, lado mayor ≤ 1600 px), la codifica
  *      en Base64 y hace POST /api/facturas.php { orden_id, imagen_base64 }
  *      con Volley (RF-M4, versión simplificada solo Base64).
@@ -67,6 +75,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String TAG = "CPP_S2";
     private static final int REQ_CAMARA = 1001;
     private static final int REQ_PERMISO_CAMARA = 1002;
+    private static final int REQ_GALERIA = 1003;      // RF-M3: ACTION_GET_CONTENT
     private static final int MAX_LADO_ENVIO = 1600;    // px del lado mayor al enviar
     private static final int MAX_LADO_PREVIEW = 1000;  // px del lado mayor en pantalla
     private static final int TIMEOUT_MS = 30000;       // KPI-1: pipeline ≤ 30 s
@@ -79,6 +88,7 @@ public class MainActivity extends AppCompatActivity {
     private ImageView imgPreview;
     private Button btnCargar;
     private Button btnFoto;
+    private Button btnGaleria;
     private Button btnEnviar;
     private Button btnLista;
     private ProgressBar barraEnvio;
@@ -124,6 +134,7 @@ public class MainActivity extends AppCompatActivity {
         imgPreview = findViewById(R.id.imgPreview);
         btnCargar = findViewById(R.id.btnCargar);
         btnFoto = findViewById(R.id.btnFoto);
+        btnGaleria = findViewById(R.id.btnGaleria);
         btnEnviar = findViewById(R.id.btnEnviar);
         btnLista = findViewById(R.id.btnLista);
         barraEnvio = findViewById(R.id.barraEnvio);
@@ -137,6 +148,7 @@ public class MainActivity extends AppCompatActivity {
             cargarOrdenes();
         });
         btnFoto.setOnClickListener(v -> pedirCamara());
+        btnGaleria.setOnClickListener(v -> elegirDeGaleria());
         btnEnviar.setOnClickListener(v -> enviarFactura());
         btnLista.setOnClickListener(v -> abrirListado());
 
@@ -267,9 +279,60 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    // ========================================================================
+    // Galería — RF-M3 (adelantado de la v1.0): ACTION_GET_CONTENT image/*
+    // ========================================================================
+
+    /**
+     * Abre el selector de imágenes del sistema. No requiere permiso de
+     * almacenamiento: el selector devuelve un content:// con lectura temporal.
+     * Motivo del adelanto: fotografiar una factura EN PANTALLA reduce demasiado
+     * la resolución y el OCR no logra leer fecha/monto; con la imagen original
+     * de la galería el OCR recibe los 1600 px completos.
+     */
+    private void elegirDeGaleria() {
+        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("image/*");
+        try {
+            startActivityForResult(intent, REQ_GALERIA);
+        } catch (ActivityNotFoundException e) {
+            Toast.makeText(this, R.string.sin_app_galeria, Toast.LENGTH_LONG).show();
+        }
+    }
+
+    /** Copia la imagen elegida (content://) al archivo de caché de la app. */
+    private boolean copiarDeGaleria(Uri uri) {
+        File destino = new File(getCacheDir(), "captura_factura.jpg");
+        try (InputStream entrada = getContentResolver().openInputStream(uri);
+             FileOutputStream salida = new FileOutputStream(destino)) {
+            byte[] buffer = new byte[8192];
+            int leidos;
+            while ((leidos = entrada.read(buffer)) > 0) {
+                salida.write(buffer, 0, leidos);
+            }
+            archivoFoto = destino;
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQ_GALERIA) {
+            if (resultCode != RESULT_OK || data == null || data.getData() == null) {
+                txtResultado.setText(R.string.foto_cancelada);
+                return;
+            }
+            if (!copiarDeGaleria(data.getData())) {
+                mostrarError(getString(R.string.galeria_error));
+                return;
+            }
+            mostrarFotoLista();
+            return;
+        }
         if (requestCode != REQ_CAMARA) {
             return;
         }
@@ -278,9 +341,14 @@ public class MainActivity extends AppCompatActivity {
             txtResultado.setText(R.string.foto_cancelada);
             return;
         }
+        mostrarFotoLista();
+    }
+
+    /** Muestra la vista previa y habilita «Enviar» (común a cámara y galería). */
+    private void mostrarFotoLista() {
         Bitmap preview = decodificar(archivoFoto, MAX_LADO_PREVIEW);
         if (preview == null) {
-            mostrarError("No se pudo leer la foto capturada.");
+            mostrarError("No se pudo leer la imagen (¿formato no soportado?).");
             return;
         }
         imgPreview.setImageBitmap(preview);
@@ -323,6 +391,7 @@ public class MainActivity extends AppCompatActivity {
 
         btnEnviar.setEnabled(false);
         btnFoto.setEnabled(false);
+        btnGaleria.setEnabled(false);
         barraEnvio.setVisibility(View.VISIBLE);
         txtResultado.setTextColor(ContextCompat.getColor(this, R.color.texto_normal));
         txtResultado.setText(getString(R.string.enviando, host()));
@@ -354,6 +423,7 @@ public class MainActivity extends AppCompatActivity {
     private void finEnvio(boolean exito) {
         barraEnvio.setVisibility(View.GONE);
         btnFoto.setEnabled(true);
+        btnGaleria.setEnabled(true);
         // Tras un envío exitoso hay que tomar otra foto para volver a enviar
         btnEnviar.setEnabled(!exito);
     }
@@ -440,18 +510,74 @@ public class MainActivity extends AppCompatActivity {
         return baos.toByteArray();
     }
 
-    /** Decodifica con inSampleSize para no inflar la memoria. */
+    /**
+     * Decodifica con inSampleSize para no inflar la memoria y reescala EXACTO
+     * al lado mayor pedido.
+     * HOTFIX 0.4.2: inSampleSize solo reduce en POTENCIAS DE 2, de modo que una
+     * foto de cámara de p.ej. 4128x1856 quedaba en 1024x461 (perdía ~36% de la
+     * resolución frente a los 1600 px objetivo) y el OCR no lograba leerla.
+     * Ahora: muestreo hasta <= 2*maxLado y createScaledBitmap al tamaño exacto.
+     */
     private Bitmap decodificar(File archivo, int maxLado) {
         BitmapFactory.Options opciones = new BitmapFactory.Options();
         opciones.inJustDecodeBounds = true;
         BitmapFactory.decodeFile(archivo.getAbsolutePath(), opciones);
         opciones.inSampleSize = 1;
-        while (opciones.outWidth / opciones.inSampleSize > maxLado
-                || opciones.outHeight / opciones.inSampleSize > maxLado) {
+        while (opciones.outWidth / opciones.inSampleSize > maxLado * 2
+                || opciones.outHeight / opciones.inSampleSize > maxLado * 2) {
             opciones.inSampleSize *= 2;
         }
         opciones.inJustDecodeBounds = false;
-        return BitmapFactory.decodeFile(archivo.getAbsolutePath(), opciones);
+        Bitmap bitmap = BitmapFactory.decodeFile(archivo.getAbsolutePath(), opciones);
+        if (bitmap == null) {
+            return null;
+        }
+        bitmap = orientarSegunExif(archivo, bitmap);
+        int ladoMayor = Math.max(bitmap.getWidth(), bitmap.getHeight());
+        if (ladoMayor > maxLado) {
+            float escala = (float) maxLado / ladoMayor;
+            Bitmap escalado = Bitmap.createScaledBitmap(bitmap,
+                    Math.round(bitmap.getWidth() * escala),
+                    Math.round(bitmap.getHeight() * escala), true);
+            if (escalado != bitmap) {
+                bitmap.recycle();
+            }
+            return escalado;
+        }
+        return bitmap;
+    }
+
+    /**
+     * HOTFIX 0.4.3: muchas cámaras (p.ej. Motorola) guardan el pixel-array en
+     * landscape y anotan la rotación en el tag EXIF Orientation. BitmapFactory
+     * IGNORA ese tag, así que la foto tomada en vertical llegaba "acostada" a
+     * la vista previa y al servidor (el OCR no puede leer texto girado 90°).
+     * Aquí se rota el bitmap según el EXIF ANTES de reescalar; el JPEG final
+     * viaja ya vertical y sin depender de metadatos.
+     */
+    private Bitmap orientarSegunExif(File archivo, Bitmap bitmap) {
+        try {
+            ExifInterface exif = new ExifInterface(archivo.getAbsolutePath());
+            int orientacion = exif.getAttributeInt(
+                    ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
+            int grados;
+            switch (orientacion) {
+                case ExifInterface.ORIENTATION_ROTATE_90:  grados = 90;  break;
+                case ExifInterface.ORIENTATION_ROTATE_180: grados = 180; break;
+                case ExifInterface.ORIENTATION_ROTATE_270: grados = 270; break;
+                default: return bitmap; // normal/desconocida: sin rotación
+            }
+            Matrix matriz = new Matrix();
+            matriz.postRotate(grados);
+            Bitmap rotado = Bitmap.createBitmap(bitmap, 0, 0,
+                    bitmap.getWidth(), bitmap.getHeight(), matriz, true);
+            if (rotado != bitmap) {
+                bitmap.recycle();
+            }
+            return rotado;
+        } catch (Exception e) {
+            return bitmap; // sin EXIF legible: la foto se devuelve tal cual
+        }
     }
 
     /** Extrae el "mensaje" del JSON de error producido por responder.php, si existe. */

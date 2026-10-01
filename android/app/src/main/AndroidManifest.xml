@@ -7,6 +7,21 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="true" />
 
+    <!-- HOTFIX 0.4.1: desde Android 11 (API 30) la visibilidad de paquetes está
+         filtrada; sin esta declaración <queries> el sistema oculta la app de
+         cámara a resolveActivity() aunque exista y el botón "Tomar foto"
+         mostraba "sin app de cámara" en móviles reales. -->
+    <queries>
+        <intent>
+            <action android:name="android.media.action.IMAGE_CAPTURE" />
+        </intent>
+        <!-- RF-M3: selector de imágenes del sistema (ACTION_GET_CONTENT) -->
+        <intent>
+            <action android:name="android.intent.action.GET_CONTENT" />
+            <data android:mimeType="image/*" />
+        </intent>
+    </queries>
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
