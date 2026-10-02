@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 0.6.0-ui · Círculo pastel detrás del emoji de estado de cada tarjeta
+     (✅/⚠️/⏳); Java aplica el tinte del color correspondiente. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <solid android:color="@color/blanco" />
+</shape>

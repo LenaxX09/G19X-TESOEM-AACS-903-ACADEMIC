@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 0.6.0-ui · Píldora del resumen del listado (✅ n · ⚠️ n · ⏳ n): el tinte
+     pastel lo fija Java con el color de cada estado. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="16dp" />
+    <solid android:color="@color/blanco" />
+</shape>

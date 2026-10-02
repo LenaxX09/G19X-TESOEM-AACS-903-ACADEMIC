@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Cuentas</string>
-    <string name="titulo">CPP · Captura de facturas</string>
-    <string name="subtitulo">Sprint 4 — Captura + procesamiento automático (RF-M2 / RF-M3 / RF-M4 / RF-B3)</string>
+    <string name="titulo">🧾 CPP · Captura de facturas</string>
+    <string name="subtitulo">Fotografía o elige una factura y el sistema la concilia contra la orden seleccionada</string>
     <string name="hint_servidor">IP del servidor (10.0.2.2 = este PC)</string>
     <string name="btn_cargar">↻ Órdenes</string>
-    <string name="btn_foto">📷 Tomar foto</string>
-    <string name="btn_galeria">🖼️ Elegir de galería</string>
+    <string name="btn_foto">📷 Cámara</string>
+    <string name="btn_galeria">🖼️ Galería</string>
     <string name="btn_enviar">📤 Enviar factura</string>
     <string name="desc_preview">Vista previa de la factura fotografiada</string>
 
@@ -31,8 +31,8 @@
 
     <!-- Sprint 4: pantalla de listado (RF-M5) -->
     <string name="btn_lista">📋 Ver facturas</string>
-    <string name="titulo_listado">CPP · Facturas</string>
-    <string name="subtitulo_listado">Sprint 4 — RF-M5: estado de conciliación por factura</string>
+    <string name="titulo_listado">🗂️ CPP · Facturas</string>
+    <string name="subtitulo_listado">Resultado de la conciliación por factura</string>
     <string name="btn_actualizar">↻ Actualizar</string>
     <string name="sin_facturas">Todavía no hay facturas registradas.\nToma una foto y envíala desde la pantalla de captura.</string>
     <string name="cargando_listado">Consultando %1$s …</string>
@@ -40,4 +40,18 @@
     <string name="fila_titulo">Nº %1$d · %2$s · %3$s</string>
     <string name="fila_estado">%1$s · riesgo %2$s %%</string>
     <string name="fila_motivo">Motivo: %1$s</string>
+
+    <!-- 0.6.0-ui: pulido de la interfaz -->
+    <string name="label_orden">Orden de compra a conciliar</string>
+    <string name="hint_preview">📷 La foto de la factura aparecerá aquí</string>
+    <string name="chip_ok">✅ %1$d aprobadas</string>
+    <string name="chip_alerta">⚠️ %1$d con discrepancia</string>
+    <string name="chip_pend">⏳ %1$d pendientes</string>
+
+    <!-- 0.7.2-ui: qué HACER ante cada discrepancia (apoyo para la retro H4) -->
+    <string name="ayuda_monto_excede">💡 El monto cobrado supera el autorizado en la orden. Pide nota de crédito o factura corregida al proveedor, o amplía la orden.</string>
+    <string name="ayuda_riesgo_alto">💡 El monto se aleja del historial de este proveedor. Confirma con compras que el precio nuevo sea legítimo.</string>
+    <string name="ayuda_proveedor">💡 ¿Elegiste la orden correcta? Reenvía la misma foto contra la orden de este proveedor.</string>
+    <string name="ayuda_fecha">💡 Verifica la fecha leída: las fotos de baja calidad hacen que el OCR confunda dígitos. Reenvía con una foto nítida.</string>
+    <string name="ayuda_generica">💡 Revisa los datos extraídos (monto, folio, proveedor) y vuelve a enviar la foto si algo se leyó mal.</string>
 </resources>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 0.6.0-ui · Marcador de posición de la vista previa: marco punteado que
+     indica dónde aparecerá la foto (desaparece al capturar/elegir una). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="12dp" />
+    <solid android:color="@color/fondo_preview" />
+    <stroke
+        android:width="2dp"
+        android:color="@color/gris_pendiente"
+        android:dashWidth="6dp"
+        android:dashGap="4dp" />
+</shape>

@@ -1,6 +1,6 @@
 ﻿================================================================================
   BITACORA DEL PROYECTO CPP — Plataforma Inteligente de Cuentas por Pagar
-  Última actualización: 01/10/2026 18:00 · Editor: Cline
+  Última actualización: 01/10/2026 18:50 · Editor: Cline
 ================================================================================
 
 ██████ INSTRUCCIÓN PARA CLINE (LEER PRIMERO EN CADA SESIÓN) ██████████████████
@@ -44,11 +44,17 @@ SECCIÓN 1 · RESUMEN DEL ESTADO ACTUAL (30 segundos)
                 imágenes comprimidas por chat (~473×631 px) confunden
                 dígitos en el OCR (2026→2025); con el original (1202×1600)
                 lee 100% incluso tras el JPEG-85 de la app.
-  Siguiente  : MVP CERRADO Y COMMITEADO. 1) Retro H4 con 2-3 usuarios.
-                2) Arrancar la v1.0 (MVP §13).
-  Git        : 791a32b «primer prototipo del proyecto» (commit 14, hecho
-                por Cline a petición explícita del usuario) + commit 15 de
-                docs · working tree LIMPIO.
+  UI 01/10 pm: app 0.7.2-ui (4 pasadas) — veredicto en panel pastel, chips
+                ✅/⚠️/⏳, banner degradado azul, fondo lavanda, píldoras,
+                sin ActionBar «Cuentas» y, en las tarjetas con ⚠️, CONSEJO
+                accionable por motivo (💡 qué hacer: reenviar contra la
+                orden correcta, foto nítida, nota de crédito…). APK vc 10.
+  Siguiente  : 1) Probar 0.7.2-ui en el móvil y commitear (19 archivos).
+                2) Retro H4 con 2-3 usuarios. 3) Arrancar la v1.0 (MVP §13).
+  Git        : 791a32b «primer prototipo del proyecto» (commit 14) +
+                dce2f21 docs (15) · PENDIENTE del usuario: paquete UI
+                0.7.2-ui. Sugerencia: "UI 0.7.2: veredicto en panel, chips
+                resumen, banner, sin ActionBar, modo oscuro y ayudas".
 
 
 ────────────────────────────────────────────────────────────────────────────────
@@ -267,6 +273,62 @@ SECCIÓN 3 · HISTORIAL DE AVANCES (cronológico)
       pero NO HACE COMMITS: los hace el usuario. Pendiente de commit:
       5 archivos de la app 0.5.0-sprint4 + Bitacora.txt + Explicacion.txt.
 
+  ▸ 01/10/2026 (18:20) — INTERFAZ PULIDA: APP 0.6.0-ui (pendiente de commit)
+    - Motivación: dejar la UI lista para la retro H4 (adiós jerga de
+      sprint en pantalla, jerarquía visual clara) SIN tocar lógica de
+      red, pipeline ni dependencias (sigue AppCompat, cero libs nuevas).
+    - Captura: título wrap_content (antes 144dp fijos) + subtítulo
+      humano · 📷 Cámara y 🖼️ Galería LADO A LADO (contorno primario) ·
+      «Enviar factura» como BOTÓN PRINCIPAL (acento, texto blanco) ·
+      vista previa con MARCADOR punteado que desaparece al capturar ·
+      resultado como PANEL de veredicto: fondo pastel del color del
+      estado (helper nuevo MainActivity.pintarResultado(color, mensaje),
+      tinte al ~20% de alfa sobre drawable/bg_veredicto.xml).
+    - Listado: fila de CHIPS de resumen «✅ n aprobadas · ⚠️ n con
+      discrepancia · ⏳ n pendientes» (helpers pintarResumen/pintarChip;
+      cada chip se oculta si su conteo es 0) · badge de cada tarjeta
+      dentro de un CÍRCULO pastel · motivo en rojo cursiva · 12dp.
+    - Modo oscuro: values-night/colors.xml aclara SOLO primario/texto/
+      bordes; los pasteles se quedan claros (funcionan como tarjetas).
+    - 16 archivos (8 modificados + 8 recursos nuevos) · mismos IDs clave
+      y endpoints · versionCode 7 / versionName «0.6.0-ui».
+    - APK recompilado y verificado: BUILD SUCCESSFUL (assembleDebug).
+
+  ▸ 01/10/2026 (18:30) — MÁS COLOR: APP 0.7.0-ui (pendiente de commit)
+    - A petición del usuario («más color, no tan simple»), segunda capa
+      visual sobre la 0.6.0: banner degradado azul (primario → índigo
+      #3949AB) con títulos blancos y emoji 🧾/🗂️ en AMBAS pantallas ·
+      fondo de pantalla lavanda #F4F6FB (noche: #121212) · selector de
+      órdenes dentro de tarjeta blanca suave · «Ver facturas» y
+      «Actualizar» como botones-píldora azul pastel · barras de progreso
+      tintadas del acento.
+    - 3 drawables nuevos (bg_encabezado, bg_tarjeta_blanca, bg_boton_pill)
+      + 4 colores (fondo_pantalla, primario_pastel, primario_medio,
+      blanco_90) y sus variantes noche · total paquete UI: 19 archivos.
+    - APK recompilado y verificado: BUILD SUCCESSFUL (vc 8, 0.7.0-ui).
+
+  ▸ 01/10/2026 (18:40) — AJUSTE POR FEEDBACK: 0.7.1-ui SIN ACTIONBAR
+    - El usuario reportó el nombre de la app «encimado» al texto que
+      explica el funcionamiento: en realidad era el apilado ActionBar
+      «Cuentas» (tema DarkActionBar) + título del banner + subtítulo.
+    - Solución: MainActivity OCULTA el ActionBar completo (el banner ya
+      identifica la app y se gana ~56dp de contenido) · ListadoActivity
+      oculta SOLO el título (conserva la flecha ⬅ de regreso) · banner
+      compacto en ambas pantallas (título 24→20sp, subtítulo con más
+      margen superior, padding 20→16dp).
+    - APK recompilado y verificado: BUILD SUCCESSFUL (vc 9, 0.7.1-ui).
+
+  ▸ 01/10/2026 (18:50) — AYUDAS ACCIONABLES POR MOTIVO: 0.7.2-ui
+    - Bajo el motivo (rojo cursiva) de cada tarjeta ⚠️ ahora hay una línea
+      💡 gris que dice QUÉ HACER: MONTO_EXCEDE→nota de crédito/ampliar
+      orden · RIESGO_ALTO→confirmar precio con compras · PROVEEDOR_NO_
+      COINCIDE→reenviar contra la orden correcta · FECHA_FUERA_DE_RANGO→
+      verificar fecha/foto nítida · genérica→revisar datos del OCR.
+    - Implementación: 5 strings nuevos + TextView txtFilaAyuda en
+      fila_factura.xml + helper ListadoActivity.textoAyuda(motivo)
+      (contains(), tolerante si el motivo viaja con prefijo).
+    - APK recompilado y verificado: BUILD SUCCESSFUL (vc 10, 0.7.2-ui).
+
 ────────────────────────────────────────────────────────────────────────────────
 SECCIÓN 4 · QUÉ FUNCIONA HOY (guía rápida de uso)
 ────────────────────────────────────────────────────────────────────────────────
@@ -285,7 +347,7 @@ SECCIÓN 4 · QUÉ FUNCIONA HOY (guía rápida de uso)
 
   App Android (Android Studio → Open → C:\CPP\android):
     - Emulador → Servidor: 10.0.2.2 · Móvil físico → IP LAN del PC.
-    - APK: android\app\build\outputs\apk\debug\app-debug.apk (0.4.0-sprint4)
+    - APK: android\app\build\outputs\apk\debug\app-debug.apk (0.7.2-ui)
       (compilar: cd C:\CPP\android && .\gradlew.bat :app:assembleDebug)
     - Al ENVIAR la foto la app llama sola a procesar.php y muestra el
       veredicto (✅/⚠️/⏳ + riesgo); botón «📋 Ver facturas» → lista con
@@ -381,7 +443,7 @@ SECCIÓN 8 · MAPA DEL REPOSITORIO
     │                          ordenes.php y procesar.php (orquestador S4)
     ├── database\seed.sql ...... esquema + datos semilla
     ├── uploads\ ............... imágenes recibidas (se llena en runtime)
-    ├── android\ ............... app 0.4.0: MainActivity (envía y procesa) +
+    ├── android\ ............... app 0.7.2-ui: MainActivity (envía y procesa) +
     │                          ListadoActivity con badges + build.cmd
     └── motores\ ............... spike/ (pruebas + fotos demo §9.2) + los 3
                                  motores: procesar_factura.py,
@@ -392,10 +454,9 @@ SECCIÓN 8 · MAPA DEL REPOSITORIO
 SECCIÓN 9 · HISTORIAL DE COMMITS
 ────────────────────────────────────────────────────────────────────────────────
 
-    (HEAD)   01/10/2026 18:00  Docs: bitacora y explicacion - registrado el
+    dce2f21  01/10/2026 18:05  Docs: bitacora y explicacion - registrado el
                                commit del prototipo (791a32b) y regla de
-                               commits afinada (hash de este docs: anotarlo
-                               la próxima sesión, práctica del 4d91a03)
+                               commits afinada
     791a32b  01/10/2026 17:54  «primer prototipo del proyecto» — cierre C4:
                                app 0.5.0-sprint4 (manifest <queries>, build.
                                gradle vc 6, MainActivity, layout, strings)

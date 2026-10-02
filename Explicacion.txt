@@ -1,6 +1,6 @@
 ﻿================================================================================
   EXPLICACIÓN DEL PROYECTO CPP — Todo lo construido, explicado paso a paso
-  Última actualización: 01/10/2026 18:00 · Editor: Cline
+  Última actualización: 01/10/2026 18:50 · Editor: Cline
 ================================================================================
 
 ██████ INSTRUCCIÓN PARA CLINE (cómo mantener este archivo) ████████████████████
@@ -689,7 +689,85 @@ El MVP demostró la idea de punta a punta. La v1.0 (MVP §13) suma login
 está pendiente: se entregó hoy. Nota de proceso: los commits los hace el
 usuario SALVO petición explícita — así nació hoy el commit 791a32b
 «primer prototipo del proyecto» (lo ejecutó Cline a petición del
-usuario, con un commit docs detrás). Working tree limpio.
+usuario, con un commit docs detrás).
+
+
+══════════════════════════════════════════════════════════════════════════════
+ PARTE 10 · PULIDO DE LA INTERFAZ — APP 0.6.0-ui (01/10/2026, tarde)
+══════════════════════════════════════════════════════════════════════════════
+
+10.1 QUÉ CAMBIÓ Y POR QUÉ
+─────────────────────────
+La demo C4 demostró que el PIPELINE funciona; la retro H4 aún no se
+hace, pero la interfaz seguía siendo "de desarrollo": subtítulos con
+jerga de sprint (RF-xx), cuatro botones apilados sin jerarquía y un
+resultado que solo cambiaba el COLOR del texto. Antes de poner la app
+frente a usuarios ajenos se pulió la UI (app 0.6.0-ui) SIN tocar la
+lógica de red ni los motores, y respetando la decisión del proyecto de
+no agregar dependencias (nada de Material Components: solo AppCompat +
+drawables XML, que son archivos que describen fondos/bordes).
+
+10.2 PANTALLA DE CAPTURA
+────────────────────────
+ · Encabezado compacto: el título ocupaba 144dp fijos "por si acaso";
+   ahora wrap_content + un subtítulo en español humano.
+ · 📷 Cámara y 🖼️ Galería van LADO A LADO (botones de contorno) y
+   «Enviar factura» es el BOTÓN PRINCIPAL (relleno naranja acento,
+   texto blanco en negrita; gris claro mientras está deshabilitado):
+   la jerarquía visual dice cuál es la acción importante.
+ · La vista previa tiene un MARCADOR DE POSICIÓN punteado ("la foto
+   aparecerá aquí") que desaparece al capturar: se sabe qué hacer
+   antes de hacerlo.
+ · El resultado ya no es texto suelto: es un PANEL de veredicto con
+   fondo pastel del color del estado (verde/ámbar/rojo/gris). Lo pinta
+   el helper nuevo MainActivity.pintarResultado(color, mensaje), que
+   aplica el color al ~20% de alfa sobre el rectángulo blanco
+   redondeado (drawable/bg_veredicto.xml).
+
+10.3 PANTALLA DE LISTADO
+────────────────────────
+ · Fila de CHIPS de resumen bajo el título: "✅ n aprobadas · ⚠️ n con
+   discrepancia · ⏳ n pendientes" (píldoras con tinte pastel; cada chip
+   se oculta si su conteo es 0). El estado global se lee ANTES que las
+   tarjetas — y sirve de antesala a los filtros reales de la v1.0
+   (RF-M6).
+ · El emoji de cada tarjeta viaja dentro de un CÍRCULO pastel del
+   color de su estado, y el motivo de discrepancia se pinta en rojo
+   cursiva: la causa salta a la vista.
+ · Tarjetas con esquinas más redondeadas (12dp).
+
+10.4 MODO OSCURO (values-night/colors.xml)
+──────────────────────────────────────────
+El tema ya era DayNight, pero los títulos navy (#1A237E) eran casi
+ilegibles sobre fondo negro. values-night solo aclara lo que debe
+aclararse (primario, texto, bordes); los pasteles se quedan claros a
+propósito: funcionan como "tarjetas" destacadas también en oscuro.
+
+10.5 MÁS COLOR (0.7.0-ui, misma tarde)
+──────────────────────────────────────
+A petición del usuario se añadió una segunda capa de color sobre lo
+anterior, también sin dependencias: BANNER degradado azul (primario →
+índigo) con título blanco y emojis 🧾/🗂️ en las dos pantallas · FONDO
+lavanda claro (noche: gris casi negro) · el selector de órdenes vive
+dentro de una TARJETA blanca suave · «Ver facturas» y «Actualizar» son
+botones-PÍLDORA azul pastel · las barras de progreso se tiñen del
+acento naranja. Nuevos: bg_encabezado/bg_tarjeta_blanca/bg_boton_pill
++ 4 colores con sus variantes noche.
+Retoque 0.7.1-ui tras feedback: el nombre «se encimaba» al texto
+explicativo —era el ActionBar «Cuentas» apilado sobre el banner—. Se
+OCULTÓ el ActionBar completo en la captura (solo el título en el
+listado, que conserva su flecha ⬅) y el banner se compactó (20sp).
+Y 0.7.2-ui completó el círculo de la H4: cada tarjeta ⚠️ ahora explica
+QUÉ HACER (💡 bajo el motivo), con un consejo distinto según la causa
+(reenviar contra la orden correcta, foto nítida, nota de crédito…).
+
+10.6 LO QUE NO CAMBIÓ
+─────────────────────
+Cero cambios de lógica: mismos endpoints, mismo pipeline, mismos IDs
+de vista clave. Solo 2 helpers nuevos (pintarResultado/pintarResumen)
+en Java. Paquete UI completo: 19 archivos (10 modificados + 11 recursos
+nuevos). APK verificado: BUILD SUCCESSFUL (assembleDebug), versionCode
+8 / versionName "0.7.0-ui". Commit a cargo del usuario.
 
 
 ══════════════════════════════════════════════════════════════════════════════
@@ -748,6 +826,17 @@ usuario, con un commit docs detrás). Working tree limpio.
     prototipo hecho al cierre de la sesión por Cline a petición explícita
     del usuario (791a32b «primer prototipo del proyecto»). Explicado en:
     PARTE 9.
+
+  SESIÓN 9 — 01/10/2026, tarde (interfaz 0.6.0-ui + capa de color 0.7.0-ui)
+    Sin tocar lógica ni dependencias: veredicto como panel pastel
+    (pintarResultado), chips de resumen ✅/⚠️/⏳ (pintarResumen),
+    cámara y galería lado a lado con «Enviar» protagonista, marcador
+    punteado en la vista previa, badge en círculo pastel, motivo en
+    rojo cursiva, values-night y, en una segunda pasada pedida por el
+    usuario, banner degradado azul, fondo lavanda, tarjeta del spinner
+    y botones-píldora; 0.7.1 quitó el ActionBar encimado y 0.7.2 añadió
+    consejos 💡 por motivo de discrepancia. APK OK (vc 10). Commit
+    pendiente del usuario (19 archivos). Explicado en: PARTE 10.
 
 
 ══════════════════════════════ FIN DE LA EXPLICACIÓN ══════════════════════════

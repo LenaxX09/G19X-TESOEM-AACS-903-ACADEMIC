@@ -9,4 +9,15 @@
     <color name="ambar_alerta">#B45309</color>
     <color name="gris_pendiente">#616161</color>
     <color name="fondo_preview">#EEEEEE</color>
+
+    <!-- 0.6.0-ui: interfaz pulida (sin dependencias nuevas, solo drawables) -->
+    <color name="blanco">#FFFFFF</color>
+    <color name="borde_tarjeta">#E0E0E0</color>
+    <color name="gris_pendiente_claro">#F5F5F5</color>
+
+    <!-- 0.7.0-ui: más color — banner degradado, fondo lavanda, pastel azul -->
+    <color name="fondo_pantalla">#F4F6FB</color>
+    <color name="primario_pastel">#E8EAF6</color>
+    <color name="primario_medio">#3949AB</color>
+    <color name="blanco_90">#E6FFFFFF</color>
 </resources>

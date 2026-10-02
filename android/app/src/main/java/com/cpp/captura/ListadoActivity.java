@@ -1,5 +1,6 @@
 package com.cpp.captura;
 
+import android.content.res.ColorStateList;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -55,6 +56,9 @@ public class ListadoActivity extends AppCompatActivity {
     private TextView txtEstado;      // "cargando…" / "sin facturas" / errores
     private FacturasAdapter adaptador;
     private String servidor;
+    private TextView chipOk;        // 0.6.0-ui: resumen por estado (✅/⚠️/⏳)
+    private TextView chipAlerta;
+    private TextView chipPend;
 
     private final List<Factura> facturas = new ArrayList<>();
 
@@ -105,7 +109,8 @@ public class ListadoActivity extends AppCompatActivity {
 
         ActionBar barraApp = getSupportActionBar();
         if (barraApp != null) {
-            barraApp.setDisplayHomeAsUpEnabled(true);   // ⬅ volver a captura
+            barraApp.setDisplayHomeAsUpEnabled(true);     // ⬅ volver a captura
+            barraApp.setDisplayShowTitleEnabled(false);   // 0.7.1-ui: sin «Cuentas», ya lo dice el banner
         }
 
         cola = Volley.newRequestQueue(this);
@@ -113,6 +118,9 @@ public class ListadoActivity extends AppCompatActivity {
         barra = findViewById(R.id.barraLista);
         txtEstado = findViewById(R.id.txtEstadoLista);
         Button btnActualizar = findViewById(R.id.btnActualizar);
+        chipOk = findViewById(R.id.chipOk);
+        chipAlerta = findViewById(R.id.chipAlerta);
+        chipPend = findViewById(R.id.chipPend);
 
         adaptador = new FacturasAdapter();
         reciclador.setLayoutManager(new LinearLayoutManager(this));
@@ -167,6 +175,7 @@ public class ListadoActivity extends AppCompatActivity {
                         }
                     }
                     adaptador.notifyDataSetChanged();
+                    pintarResumen();
                     txtEstado.setVisibility(facturas.isEmpty() ? View.VISIBLE : View.GONE);
                     txtEstado.setText(R.string.sin_facturas);
                 },
@@ -174,6 +183,7 @@ public class ListadoActivity extends AppCompatActivity {
                     barra.setVisibility(View.GONE);
                     facturas.clear();
                     adaptador.notifyDataSetChanged();
+                    pintarResumen();   // sin datos → los tres chips se ocultan
                     txtEstado.setVisibility(View.VISIBLE);
                     txtEstado.setTextColor(ContextCompat.getColor(this, R.color.rojo_error));
                     txtEstado.setText(getString(R.string.error_listado, mensajeVolley(error)));
@@ -182,6 +192,58 @@ public class ListadoActivity extends AppCompatActivity {
         peticion.setRetryPolicy(new DefaultRetryPolicy(TIMEOUT_MS, 0, 1.0f));
         peticion.setTag(TAG);
         cola.add(peticion);
+    }
+
+    /**
+     * 0.6.0-ui: resumen superior por estado — una píldora ✅/⚠️/⏳ por cada estado
+     * con conteo mayor que cero (tinte pastel del color del estado). Da el estado
+     * global del día de un vistazo, antes de leer las tarjetas.
+     */
+    private void pintarResumen() {
+        int ok = 0, alerta = 0, pendientes = 0;
+        for (Factura f : facturas) {
+            switch (f.estado) {
+                case "Aprobada":          ok++;         break;
+                case "Con Discrepancia":  alerta++;     break;
+                default:                  pendientes++; break;
+            }
+        }
+        pintarChip(chipOk, R.string.chip_ok, ok, R.color.verde_ok);
+        pintarChip(chipAlerta, R.string.chip_alerta, alerta, R.color.ambar_alerta);
+        pintarChip(chipPend, R.string.chip_pend, pendientes, R.color.gris_pendiente);
+    }
+
+    /** Pinta (u oculta si n=0) una píldora del resumen con su color de estado. */
+    private void pintarChip(TextView chip, int textoRes, int n, int colorRes) {
+        chip.setVisibility(n > 0 ? View.VISIBLE : View.GONE);
+        if (n > 0) {
+            int color = ContextCompat.getColor(this, colorRes);
+            chip.setText(getString(textoRes, n));
+            chip.setTextColor(color);
+            chip.setBackgroundTintList(ColorStateList.valueOf(
+                    (color & 0x00FFFFFF) | 0x33000000));
+        }
+    }
+
+    /**
+     * 0.7.2-ui: convierte el motivo de la discrepancia en un CONSEJO accionable
+     * (qué puede hacer el usuario). La hipótesis H4 pide que el resultado se
+     * entienda sin explicación; con esto también se sabe cómo resolverlo.
+     */
+    private String textoAyuda(String motivo) {
+        int res;
+        if (motivo.contains("MONTO_EXCEDE")) {
+            res = R.string.ayuda_monto_excede;
+        } else if (motivo.contains("RIESGO")) {
+            res = R.string.ayuda_riesgo_alto;
+        } else if (motivo.contains("PROVEEDOR")) {
+            res = R.string.ayuda_proveedor;
+        } else if (motivo.contains("FECHA")) {
+            res = R.string.ayuda_fecha;
+        } else {
+            res = R.string.ayuda_generica;
+        }
+        return getString(res);
     }
 
     /** Igual que en MainActivity: extrae el «mensaje» del JSON de error de la API. */
@@ -237,6 +299,8 @@ public class ListadoActivity extends AppCompatActivity {
             }
 
             fila.badge.setText(badge);
+            fila.badge.setBackgroundTintList(ColorStateList.valueOf(
+                    (color & 0x00FFFFFF) | 0x33000000));  // 0.6.0-ui: círculo pastel
             fila.titulo.setText(getString(R.string.fila_titulo, f.id, f.orden, f.folio));
             fila.monto.setText(f.monto);
             fila.monto.setTextColor(color);
@@ -248,8 +312,13 @@ public class ListadoActivity extends AppCompatActivity {
             if (f.motivo != null) {
                 fila.motivo.setVisibility(View.VISIBLE);
                 fila.motivo.setText(getString(R.string.fila_motivo, f.motivo));
+                fila.motivo.setTextColor(ContextCompat.getColor(
+                        ListadoActivity.this, R.color.rojo_error));
+                fila.ayuda.setVisibility(View.VISIBLE);          // 0.7.2-ui: consejo
+                fila.ayuda.setText(textoAyuda(f.motivo));
             } else {
                 fila.motivo.setVisibility(View.GONE);
+                fila.ayuda.setVisibility(View.GONE);
             }
         }
 
@@ -266,6 +335,7 @@ public class ListadoActivity extends AppCompatActivity {
             final TextView proveedor;
             final TextView estado;
             final TextView motivo;
+            final TextView ayuda;      // 0.7.2-ui: qué hacer ante la discrepancia
 
             Fila(View v) {
                 super(v);
@@ -275,6 +345,7 @@ public class ListadoActivity extends AppCompatActivity {
                 proveedor = v.findViewById(R.id.txtFilaProveedor);
                 estado = v.findViewById(R.id.txtFilaEstado);
                 motivo = v.findViewById(R.id.txtFilaMotivo);
+                ayuda = v.findViewById(R.id.txtFilaAyuda);
             }
         }
     }

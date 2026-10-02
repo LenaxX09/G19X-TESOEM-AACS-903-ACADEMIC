@@ -6,7 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginBottom="8dp"
-    app:cardCornerRadius="8dp"
+    app:cardCornerRadius="12dp"
     app:cardElevation="2dp"
     app:cardUseCompatPadding="true">
 
@@ -19,10 +19,11 @@
 
         <TextView
             android:id="@+id/txtBadge"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textSize="28sp"
-            android:textStyle="bold" />
+            android:layout_width="46dp"
+            android:layout_height="46dp"
+            android:background="@drawable/bg_badge_circulo"
+            android:gravity="center"
+            android:textSize="22sp" />
 
         <LinearLayout
             android:layout_width="0dp"
@@ -72,6 +73,17 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textSize="12sp"
+                android:textStyle="italic"
+                android:visibility="gone" />
+
+            <!-- 0.7.2-ui: qué hacer ante esta discrepancia (lo fija Java) -->
+            <TextView
+                android:id="@+id/txtFilaAyuda"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:textColor="@color/gris_pendiente"
+                android:textSize="11sp"
                 android:visibility="gone" />
         </LinearLayout>
     </LinearLayout>

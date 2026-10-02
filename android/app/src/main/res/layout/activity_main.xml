@@ -7,19 +7,38 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:background="@color/fondo_pantalla"
         android:orientation="vertical"
         android:padding="16dp">
 
-        <!-- Servidor + recarga de órdenes -->
-
-        <TextView
-            android:id="@+id/txtTitulo"
+        <!-- Encabezado (0.7.1-ui): banner compacto — título 20sp y aire
+             antes del subtítulo para que no se sienta "encimado" -->
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="144dp"
-            android:text="@string/titulo"
-            android:textColor="@color/primario"
-            android:textSize="20sp"
-            android:textStyle="bold" />
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:background="@drawable/bg_encabezado"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:id="@+id/txtTitulo"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/titulo"
+                android:textColor="@color/blanco"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/txtSubtitulo"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/subtitulo"
+                android:textColor="@color/blanco_90"
+                android:textSize="12sp" />
+        </LinearLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -35,64 +54,119 @@
                 android:layout_weight="1"
                 android:hint="@string/hint_servidor"
                 android:inputType="text"
-                android:maxLines="1" />
+                android:maxLines="1"
+                android:textSize="13sp" />
 
             <Button
                 android:id="@+id/btnCargar"
+                style="?android:attr/borderlessButtonStyle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
-                android:text="@string/btn_cargar" />
+                android:minWidth="0dp"
+                android:text="@string/btn_cargar"
+                android:textColor="@color/primario" />
         </LinearLayout>
 
-        <!-- Órdenes de compra (GET /api/ordenes.php) -->
-        <Spinner
-            android:id="@+id/spOrdenes"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp" />
-
-        <!-- Vista previa de la foto (RF-M2) -->
-        <ImageView
-            android:id="@+id/imgPreview"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            android:adjustViewBounds="true"
-            android:background="@color/fondo_preview"
-            android:contentDescription="@string/desc_preview"
-            android:maxHeight="320dp" />
-
-        <Button
-            android:id="@+id/btnFoto"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/btn_foto" />
-
-        <!-- RF-M3 (adelantado de v1.0): elegir una imagen existente -->
-        <Button
-            android:id="@+id/btnGaleria"
+        <!-- Órdenes de compra (GET /api/ordenes.php) en tarjeta suave -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:text="@string/btn_galeria" />
+            android:layout_marginBottom="12dp"
+            android:background="@drawable/bg_tarjeta_blanca"
+            android:orientation="vertical"
+            android:padding="12dp">
 
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/label_orden"
+                android:textColor="@color/primario"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <Spinner
+                android:id="@+id/spOrdenes"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+
+        <!-- Vista previa (RF-M2) con marcador de posición punteado (0.6.0-ui) -->
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="240dp"
+            android:layout_marginBottom="12dp">
+
+            <ImageView
+                android:id="@+id/imgPreview"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@color/fondo_preview"
+                android:contentDescription="@string/desc_preview"
+                android:scaleType="fitCenter" />
+
+            <TextView
+                android:id="@+id/txtPreviewHint"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/bg_placeholder_preview"
+                android:gravity="center"
+                android:padding="16dp"
+                android:text="@string/hint_preview"
+                android:textColor="@color/gris_pendiente"
+                android:textSize="14sp" />
+        </FrameLayout>
+
+        <!-- Captura (RF-M2 / RF-M3): cámara y galería lado a lado (0.6.0-ui) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btnFoto"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:background="@drawable/bg_boton_secundario"
+                android:text="@string/btn_foto"
+                android:textColor="@color/primario" />
+
+            <Button
+                android:id="@+id/btnGaleria"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_boton_secundario"
+                android:text="@string/btn_galeria"
+                android:textColor="@color/primario" />
+        </LinearLayout>
+
+        <!-- Acción principal de la pantalla (0.6.0-ui: botón de acento) -->
         <Button
             android:id="@+id/btnEnviar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_boton_principal"
             android:enabled="false"
-            android:text="@string/btn_enviar" />
+            android:text="@string/btn_enviar"
+            android:textColor="@color/texto_boton_principal"
+            android:textStyle="bold" />
 
-        <!-- Sprint 4: listado con badges (RF-M5) -->
+        <!-- Sprint 4: listado con badges (RF-M5) — píldora azul pastel -->
         <Button
             android:id="@+id/btnLista"
             style="?android:attr/borderlessButtonStyle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:text="@string/btn_lista" />
+            android:background="@drawable/bg_boton_pill"
+            android:text="@string/btn_lista"
+            android:textColor="@color/primario"
+            android:textStyle="bold" />
 
         <ProgressBar
             android:id="@+id/barraEnvio"
@@ -100,15 +174,20 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
             android:layout_marginTop="12dp"
+            android:indeterminateTint="@color/acento"
             android:visibility="gone" />
 
+        <!-- Panel del veredicto: fondo pastel por estado (lo fija Java) -->
         <TextView
             android:id="@+id/txtResultado"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
+            android:background="@drawable/bg_veredicto"
+            android:padding="14dp"
             android:textColor="@color/texto_normal"
             android:textIsSelectable="true"
-            android:textSize="14sp" />
+            android:textSize="14sp"
+            android:visibility="gone" />
     </LinearLayout>
 </ScrollView>

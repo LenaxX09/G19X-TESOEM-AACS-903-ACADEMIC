@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 0.6.0-ui · Modo oscuro (DayNight): SOLO los tonos que deben aclararse para
+     seguir leyéndose sobre fondo negro (títulos navy, texto, bordes). Los fondos
+     pastel de chips/veredicto se calculan sobre blanco y se quedan claros a
+     propósito: funcionan como "tarjetas" destacadas también en oscuro. -->
+<resources>
+    <color name="primario">#9FA8DA</color>
+    <color name="texto_normal">#E0E0E0</color>
+    <color name="fondo_preview">#2B2B2B</color>
+    <color name="borde_tarjeta">#3A3A3A</color>
+    <color name="fondo_pantalla">#121212</color>
+    <color name="primario_pastel">#2C3352</color>
+</resources>

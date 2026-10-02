@@ -1,32 +1,97 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- 0.6.0-ui: subtítulo humano + fila de chips con el resumen por estado
+     (✅ aprobadas · ⚠️ con discrepancia · ⏳ pendientes) sobre el listado. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/fondo_pantalla"
     android:orientation="vertical"
     android:padding="12dp">
 
-    <!-- Sprint 4 (RF-M5): listado de facturas con badges de estado -->
-    <TextView
+    <!-- Encabezado (0.7.1-ui): banner compacto como en la captura -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/titulo_listado"
-        android:textColor="@color/primario"
-        android:textSize="20sp"
-        android:textStyle="bold" />
+        android:layout_marginBottom="12dp"
+        android:background="@drawable/bg_encabezado"
+        android:orientation="vertical"
+        android:padding="16dp">
 
-    <TextView
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/titulo_listado"
+            android:textColor="@color/blanco"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="@string/subtitulo_listado"
+            android:textColor="@color/blanco_90"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <!-- Resumen por estado: Java pinta el texto y el tinte pastel de cada chip -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
-        android:text="@string/subtitulo_listado"
-        android:textColor="@color/texto_normal"
-        android:textSize="12sp" />
+        android:layout_marginBottom="4dp"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/chipOk"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_chip_estado"
+            android:paddingStart="12dp"
+            android:paddingTop="6dp"
+            android:paddingEnd="12dp"
+            android:paddingBottom="6dp"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/chipAlerta"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/bg_chip_estado"
+            android:paddingStart="12dp"
+            android:paddingTop="6dp"
+            android:paddingEnd="12dp"
+            android:paddingBottom="6dp"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/chipPend"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/bg_chip_estado"
+            android:paddingStart="12dp"
+            android:paddingTop="6dp"
+            android:paddingEnd="12dp"
+            android:paddingBottom="6dp"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+    </LinearLayout>
 
     <Button
         android:id="@+id/btnActualizar"
+        style="?android:attr/borderlessButtonStyle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/btn_actualizar" />
+        android:background="@drawable/bg_boton_pill"
+        android:text="@string/btn_actualizar"
+        android:textColor="@color/primario"
+        android:textStyle="bold" />
 
     <ProgressBar
         android:id="@+id/barraLista"
@@ -34,6 +99,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
         android:layout_marginTop="12dp"
+        android:indeterminateTint="@color/acento"
         android:visibility="gone" />
 
     <!-- "Cargando…" / "sin facturas" / errores de red -->

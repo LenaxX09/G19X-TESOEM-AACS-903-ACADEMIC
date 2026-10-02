@@ -5,6 +5,7 @@ import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.content.res.ColorStateList;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
@@ -93,6 +94,7 @@ public class MainActivity extends AppCompatActivity {
     private Button btnLista;
     private ProgressBar barraEnvio;
     private TextView txtResultado;
+    private TextView txtPreviewHint;  // 0.6.0-ui: marcador «sin foto» sobre la vista previa
 
     private File archivoFoto;
     private final List<Orden> ordenes = new ArrayList<>();
@@ -126,6 +128,12 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        // 0.7.1-ui: sin ActionBar «Cuentas» — el banner ya identifica la app
+        // y se gana todo ese espacio vertical para el contenido.
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().hide();
+        }
+
         prefs = getPreferences(MODE_PRIVATE);
         cola = Volley.newRequestQueue(this);
 
@@ -139,6 +147,7 @@ public class MainActivity extends AppCompatActivity {
         btnLista = findViewById(R.id.btnLista);
         barraEnvio = findViewById(R.id.barraEnvio);
         txtResultado = findViewById(R.id.txtResultado);
+        txtPreviewHint = findViewById(R.id.txtPreviewHint);
 
         // Servidor por defecto: alias del host local visto desde el emulador.
         txtServidor.setText(prefs.getString("servidor", "10.0.2.2"));
@@ -197,8 +206,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void cargarOrdenes() {
-        txtResultado.setTextColor(ContextCompat.getColor(this, R.color.texto_normal));
-        txtResultado.setText("Consultando órdenes en " + urlBase() + "/ordenes.php …");
+        pintarResultado(R.color.texto_normal,
+                "Consultando órdenes en " + urlBase() + "/ordenes.php …");
 
         JsonObjectRequest peticion = new JsonObjectRequest(Request.Method.GET,
                 urlBase() + "/ordenes.php", null,
@@ -223,8 +232,9 @@ public class MainActivity extends AppCompatActivity {
                         adaptador.setDropDownViewResource(
                                 android.R.layout.simple_spinner_dropdown_item);
                         spOrdenes.setAdapter(adaptador);
-                        txtResultado.setText("Órdenes cargadas: " + ordenes.size()
-                                + ". Ya puedes tomar la foto.");
+                        pintarResultado(R.color.texto_normal,
+                                "Órdenes cargadas: " + ordenes.size()
+                                        + ". Ya puedes tomar la foto.");
                     } catch (JSONException e) {
                         mostrarError("Respuesta inesperada del servidor: " + e.getMessage());
                     }
@@ -323,7 +333,7 @@ public class MainActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQ_GALERIA) {
             if (resultCode != RESULT_OK || data == null || data.getData() == null) {
-                txtResultado.setText(R.string.foto_cancelada);
+                pintarResultado(R.color.gris_pendiente, getString(R.string.foto_cancelada));
                 return;
             }
             if (!copiarDeGaleria(data.getData())) {
@@ -338,7 +348,7 @@ public class MainActivity extends AppCompatActivity {
         }
         if (resultCode != RESULT_OK || archivoFoto == null
                 || !archivoFoto.exists() || archivoFoto.length() == 0) {
-            txtResultado.setText(R.string.foto_cancelada);
+            pintarResultado(R.color.gris_pendiente, getString(R.string.foto_cancelada));
             return;
         }
         mostrarFotoLista();
@@ -352,8 +362,9 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         imgPreview.setImageBitmap(preview);
+        txtPreviewHint.setVisibility(View.GONE);
         btnEnviar.setEnabled(true);
-        txtResultado.setText(R.string.foto_lista);
+        pintarResultado(R.color.texto_normal, getString(R.string.foto_lista));
     }
 
     // ========================================================================
@@ -393,8 +404,7 @@ public class MainActivity extends AppCompatActivity {
         btnFoto.setEnabled(false);
         btnGaleria.setEnabled(false);
         barraEnvio.setVisibility(View.VISIBLE);
-        txtResultado.setTextColor(ContextCompat.getColor(this, R.color.texto_normal));
-        txtResultado.setText(getString(R.string.enviando, host()));
+        pintarResultado(R.color.texto_normal, getString(R.string.enviando, host()));
 
         JsonObjectRequest peticion = new JsonObjectRequest(Request.Method.POST,
                 urlBase() + "/facturas.php", cuerpo,
@@ -441,8 +451,7 @@ public class MainActivity extends AppCompatActivity {
 
     /** Dispara el pipeline OCR → riesgo → conciliación y muestra el veredicto. */
     private void procesarFactura(int idFactura) {
-        txtResultado.setTextColor(ContextCompat.getColor(this, R.color.texto_normal));
-        txtResultado.setText(getString(R.string.procesando, idFactura));
+        pintarResultado(R.color.texto_normal, getString(R.string.procesando, idFactura));
 
         JsonObjectRequest peticion = new JsonObjectRequest(Request.Method.GET,
                 urlBase() + "/procesar.php?id=" + idFactura, null,
@@ -458,8 +467,7 @@ public class MainActivity extends AppCompatActivity {
                 error -> {
                     finEnvio(true);
                     // RNF-5: la factura NO se perdió; quedó «Pendiente» en el servidor.
-                    txtResultado.setTextColor(ContextCompat.getColor(this, R.color.ambar_alerta));
-                    txtResultado.setText(getString(R.string.queda_pendiente,
+                    pintarResultado(R.color.ambar_alerta, getString(R.string.queda_pendiente,
                             idFactura, mensajeVolley(error)));
                 });
 
@@ -478,17 +486,15 @@ public class MainActivity extends AppCompatActivity {
 
         switch (estado) {
             case "Aprobada":
-                txtResultado.setTextColor(ContextCompat.getColor(this, R.color.verde_ok));
-                txtResultado.setText(getString(R.string.procesada_ok, idFactura, riesgo, duracion));
+                pintarResultado(R.color.verde_ok,
+                        getString(R.string.procesada_ok, idFactura, riesgo, duracion));
                 break;
             case "Con Discrepancia":
-                txtResultado.setTextColor(ContextCompat.getColor(this, R.color.ambar_alerta));
-                txtResultado.setText(getString(R.string.procesada_discrepancia,
+                pintarResultado(R.color.ambar_alerta, getString(R.string.procesada_discrepancia,
                         idFactura, motivo.isEmpty() ? "?" : motivo, riesgo, duracion));
                 break;
             default:   // sigue «Pendiente» (p. ej. OCR incompleto) u otro estado
-                txtResultado.setTextColor(ContextCompat.getColor(this, R.color.gris_pendiente));
-                txtResultado.setText(getString(R.string.procesada_pendiente,
+                pintarResultado(R.color.gris_pendiente, getString(R.string.procesada_pendiente,
                         idFactura, estado.isEmpty() ? "?" : estado));
                 break;
         }
@@ -599,7 +605,21 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void mostrarError(String mensaje) {
-        txtResultado.setTextColor(ContextCompat.getColor(this, R.color.rojo_error));
+        pintarResultado(R.color.rojo_error, mensaje);
+    }
+
+    /**
+     * 0.6.0-ui: el resultado se pinta como PANEL de veredicto — texto en el color
+     * del estado sobre un fondo pastel del mismo tono (el tinte, al ~20% de alfa,
+     * se aplica al rectángulo redondeado blanco del layout). Así ✅/⚠️/❌ se
+     * distinguen de un vistazo sin leer el texto (hipótesis H4 del MVP).
+     */
+    private void pintarResultado(int colorRes, CharSequence mensaje) {
+        int color = ContextCompat.getColor(this, colorRes);
+        txtResultado.setVisibility(View.VISIBLE);
+        txtResultado.setTextColor(color);
+        txtResultado.setBackgroundTintList(ColorStateList.valueOf(
+                (color & 0x00FFFFFF) | 0x33000000));
         txtResultado.setText(mensaje);
     }
 

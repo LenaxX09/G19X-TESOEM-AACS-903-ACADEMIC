@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 0.6.0-ui · Panel del veredicto (txtResultado): rectángulo blanco redondeado
+     con borde suave. Java le aplica setBackgroundTintList() con el color del
+     estado al ~20% de alfa → fondo pastel verde/ámbar/rojo/gris según el
+     resultado (✅ aprobada · ⚠️ discrepancia · ⏳ pendiente · ❌ error). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="12dp" />
+    <solid android:color="@color/blanco" />
+    <stroke
+        android:width="1dp"
+        android:color="@color/borde_tarjeta" />
+</shape>

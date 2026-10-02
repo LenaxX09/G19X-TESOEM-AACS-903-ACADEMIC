@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 0.7.0-ui · Banner de encabezado: degradado azul (primario → índigo) con
+     esquinas inferiores redondeadas. Da identidad de color a la app en las
+     dos pantallas sin agregar dependencias. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <gradient
+        android:angle="315"
+        android:endColor="@color/primario_medio"
+        android:startColor="@color/primario" />
+    <corners
+        android:bottomLeftRadius="20dp"
+        android:bottomRightRadius="20dp" />
+</shape>

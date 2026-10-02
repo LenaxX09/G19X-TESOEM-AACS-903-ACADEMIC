@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 0.6.0-ui · Botón principal («Enviar factura»): relleno acento redondeado;
+     deshabilitado pasa a gris claro (no hay foto aún). El color del texto lo
+     acompaña desde res/color/texto_boton_principal.xml. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_enabled="false">
+        <shape android:shape="rectangle">
+            <corners android:radius="10dp" />
+            <solid android:color="@color/gris_pendiente_claro" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="10dp" />
+            <solid android:color="@color/acento" />
+        </shape>
+    </item>
+</selector>
