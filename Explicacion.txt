@@ -1,6 +1,6 @@
 ﻿================================================================================
   EXPLICACIÓN DEL PROYECTO CPP — Todo lo construido, explicado paso a paso
-  Última actualización: 01/10/2026 18:50 · Editor: Cline
+  Última actualización: 05/10/2026 · Editor: Cline (sesión 10: regresión §9.2 + 0.7.2-ui en móvil)
 ================================================================================
 
 ██████ INSTRUCCIÓN PARA CLINE (cómo mantener este archivo) ████████████████████
@@ -835,8 +835,19 @@ nuevos). APK verificado: BUILD SUCCESSFUL (assembleDebug), versionCode
     rojo cursiva, values-night y, en una segunda pasada pedida por el
     usuario, banner degradado azul, fondo lavanda, tarjeta del spinner
     y botones-píldora; 0.7.1 quitó el ActionBar encimado y 0.7.2 añadió
-    consejos 💡 por motivo de discrepancia. APK OK (vc 10). Commit
-    pendiente del usuario (19 archivos). Explicado en: PARTE 10.
+    consejos 💡 por motivo de discrepancia. APK OK (vc 10). El usuario
+    commiteó el paquete como 37136d2 (01/10 18:52). Explicado en: PARTE 10.
+
+  SESIÓN 10 — 05/10/2026 (registro del commit UI + prueba de regresión)
+     Se registró en la Bitácora el commit 37136d2 del usuario (paquete UI
+     0.7.2-ui, 21 archivos). Con el entorno apagado, se arrancaron a mano
+     el MySQL y el Apache de Laragon y se corrió OTRA VEZ el guion §9.2
+     por HTTP: trío exacto (A ✅ 27.3 · B ⚠️ 53.0 MONTO_EXCEDE · C ⚠️
+     PROVEEDOR_NO_COINCIDE · KPI-1 ✓ · idempotencia YA_PROCESADA). Luego
+     el usuario reprodujo el MISMO trío EN EL MÓVIL FÍSICO con la app
+     0.7.2-ui: la interfaz pulida (paneles pastel, chips, consejos 💡)
+     quedó verificada de punta a punta. Sin cambios de código. Próximo:
+     commitear docs, retro H4 y arrancar la v1.0.
 
 
 ══════════════════════════════ FIN DE LA EXPLICACIÓN ══════════════════════════

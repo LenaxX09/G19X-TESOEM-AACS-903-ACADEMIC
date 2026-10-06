@@ -1,6 +1,6 @@
 ﻿================================================================================
   BITACORA DEL PROYECTO CPP — Plataforma Inteligente de Cuentas por Pagar
-  Última actualización: 01/10/2026 18:50 · Editor: Cline
+  Última actualización: 05/10/2026 · Editor: Cline (regresión C4 + 0.7.2-ui verificada en móvil)
 ================================================================================
 
 ██████ INSTRUCCIÓN PARA CLINE (LEER PRIMERO EN CADA SESIÓN) ██████████████████
@@ -49,12 +49,20 @@ SECCIÓN 1 · RESUMEN DEL ESTADO ACTUAL (30 segundos)
                 sin ActionBar «Cuentas» y, en las tarjetas con ⚠️, CONSEJO
                 accionable por motivo (💡 qué hacer: reenviar contra la
                 orden correcta, foto nítida, nota de crédito…). APK vc 10.
-  Siguiente  : 1) Probar 0.7.2-ui en el móvil y commitear (19 archivos).
-                2) Retro H4 con 2-3 usuarios. 3) Arrancar la v1.0 (MVP §13).
-  Git        : 791a32b «primer prototipo del proyecto» (commit 14) +
-                dce2f21 docs (15) · PENDIENTE del usuario: paquete UI
-                0.7.2-ui. Sugerencia: "UI 0.7.2: veredicto en panel, chips
-                resumen, banner, sin ActionBar, modo oscuro y ayudas".
+  Probado    : 05/10 — guion §9.2 de nuevo EXACTO (regresión por HTTP:
+                 #10 ✅ APROBADA 27.3 · #11 ⚠️ MONTO_EXCEDE 53.0 · #12 ⚠️
+                 PROVEEDOR_NO_COINCIDE · KPI-1 ✓ · idempotencia ✓) y el
+                 USUARIO reprodujo el trío en el MÓVIL FÍSICO con la app
+                 0.7.2-ui (paneles pastel, chips y consejos 💡 reales).
+  Siguiente  : 1) Commitear docs de hoy (usuario). 2) Retro H4 con 2-3
+                 usuarios ajenos (SPRINT4_DEMO.md §3). 3) Arrancar la v1.0
+                 (MVP §13).
+  Git        : 37136d2 «actualizacion del prototipo del proyecto» (commit
+                 16, 01/10 18:52, hecho por el USUARIO: paquete UI 0.7.2-ui
+                 de 21 archivos) + dce2f21 docs (15) + 791a32b prototipo
+                 (14) · PENDIENTE del usuario: docs de hoy (registro del
+                 commit 37136d2 + prueba de regresión). Sugerencia: "Docs:
+                 bitacora y explicacion - commit UI y prueba de regresion".
 
 
 ────────────────────────────────────────────────────────────────────────────────
@@ -329,6 +337,35 @@ SECCIÓN 3 · HISTORIAL DE AVANCES (cronológico)
       (contains(), tolerante si el motivo viaja con prefijo).
     - APK recompilado y verificado: BUILD SUCCESSFUL (vc 10, 0.7.2-ui).
 
+  ▸ 05/10/2026 (verificación git) — REGISTRADO EL COMMIT DEL PAQUETE UI
+    - El usuario commiteó el pendiente como 37136d2 «actualizacion del
+      prototipo del proyecto» (01/10 18:52, commit 16 de 16): 21 archivos =
+      19 de la app 0.7.2-ui (MainActivity, ListadoActivity, build.gradle
+      vc 10, layouts, drawables, colores day/night, strings) + Bitacora.txt
+      + Explicacion.txt. git status quedó LIMPIO (verificado esta sesión).
+    - Con esto TODO el trabajo S1-S4 + pulido UI está commiteado. Se
+      registró también en Sección 9 y se ajustó el «Siguiente paso»
+      (Sección 7). Sin cambios de código en esta sesión: solo docs.
+
+  ▸ 05/10/2026 (tarde) — PRUEBA DE REGRESIÓN C4 + 0.7.2-ui VERIFICADA EN MÓVIL
+    - Entorno estaba APAGADO: arrancados a mano el mysqld de Laragon (con
+      su my.ini; datos en C:\laragon\data\mysql-8) y el httpd de Apache
+      2.4.54. Servicios MySQL8x de Windows: detenidos, puerto 3306 libre.
+    - Demo §9.2 por HTTP (guion SPRINT4_DEMO.md §4) — trío EXACTO:
+        #10 factura_01→OC-001 = ✅ APROBADA · 27.3 · 5.94 s (frío)
+        #11 factura_06→OC-001 = ⚠️ MONTO_EXCEDE_ORDEN · 53.0 · 1.08 s
+        #12 factura_04→OC-002 = ⚠️ PROVEEDOR_NO_COINCIDE · 1.15 s
+      KPI-1 ✓ en los 3 · folios F-1001/F-1002/F-1042 leídos (la comparación
+      tolerante aguantó hasta el «S.A, DE C.V.» con coma del OCR) ·
+      reprocesar #10 → YA_PROCESADA · listado con 12 facturas · regla
+      firewall «CPP Apache 80» activa.
+    - El USUARIO reprodujo el MISMO trío en el móvil físico con la app
+      0.7.2-ui: paneles pastel, chips ✅/⚠️/⏳ y consejos 💡 vistos en
+      pantalla. La 0.7.2-ui queda VERIFICADA de punta a punta.
+    - IP LAN del PC hoy: 192.168.1.109 (Wi-Fi; hotspot: 192.168.137.1).
+      Quedan Apache+MySQL corriendo para siguientes pruebas. Sin cambios
+      de código: solo docs.
+
 ────────────────────────────────────────────────────────────────────────────────
 SECCIÓN 4 · QUÉ FUNCIONA HOY (guía rápida de uso)
 ────────────────────────────────────────────────────────────────────────────────
@@ -404,24 +441,29 @@ SECCIÓN 6 · ENTORNO DEL EQUIPO (referencias)
 SECCIÓN 7 · SIGUIENTE PASO (empezar por aquí en la próxima sesión)
 ────────────────────────────────────────────────────────────────────────────────
 
-  ★ POST-MVP: retroalimentación H4 + arranque v1.0 (commit YA HECHO)
+  ★ POST-MVP: commitear docs + retro H4 + arranque v1.0
 
-     El MVP quedó CERRADO (C4 definitivo el 01/10/2026 en móvil físico) y
-     COMMITEADO: a petición explícita del usuario, Cline hizo el commit
-     791a32b «primer prototipo del proyecto» (7 archivos: app 0.5.0-sprint4
-     + Bitacora + Explicacion) más un commit docs posterior. Siguiente ruta:
+     El MVP quedó CERRADO (C4 definitivo 01/10/2026) y COMMITEADO POR
+     COMPLETO: 791a32b prototipo + dce2f21 docs + 37136d2 paquete UI
+     0.7.2-ui (commits del 01/10). HOY 05/10 la 0.7.2-ui quedó VERIFICADA
+     de punta a punta: regresión §9.2 por HTTP exacta y el MISMO trío
+     visto por el usuario en el móvil físico. Único pendiente de commit:
+     los docs de hoy (Bitacora + Explicacion). Siguiente ruta:
 
-     1) Retro H4 con 2-3 usuarios ajenos, guion SPRINT4_DEMO.md §3. Usar
-        las fotos de /sdcard/Download del móvil demo o facturas IMPRESAS:
-        la foto-de-monitor NO da resolución suficiente para el OCR.
-     2) Arrancar v1.0 (MVP §13): login RF-M1, multipart RF-M4 pleno,
-        filtros, alertas, dashboard. (RF-M3 galería quedó cumplido HOY:
-        moverlo de "diferido" a "hecho" al planear la v1.0.)
-     3) Si se clona el repo en otra máquina: recompilar
-        clasificador_riesgo.exe (GCC) y el APK (android\build.cmd).
+      1) Commitear los docs de hoy (usuario). Sugerencia: "Docs: bitacora
+         y explicacion - commit UI y prueba de regresion".
+      2) Retro H4 con 2-3 usuarios ajenos (guion SPRINT4_DEMO.md §3) con
+         el APK 0.7.2-ui ya verificado. Usar las fotos de /sdcard/Download
+         del móvil demo o facturas IMPRESAS: la foto-de-monitor NO da
+         resolución para el OCR. Servidor: IP LAN del PC (hoy 192.168.1.109).
+      3) Arrancar v1.0 (MVP §13): login RF-M1, multipart RF-M4 pleno,
+         filtros, alertas, dashboard. (RF-M3 galería ya está cumplido:
+         moverlo de "diferido" a "hecho" al planear la v1.0.)
+      4) Si se clona el repo en otra máquina: recompilar
+         clasificador_riesgo.exe (GCC) y el APK (android\build.cmd).
 
      Notas de entorno: tras desplegar.ps1, OPcache puede servir PHP viejo
-     2-3 s (reintentar). mysqld de Laragon se arrancó a mano esta sesión
+     2-3 s (reintentar). mysqld de Laragon se arrancó a mano el 01/10 y el 05/10
      (Get-Process mysqld para verificar). El .exe NO está en git
      (motores/.gitignore) — si se clona el repo, recompilar con GCC_BIN:
      gcc -O2 -Wall -o clasificador_riesgo.exe clasificador_riesgo.c
@@ -454,6 +496,12 @@ SECCIÓN 8 · MAPA DEL REPOSITORIO
 SECCIÓN 9 · HISTORIAL DE COMMITS
 ────────────────────────────────────────────────────────────────────────────────
 
+    37136d2  01/10/2026 18:52  «actualizacion del prototipo del proyecto» —
+                               paquete UI 0.7.2-ui: 21 archivos (19 de la
+                               app: veredicto en panel pastel, chips resumen,
+                               banner, sin ActionBar, modo oscuro y consejos
+                               💡 + Bitacora + Explicacion). Commiteado por
+                               el USUARIO (regla por defecto del proyecto).
     dce2f21  01/10/2026 18:05  Docs: bitacora y explicacion - registrado el
                                commit del prototipo (791a32b) y regla de
                                commits afinada
@@ -492,4 +540,6 @@ SECCIÓN 9 · HISTORIAL DE COMMITS
      commits los hace EL USUARIO; Cline commitea SOLO cuando el usuario
      se lo pide de forma explícita — como hoy con 791a32b «primer
      prototipo del proyecto». Ya NO queda ningún commit pendiente.
+     Reverificado el 05/10: el paquete UI 0.7.2-ui también lo commiteó el
+     usuario (37136d2) — git status limpio.
 ════════════════════════════ FIN DE LA BITACORA ═══════════════════════════════
