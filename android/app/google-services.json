@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "527630981963",
+    "project_id": "cpp-facturas",
+    "storage_bucket": "cpp-facturas.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:527630981963:android:1b53b7e7ab38297a9766ce",
+        "android_client_info": {
+          "package_name": "com.cpp.captura"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDnL1rW98iEgcPJSPsUvcYa8yTqrMoM8Bg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/fondo_pantalla"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <!-- Banner con el mismo estilo de las demás pantallas (0.7.0-ui) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="20dp"
+            android:background="@drawable/bg_encabezado"
+            android:orientation="vertical"
+            android:padding="18dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/titulo_login"
+                android:textColor="@color/blanco"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/subtitulo_login"
+                android:textColor="@color/blanco_90"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <!-- Tarjeta con las credenciales (mismo estilo del selector de órdenes).
+             0.8.1-night: texto/hi­nts con color FIJO oscuro porque la tarjeta
+             sigue clara también en modo oscuro (el texto del tema se aclararía
+             y sería ilegible). -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_tarjeta_blanca"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <EditText
+                android:id="@+id/txtServidorLogin"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/hint_servidor"
+                android:inputType="text"
+                android:maxLines="1"
+                android:textColor="@color/texto_sobre_tarjeta"
+                android:textColorHint="@color/hint_sobre_tarjeta"
+                android:textSize="14sp" />
+
+            <EditText
+                android:id="@+id/txtUsuarioLogin"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:hint="@string/hint_usuario"
+                android:inputType="text"
+                android:maxLines="1"
+                android:textColor="@color/texto_sobre_tarjeta"
+                android:textColorHint="@color/hint_sobre_tarjeta" />
+
+            <EditText
+                android:id="@+id/txtPasswordLogin"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:hint="@string/hint_password"
+                android:inputType="textPassword"
+                android:maxLines="1"
+                android:textColor="@color/texto_sobre_tarjeta"
+                android:textColorHint="@color/hint_sobre_tarjeta" />
+        </LinearLayout>
+
+        <!-- Acción principal de la pantalla (mismo botón de acento que «Enviar») -->
+        <Button
+            android:id="@+id/btnEntrar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/bg_boton_principal"
+            android:text="@string/btn_entrar"
+            android:textColor="@color/texto_boton_principal"
+            android:textStyle="bold" />
+
+        <!-- Sprint 6: entrada del proveedor (buzón de notificaciones en vivo) -->
+        <Button
+            android:id="@+id/btnSoyProveedor"
+            style="?android:attr/borderlessButtonStyle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:background="@drawable/bg_boton_pill"
+            android:text="@string/btn_soy_proveedor"
+            android:textColor="@color/primario"
+            android:textStyle="bold" />
+
+        <ProgressBar
+            android:id="@+id/barraLogin"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:indeterminateTint="@color/acento"
+            android:visibility="gone" />
+
+        <!-- Panel de resultado: verdes/rojos de credenciales (mismo pastel del veredicto) -->
+        <TextView
+            android:id="@+id/txtResultadoLogin"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_veredicto"
+            android:padding="14dp"
+            android:textColor="@color/texto_normal"
+            android:textIsSelectable="true"
+            android:textSize="14sp"
+            android:visibility="gone" />
+    </LinearLayout>
+</ScrollView>

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 0.8.1-night · Ítem del Spinner de órdenes (MainActivity): color FIJO
+     oscuro porque el spinner vive dentro de la tarjeta clara (que sigue
+     clara también de noche). El DROPDOWN usa simple_spinner_dropdown_item
+     del tema, que sí se aclara de noche (fondo del popup oscuro). -->
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@android:id/text1"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:ellipsize="marquee"
+    android:paddingStart="4dp"
+    android:paddingTop="6dp"
+    android:paddingEnd="4dp"
+    android:paddingBottom="6dp"
+    android:singleLine="true"
+    android:textColor="@color/texto_sobre_tarjeta"
+    android:textSize="14sp" />
