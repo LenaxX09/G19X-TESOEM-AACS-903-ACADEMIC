@@ -1,6 +1,7 @@
 package com.cpp.captura;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -17,8 +18,17 @@ import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.android.volley.AuthFailureError;
+import com.android.volley.DefaultRetryPolicy;
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
+
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * ProveedorActivity — Sprint 6 (RF-F3/F4): el "buzón" del proveedor.
@@ -36,6 +46,7 @@ public class ProveedorActivity extends AppCompatActivity {
 
     private String proveedor;
     private NotisAdapter adaptador;
+    private RequestQueue cola;                       // Sprint 7: logout con el token
     private final List<FirebaseServicio.Noti> notis = new ArrayList<>();
 
     @Override
@@ -44,10 +55,14 @@ public class ProveedorActivity extends AppCompatActivity {
         setContentView(R.layout.activity_proveedor);
 
         proveedor = getIntent().getStringExtra("proveedor");
+        // Sprint 7 (RF-F7): con cuenta propia, el negocio viene de la sesión.
+        if ((proveedor == null || proveedor.isEmpty()) && Sesion.esProveedor(this)) {
+            proveedor = Sesion.negocio(this);
+        }
         if (proveedor == null || proveedor.isEmpty()) {
             proveedor = FirebaseServicio.proveedorGuardado(this);
         }
-        if (proveedor.isEmpty()) {
+        if (proveedor == null || proveedor.isEmpty()) {
             finish();
             return;
         }
@@ -70,7 +85,22 @@ public class ProveedorActivity extends AppCompatActivity {
         txtEstado.setText(R.string.proveedor_escuchando);
 
         Button btnSalir = findViewById(R.id.btnSalirProveedor);
-        btnSalir.setOnClickListener(v -> finish());
+        cola = Volley.newRequestQueue(this);
+
+        if (Sesion.esProveedor(this)) {
+            // Sprint 7 (RF-F7): perfil EXCLUSIVO con cuenta — puede ENVIAR sus
+            // facturas (MainActivity cargará solo SUS órdenes vía la API) y
+            // cerrar sesión de verdad (borra el token en el servidor).
+            Button btnEnviar = findViewById(R.id.btnEnviarFactura);
+            btnEnviar.setVisibility(View.VISIBLE);
+            btnEnviar.setOnClickListener(v ->
+                    startActivity(new Intent(this, MainActivity.class)));
+            btnSalir.setText(R.string.proveedor_cerrar_sesion);
+            btnSalir.setOnClickListener(v -> cerrarSesion());
+        } else {
+            // Modo rápido «Soy proveedor» (S6): solo mirar el buzón.
+            btnSalir.setOnClickListener(v -> finish());
+        }
 
         // Android 13+: pedir permiso para que el PUSH se vea (no el listener).
         if (Build.VERSION.SDK_INT >= 33
@@ -95,6 +125,24 @@ public class ProveedorActivity extends AppCompatActivity {
     public boolean onSupportNavigateUp() {
         finish();     // ⬅ volver al login
         return true;
+    }
+
+    /** Sprint 7 (RF-F5): logout real — DELETE /sesion.php con el token y al login. */
+    private void cerrarSesion() {
+        JsonObjectRequest peticion = new JsonObjectRequest(Request.Method.DELETE,
+                "http://" + Sesion.servidor(this) + "/cpp/api/sesion.php", null,
+                r -> Sesion.salirAlLogin(ProveedorActivity.this),
+                e -> Sesion.salirAlLogin(ProveedorActivity.this)) {
+            @Override
+            public Map<String, String> getHeaders() throws AuthFailureError {
+                // Copia mutable: super.getHeaders() es inmutable (hotfix 0.8.2).
+                Map<String, String> h = new HashMap<>(super.getHeaders());
+                h.putAll(Sesion.cabeceras(ProveedorActivity.this));
+                return h;
+            }
+        };
+        peticion.setRetryPolicy(new DefaultRetryPolicy(10000, 0, 1.0f));
+        cola.add(peticion);
     }
 
     /** Adaptador mínimo que reutiliza la fila genérica de administración. */

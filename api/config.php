@@ -22,6 +22,16 @@ define('UPLOAD_DIR', __DIR__ . '/../uploads');
 // --- Umbral de riesgo configurable (MVP_CPP sección 4.1: riesgo < 40 % ⇒ aprobable) ---
 define('UMBRAL_RIESGO', 40.0);
 
+// --- Sprint 5 (v1.0, RF-M1/RF-B6): sesiones con token X-CPP-Token ---
+// TTL de la sesión en horas; al expirar la app recibe 401 y vuelve al login.
+define('SESION_TTL_HORAS', 8);
+
+// --- Sprint 6 (v1.0, Firebase): push FCM + escritura en Firestore ---
+// Clave de servicio del proyecto cpp-facturas. Es un SECRETO: NO va en git
+// (.gitignore la excluye). Si falta, la API sigue funcionando igual —
+// solo deja de notificar (best-effort).
+define('FIREBASE_SA', __DIR__ . '/firebase-service-account.json');
+
 // --- Motores externos (se consumen en el Sprint 4, RF-B3) ---
 // Rutas REALES verificadas el 30/09/2026 en este equipo (Sprint 3, spike OCR):
 //   Python 3.12.10 (winget) · SWI-Prolog (C:\Program Files\swipl) · GCC MinGW.

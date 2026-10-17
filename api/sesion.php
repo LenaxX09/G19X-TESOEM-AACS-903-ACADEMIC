@@ -53,7 +53,7 @@ function iniciarSesion(): void
     }
 
     $stmt = db()->prepare(
-        'SELECT id, nombre, usuario, password_hash, rol, activo
+        'SELECT id, nombre, usuario, password_hash, rol, negocio, activo
            FROM usuarios WHERE usuario = :usuario');
     $stmt->execute([':usuario' => $nombreUsuario]);
     $usuario = $stmt->fetch();
@@ -75,7 +75,9 @@ function iniciarSesion(): void
         'usuario'   => ['id'       => (int)$usuario['id'],
                         'nombre'   => $usuario['nombre'],
                         'usuario'  => $usuario['usuario'],
-                        'rol'      => $usuario['rol']],
+                        'rol'      => $usuario['rol'],
+                        // Sprint 7 (RF-F5): el rol proveedor viaja con su negocio.
+                        'negocio'  => $usuario['negocio'] ?? ''],
     ]);
 }
 

@@ -17,12 +17,19 @@
 require_once __DIR__ . '/responder.php';
 require_once __DIR__ . '/db.php';
 
+// Sprint 5 (RF-B6): la consulta de facturas exige sesión iniciada. El envío
+// (POST) está reservado a capturista/admin y, desde el Sprint 7 (RF-F6), al
+// proveedor — pero SOLO contra órdenes de su propio negocio. Revisor: lectura.
+require_once __DIR__ . '/autenticar.php';
+
 $metodo = $_SERVER['REQUEST_METHOD'];
 
 try {
     if ($metodo === 'POST') {
+        requerirRol(['capturista', 'admin', 'proveedor']);
         recibirFactura();
     } elseif ($metodo === 'GET') {
+        requerirAutenticacion();
         listarFacturas();
     } else {
         responder(405, 'METODO_NO_PERMITIDO', 'Use GET o POST.');
@@ -55,6 +62,21 @@ function recibirFactura(): void
     $orden = $stmt->fetch();
     if (!$orden) {
         responder(422, 'ORDEN_NO_ENCONTRADA', "No existe la orden de compra con id=$ordenId.");
+    }
+
+    // Sprint 7 (RF-F6): un proveedor solo puede facturar contra órdenes de SU
+    // negocio. Se compara por SLUG (fb_slug: sin acentos/mayúsculas/espacios)
+    // para que «Papeleria Central» == «Papelería Central»: hallazgo de la
+    // prueba del 15/10 — el texto exacto rechinaba con las tildes.
+    $yo = usuarioActual();
+    if (($yo['rol'] ?? '') === 'proveedor') {
+        require_once __DIR__ . '/firebase.php';          // solo por fb_slug()
+        if (fb_slug($orden['proveedor'])
+                !== fb_slug(trim((string)($yo['negocio'] ?? '')))) {
+            responder(403, 'ORDEN_DE_OTRO_PROVEEDOR',
+                "La orden {$orden['codigo']} pertenece a «{$orden['proveedor']}», "
+                . 'no a tu negocio.');
+        }
     }
 
     $imagenBase64 = trim((string)($entrada['imagen_base64'] ?? ''));
@@ -93,10 +115,16 @@ function recibirFactura(): void
     }
 
     // --- Registrar factura en estado Pendiente (RF-B1) ---
-    $stmt = db()->prepare("INSERT INTO facturas (orden_id, estado, ruta_imagen)
-                           VALUES (:orden_id, 'Pendiente', :ruta)");
-    $stmt->execute([':orden_id' => $ordenId, ':ruta' => 'uploads/' . $nombreArchivo]);
+    $stmt = db()->prepare("INSERT INTO facturas (orden_id, estado, ruta_imagen, subida_por)
+                          VALUES (:orden_id, 'Pendiente', :ruta, :subida)");
+    $stmt->execute([':orden_id' => $ordenId, ':ruta' => 'uploads/' . $nombreArchivo,
+                    ':subida' => (int)($yo['id'] ?? 0)]);
     $facturaId = (int)db()->lastInsertId();
+
+    // Sprint 6 (RF-F4): notificar al proveedor (Firestore en tiempo real +
+    // push FCM). Best-effort: si Firebase falla, la factura YA está guardada.
+    require_once __DIR__ . '/firebase.php';
+    fb_notificar_factura($facturaId, $orden['codigo'], $orden['proveedor']);
 
     responder(201, 'OK', 'Factura registrada como Pendiente.', [
         'factura_id' => $facturaId,
@@ -112,6 +140,11 @@ function recibirFactura(): void
 // ============================================================================
 function listarFacturas(): void
 {
+    // Sprint 7 (RF-F7): el proveedor solo ve las facturas de SU negocio.
+    $yo      = usuarioActual();
+    $esProv  = ($yo['rol'] ?? '') === 'proveedor';
+    $negocio = trim((string)($yo['negocio'] ?? ''));
+
     $id = filter_var($_GET['id'] ?? null, FILTER_VALIDATE_INT,
         ['options' => ['min_range' => 1]]);
 
@@ -128,6 +161,13 @@ function listarFacturas(): void
         if (!$factura) {
             responder(404, 'NO_ENCONTRADO', "No existe la factura con id=$id.");
         }
+        if ($esProv) {
+            require_once __DIR__ . '/firebase.php';
+            if (fb_slug((string)$factura['orden_proveedor']) !== fb_slug($negocio)) {
+                responder(403, 'FACTURA_DE_OTRO_PROVEEDOR',
+                    'Esa factura pertenece a otro proveedor.');
+            }
+        }
         responder(200, 'OK', 'Factura encontrada.', ['factura' => $factura]);
     }
 
@@ -137,23 +177,54 @@ function listarFacturas(): void
 
     $sql = 'SELECT f.id, f.orden_id, o.codigo AS orden_codigo, o.proveedor AS orden_proveedor,
                    f.proveedor_detectado, f.folio, f.monto_facturado, f.riesgo, f.estado,
-                   f.motivo_discrepancia, f.creado_en, f.procesado_en
+                   f.motivo_discrepancia, f.creado_en, f.procesado_en,
+                   f.pagada, f.pagada_en, f.ruta_imagen, f.subida_por
             FROM facturas f
             JOIN ordenes_compra o ON o.id = f.orden_id';
+    $condiciones = [];
     $params = [];
+    if ($esProv) {
+        // (el filtro por negocio se aplica en PHP, tras el fetch)
+    }
     if ($estado !== null) {
         if (!in_array($estado, $estadosValidos, true)) {
             responder(400, 'ERROR_VALIDACION',
                 'estado debe ser uno de: ' . implode(', ', $estadosValidos) . '.');
         }
-        $sql .= ' WHERE f.estado = :estado';
+        $condiciones[] = 'f.estado = :estado';
         $params[':estado'] = $estado;
+    }
+    // Sprint 8 (RF-P1): filtro de pago ?pagada=0|1
+    if (isset($_GET['pagada'])) {
+        $condiciones[] = 'f.pagada = :pagada';
+        $params[':pagada'] = ((int)$_GET['pagada'] === 1) ? 1 : 0;
+    }
+    if ($condiciones) {
+        $sql .= ' WHERE ' . implode(' AND ', $condiciones);
     }
     $sql .= ' ORDER BY f.id DESC';
 
     $stmt = db()->prepare($sql);
     $stmt->execute($params);
     $facturas = $stmt->fetchAll();
+
+    // Sprint 7 (RF-F7): al proveedor se le filtra EN PHP por slug (tolera
+    // acentos: «Papeleria Central» == «Papelería Central»).
+    // S8.2: capturista y revisor ven SOLO las facturas que ELLOS subieron
+    // (sus propias cuentas); el admin sigue viendo todo (gestiona el sistema).
+    if ($esProv) {
+        require_once __DIR__ . '/firebase.php';
+        $facturas = array_values(array_filter($facturas,
+            function ($f) use ($negocio) {
+                return fb_slug((string)$f['orden_proveedor']) === fb_slug($negocio);
+            }));
+    } elseif (($yo['rol'] ?? '') !== 'admin') {
+        $miId = (int)($yo['id'] ?? 0);
+        $facturas = array_values(array_filter($facturas,
+            function ($f) use ($miId) {
+                return (int)$f['subida_por'] === $miId;
+            }));
+    }
 
     responder(200, 'OK', 'Listado de facturas.', [
         'facturas' => $facturas,

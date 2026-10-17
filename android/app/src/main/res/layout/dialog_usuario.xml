@@ -42,6 +42,16 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp" />
 
+        <!-- Sprint 7 (RF-F5): negocio del proveedor (se ignora en los demás roles) -->
+        <EditText
+            android:id="@+id/edtNegocio"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:hint="@string/hint_negocio_usuario"
+            android:inputType="text"
+            android:maxLines="1" />
+
         <Switch
             android:id="@+id/swActivo"
             android:layout_width="match_parent"

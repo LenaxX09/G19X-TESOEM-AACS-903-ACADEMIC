@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Sprint 8 (RF-P3): diálogo para REVISAR la foto de una factura del
+     apartado de pagos + acción de pagar/despagar (botones del diálogo). -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <ImageView
+            android:id="@+id/imgFotoPago"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:adjustViewBounds="true"
+            android:maxHeight="420dp"
+            android:scaleType="fitCenter"
+            android:contentDescription="@string/subtitulo_pagos" />
+
+        <TextView
+            android:id="@+id/txtInfoPago"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:textColor="@color/texto_normal"
+            android:textSize="13sp" />
+    </LinearLayout>
+</ScrollView>

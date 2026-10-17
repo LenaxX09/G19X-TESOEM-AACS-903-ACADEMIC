@@ -20,4 +20,12 @@
     <color name="primario_pastel">#E8EAF6</color>
     <color name="primario_medio">#3949AB</color>
     <color name="blanco_90">#E6FFFFFF</color>
+
+    <!-- 0.8.1-night: texto FIJO (sin variante noche) para todo lo que vive
+         ENCIMA de una tarjeta clara: las tarjetas pastel se quedan claras
+         también de noche (decisión 0.6.0-ui), así que su texto debe ser
+         oscuro SIEMPRE. El texto del TEMA (que se aclara de noche) solo se
+         usa sobre fondo_pantalla. -->
+    <color name="texto_sobre_tarjeta">#212121</color>
+    <color name="hint_sobre_tarjeta">#8A8A8A</color>
 </resources>

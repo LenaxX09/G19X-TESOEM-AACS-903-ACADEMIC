@@ -30,6 +30,11 @@
 require_once __DIR__ . '/responder.php';
 require_once __DIR__ . '/db.php';
 
+// Sprint 5 (RF-B6): el pipeline también exige sesión (cualquier rol: la
+// ejecución OCR→riesgo→Prolog es automática, no una decisión de revisión).
+require_once __DIR__ . '/autenticar.php';
+requerirAutenticacion();
+
 try {
     $id = filter_var($_GET['id'] ?? null, FILTER_VALIDATE_INT,
         ['options' => ['min_range' => 1]]);

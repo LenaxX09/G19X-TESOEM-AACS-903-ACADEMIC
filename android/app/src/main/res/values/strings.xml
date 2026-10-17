@@ -54,4 +54,101 @@
     <string name="ayuda_proveedor">💡 ¿Elegiste la orden correcta? Reenvía la misma foto contra la orden de este proveedor.</string>
     <string name="ayuda_fecha">💡 Verifica la fecha leída: las fotos de baja calidad hacen que el OCR confunda dígitos. Reenvía con una foto nítida.</string>
     <string name="ayuda_generica">💡 Revisa los datos extraídos (monto, folio, proveedor) y vuelve a enviar la foto si algo se leyó mal.</string>
+
+    <!-- ══════════ Sprint 5: login + roles + administración (RF-M1/B6/B4) ══════════ -->
+    <string name="titulo_login">🔐 CPP · Iniciar sesión</string>
+    <string name="subtitulo_login">Identifícate para capturar o revisar facturas</string>
+    <string name="hint_usuario">Usuario (admin · capturista · revisor)</string>
+    <string name="hint_password">Contraseña</string>
+    <string name="btn_entrar">🔓 Entrar</string>
+    <string name="login_faltan_datos">Escribe tu usuario y tu contraseña.</string>
+    <string name="login_conectando">Iniciando sesión en %1$s …</string>
+    <string name="login_error">No se pudo iniciar sesión:\n%1$s</string>
+    <string name="sesion_caducada">Tu sesión expiró o fue cerrada. Inicia sesión de nuevo.</string>
+    <string name="sesion_info">👤 %1$s (%2$s) · servidor %3$s</string>
+    <string name="btn_salir">🚪 Cerrar sesión</string>
+    <string name="btn_admin">⚙️ Administración</string>
+    <string name="revisor_solo_lectura">Tu rol «revisor» es de consulta: puedes ver facturas pero no enviarlas. Pide al administrador el rol capturista.</string>
+
+    <!-- Administración (solo admin) -->
+    <string name="titulo_admin">⚙️ CPP · Administración</string>
+    <string name="subtitulo_admin">Usuarios y órdenes de compra — solo administradores</string>
+    <string name="modo_usuarios">👥 Usuarios</string>
+    <string name="modo_ordenes">🧾 Órdenes de compra</string>
+    <string name="btn_nuevo">＋ Nuevo registro</string>
+    <string name="admin_solo_admin">Esta pantalla es solo para administradores.</string>
+    <string name="admin_sin_datos">No hay registros todavía.\nPulsa «Nuevo registro» para crear uno.</string>
+    <string name="admin_cargando">Consultando %1$s …</string>
+    <string name="admin_error">%1$s</string>
+    <string name="fila_usuario_sub">%1$s · rol %2$s</string>
+    <string name="fila_orden_sub">%1$s · autorizado $%2$s · emitida %3$s</string>
+    <string name="estado_activo">Activo</string>
+    <string name="estado_inactivo">Inactivo</string>
+    <string name="orden_abierta">Abierta</string>
+    <string name="orden_cerrada">Cerrada</string>
+    <string name="dlg_usuario_nuevo">Nuevo usuario</string>
+    <string name="dlg_usuario_editar">Editar usuario</string>
+    <string name="dlg_orden_nueva">Nueva orden de compra</string>
+    <string name="dlg_orden_editar">Editar orden de compra</string>
+    <string name="hint_nombre">Nombre completo</string>
+    <string name="hint_login">Usuario (para iniciar sesión)</string>
+    <string name="hint_password_nuevo">Contraseña (mínimo 6 caracteres)</string>
+    <string name="hint_password_editar">Nueva contraseña (vacío = no cambiarla)</string>
+    <string name="hint_codigo">Código (p. ej. OC-004)</string>
+    <string name="hint_proveedor">Proveedor</string>
+    <string name="hint_monto">Monto autorizado</string>
+    <string name="hint_fecha">Fecha de emisión (YYYY-MM-DD)</string>
+    <string name="usuario_activo">Usuario activo</string>
+    <string name="guardar">Guardar</string>
+    <string name="cancelar">Cancelar</string>
+    <string name="admin_falta_nombre">Escribe el nombre.</string>
+    <string name="admin_falta_usuario_pass">Usuario obligatorio y contraseña de al menos 6 caracteres.</string>
+    <string name="admin_falta_orden">Completa código, proveedor, monto mayor a 0 y fecha YYYY-MM-DD.</string>
+
+    <!-- ══════════ Sprint 6: Firebase (clientes, proveedores, notificaciones) ══════════ -->
+    <string name="btn_soy_proveedor">🏬 Soy proveedor</string>
+    <string name="proveedor_error">No se pudo leer la lista de proveedores:\n%1$s</string>
+    <string name="titulo_proveedor">🏬 CPP · Facturas de mi negocio</string>
+    <string name="subtitulo_proveedor">Avisos en vivo de %1$s — deja esta pantalla abierta o cierra la app: el aviso llega igual</string>
+    <string name="proveedor_escuchando">⏳ Escuchando facturas nuevas…</string>
+    <string name="proveedor_sin_facturas">Todavía no hay facturas registradas para ti.</string>
+    <string name="proveedor_con_facturas">✅ %1$d facturas registradas (se actualiza solo)</string>
+    <string name="btn_salir_proveedor">⬅ Volver al inicio de sesión</string>
+<!-- ══════════ Sprint 7: cuentas de proveedor (RF-F5..F7) ══════════ -->
+<string name="btn_crear_proveedor">🆕 Crear cuenta de proveedor</string>
+<string name="reg_titulo">Crear cuenta de proveedor</string>
+<string name="reg_usuario_hint">Usuario (letras y números, sin acentos)</string>
+<string name="reg_password_hint">Contraseña (mínimo 6 caracteres)</string>
+<string name="reg_negocio_hint">Nombre de tu negocio (como aparece en las órdenes)</string>
+<string name="reg_crear">Crear cuenta y entrar</string>
+<string name="reg_faltan_datos">Completa todo: usuario, contraseña (mín. 6) y tu negocio (mín. 3 letras).</string>
+<string name="reg_creando">Creando tu cuenta…</string>
+<string name="reg_exito">✅ Cuenta creada. ¡Bienvenido, %1$s!</string>
+<string name="proveedor_enviar">📤 Enviar una factura</string>
+<string name="proveedor_cerrar_sesion">🚪 Cerrar sesión</string>
+<string name="hint_negocio_usuario">Negocio (solo si el rol es proveedor)</string>
+<string name="admin_falta_negocio">Un proveedor necesita su negocio: el nombre con el que se registran sus órdenes.</string>
+<!-- ══════════ Sprint 8: cuentas por pagar (RF-P1..P3) ══════════ -->
+<string name="btn_crear_cuenta">🆕 Crear cuenta</string>
+<string name="tipo_cuenta_titulo">¿Qué tipo de cuenta necesitas?</string>
+<string name="tipo_cuenta_proveedor">🏬 Proveedor — mi negocio factura</string>
+<string name="tipo_cuenta_cliente">🏢 Cliente — personal de la empresa</string>
+<string name="cliente_info_titulo">Cuentas del cliente (personal de la empresa)</string>
+<string name="cliente_info">El CLIENTE es la empresa que paga sus cuentas. Su personal trabaja con tres roles:\n\n📷 capturista — sube las facturas que recibe la empresa\n\n🔍 revisor — consulta y audita (solo lectura)\n\n👑 admin — administra usuarios y órdenes, y paga\n\nPor seguridad estas cuentas NO se crean solas: pide a un administrador que te dé la tuya desde ⚙️ Administración → Usuarios. El registro público es solo para proveedores.</string>
+<string name="btn_pagos">💰 Cuentas por pagar</string>
+<string name="titulo_pagos">💰 CPP · Cuentas por pagar</string>
+<string name="subtitulo_pagos">Tus cuentas: lo que te falta por pagar y lo que ya pagaste — toca una para ver su foto</string>
+<string name="tab_por_pagar">⏳ POR PAGAR (%1$d)</string>
+<string name="tab_pagadas">✅ PAGADAS (%1$d)</string>
+<string name="chip_todas">Todas</string>
+<string name="chip_aprobadas">✅ Aprobadas</string>
+<string name="chip_no_coinciden">❌ No coinciden</string>
+<string name="chip_discrepancias">⚠️ Discrepancia</string>
+<string name="pagos_vacio_por_pagar">No hay facturas aprobadas pendientes de pago. ¡Al día! 🎉</string>
+<string name="pagos_vacio_pagadas">Aún no has marcado facturas como pagadas.</string>
+<string name="pagos_vacio_filtro">Ninguna factura pagada en esta clasificación.</string>
+<string name="pago_marcar">💰 Marcar como pagada</string>
+<string name="pago_desmarcar">↩️ Devolver a por pagar</string>
+<string name="pagos_error">No se pudieron cargar las cuentas:\n%1$s</string>
+<string name="pagos_cargando">Cargando cuentas…</string>
 </resources>

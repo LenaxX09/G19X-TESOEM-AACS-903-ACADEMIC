@@ -2,4 +2,6 @@
 // Requiere Gradle 8.13+ y JDK 17+ (Android Studio usa su JBR 21).
 plugins {
     id 'com.android.application' version '8.13.0' apply false
+    // Sprint 6 (Firebase): plugin que inyecta google-services.json en el build
+    id 'com.google.gms.google-services' version '4.4.2' apply false
 }

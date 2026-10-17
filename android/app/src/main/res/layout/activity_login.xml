@@ -106,6 +106,19 @@
             android:textColor="@color/primario"
             android:textStyle="bold" />
 
+        <!-- Sprint 7/8: crear cuenta (proveedor se autoregistra; cliente va
+             con el admin) -->
+        <Button
+            android:id="@+id/btnCrearCuenta"
+            style="?android:attr/borderlessButtonStyle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:background="@drawable/bg_boton_pill"
+            android:text="@string/btn_crear_cuenta"
+            android:textColor="@color/acento"
+            android:textStyle="bold" />
+
         <ProgressBar
             android:id="@+id/barraLogin"
             android:layout_width="wrap_content"

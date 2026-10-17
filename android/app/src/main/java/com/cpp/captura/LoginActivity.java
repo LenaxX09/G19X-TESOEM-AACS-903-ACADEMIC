@@ -3,6 +3,7 @@ package com.cpp.captura;
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.os.Bundle;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -23,6 +24,8 @@ import com.android.volley.toolbox.Volley;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
+
+import java.util.Locale;
 
 /**
  * LoginActivity — Sprint 5 "Acceso y roles" (RF-M1: inicio de sesión).
@@ -55,10 +58,15 @@ public class LoginActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Sesión aún vigente localmente → directo a capturar (el 401, si
-        // llegara, manda de regreso aquí).
+        // Sesión aún vigente localmente → directo a su pantalla (el 401, si
+        // llegara, manda de regreso aquí). Sprint 7 (RF-F7): el proveedor
+        // entra a su perfil exclusivo (buzón + envío), no a la captura interna.
         if (Sesion.activa(this)) {
-            startActivity(new Intent(this, MainActivity.class));
+            if (Sesion.esProveedor(this)) {
+                entrarComoProveedor(Sesion.negocio(this));
+            } else {
+                startActivity(new Intent(this, MainActivity.class));
+            }
             finish();
             return;
         }
@@ -85,6 +93,7 @@ public class LoginActivity extends AppCompatActivity {
 
         btnEntrar.setOnClickListener(v -> entrar());
         findViewById(R.id.btnSoyProveedor).setOnClickListener(v -> cargarProveedores());
+        findViewById(R.id.btnCrearCuenta).setOnClickListener(v -> dialogTipoCuenta());
     }
 
     @Override
@@ -133,12 +142,18 @@ public class LoginActivity extends AppCompatActivity {
                         Sesion.guardar(LoginActivity.this, host(), token,
                                 u.optInt("id", 0),
                                 u.optString("nombre", usuario),
-                                u.optString("rol", "capturista"));
+                                u.optString("rol", "capturista"),
+                                u.optString("negocio", ""));
                         // Sprint 6 (RF-F2): cada cliente que entra queda en Firestore.
                         FirebaseServicio.registrarCliente(u.optInt("id", 0),
                                 u.optString("nombre", usuario), usuario,
                                 u.optString("rol", "capturista"));
-                        startActivity(new Intent(LoginActivity.this, MainActivity.class));
+                        // Sprint 7 (RF-F7): el proveedor entra a su perfil exclusivo.
+                        if ("proveedor".equals(u.optString("rol", ""))) {
+                            entrarComoProveedor(u.optString("negocio", ""));
+                        } else {
+                            startActivity(new Intent(LoginActivity.this, MainActivity.class));
+                        }
                         finish();
                     } else {
                         pintar(R.color.rojo_error, getString(R.string.respuesta_rara));
@@ -198,6 +213,109 @@ public class LoginActivity extends AppCompatActivity {
         FirebaseServicio.registrarProveedor(LoginActivity.this, proveedor);
         startActivity(new Intent(LoginActivity.this, ProveedorActivity.class)
                 .putExtra("proveedor", proveedor));
+    }
+
+    // ========================================================================
+    // Sprint 7/8 — crear cuenta: primero el TIPO (proveedor público ·
+    // cliente = personal de la empresa, que crea el admin)
+    // ========================================================================
+
+    /** Paso 1: ¿proveedor o cliente? */
+    private void dialogTipoCuenta() {
+        final String[] opciones = {
+                getString(R.string.tipo_cuenta_proveedor),
+                getString(R.string.tipo_cuenta_cliente)};
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.tipo_cuenta_titulo)
+                .setItems(opciones, (d, cual) -> {
+                    if (cual == 0) {
+                        dialogCrearProveedor();
+                    } else {
+                        dialogClienteInfo();
+                    }
+                })
+                .setNegativeButton(R.string.cancelar, null)
+                .show();
+    }
+
+    /** Cliente: explica los roles y que la cuenta la crea un admin. */
+    private void dialogClienteInfo() {
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.cliente_info_titulo)
+                .setMessage(R.string.cliente_info)
+                .setPositiveButton(android.R.string.ok, null)
+                .show();
+    }
+
+    /** Paso 2 (proveedor): usuario + contraseña + nombre de su negocio. */
+    private void dialogCrearProveedor() {
+        View v = LayoutInflater.from(this).inflate(R.layout.dialog_registro_proveedor, null);
+        EditText edtUsuario = v.findViewById(R.id.edtRegUsuario);
+        EditText edtPassword = v.findViewById(R.id.edtRegPassword);
+        EditText edtNegocio = v.findViewById(R.id.edtRegNegocio);
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.reg_titulo)
+                .setView(v)
+                .setPositiveButton(R.string.reg_crear, (d, w) ->
+                        registrarProveedorHttp(edtUsuario, edtPassword, edtNegocio))
+                .setNegativeButton(R.string.cancelar, null)
+                .show();
+    }
+
+    /** POST /api/registro_proveedor.php → la API crea la cuenta Y la sesión. */
+    private void registrarProveedorHttp(EditText edtUsuario, EditText edtPassword,
+                                        EditText edtNegocio) {
+        String usuario  = edtUsuario.getText().toString().trim().toLowerCase(Locale.ROOT);
+        String password = edtPassword.getText().toString();
+        String negocio  = edtNegocio.getText().toString().trim();
+
+        if (usuario.isEmpty() || password.length() < 6 || negocio.length() < 3) {
+            pintar(R.color.rojo_error, getString(R.string.reg_faltan_datos));
+            return;
+        }
+
+        JSONObject cuerpo = new JSONObject();
+        try {
+            cuerpo.put("usuario", usuario);
+            cuerpo.put("password", password);
+            cuerpo.put("negocio", negocio);
+        } catch (Exception e) {
+            pintar(R.color.rojo_error, "Error interno: " + e.getMessage());
+            return;
+        }
+
+        barra.setVisibility(View.VISIBLE);
+        pintar(R.color.texto_normal, getString(R.string.reg_creando));
+
+        JsonObjectRequest peticion = new JsonObjectRequest(Request.Method.POST,
+                urlBase() + "/registro_proveedor.php", cuerpo,
+                response -> {
+                    barra.setVisibility(View.GONE);
+                    JSONObject datos = response.optJSONObject("datos");
+                    JSONObject u = datos != null ? datos.optJSONObject("usuario") : null;
+                    String token = datos != null ? datos.optString("token", "") : "";
+                    if ("OK".equals(response.optString("codigo")) && u != null && !token.isEmpty()) {
+                        Sesion.guardar(LoginActivity.this, host(), token,
+                                u.optInt("id", 0), u.optString("nombre", usuario),
+                                "proveedor", u.optString("negocio", negocio));
+                        FirebaseServicio.registrarCliente(u.optInt("id", 0),
+                                u.optString("nombre", usuario), usuario, "proveedor");
+                        pintar(R.color.verde_ok, getString(R.string.reg_exito, negocio));
+                        entrarComoProveedor(u.optString("negocio", negocio));
+                        finish();
+                    } else {
+                        pintar(R.color.rojo_error, getString(R.string.respuesta_rara));
+                    }
+                },
+                error -> {
+                    barra.setVisibility(View.GONE);
+                    pintar(R.color.rojo_error,
+                            getString(R.string.login_error, mensajeVolley(error)));
+                });
+        peticion.setRetryPolicy(new DefaultRetryPolicy(TIMEOUT_MS, 0, 1.0f));
+        peticion.setTag(TAG);
+        cola.add(peticion);
     }
 
     // ========================================================================

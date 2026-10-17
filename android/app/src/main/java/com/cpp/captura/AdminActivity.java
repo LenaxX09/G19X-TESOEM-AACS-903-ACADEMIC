@@ -74,7 +74,8 @@ public class AdminActivity extends AppCompatActivity {
     private AdminAdapter adaptador;
 
     private final List<FilaAdmin> filas = new ArrayList<>();
-    private final List<String> roles = Arrays.asList("capturista", "revisor", "admin");
+    // Sprint 7 (RF-F5): 'proveedor' se gestiona igual desde el CRUD del admin.
+    private final List<String> roles = Arrays.asList("capturista", "revisor", "admin", "proveedor");
 
     /** Datos de una fila (usuario u orden) + el JSON crudo para prellenar el diálogo. */
     private static class FilaAdmin {
@@ -240,11 +241,16 @@ public class AdminActivity extends AppCompatActivity {
 
     private FilaAdmin filaUsuario(JSONObject u) {
         boolean activo = u.optInt("activo", 0) == 1;
+        String sub = getString(R.string.fila_usuario_sub, u.optString("usuario", "?"),
+                u.optString("rol", "?"));
+        String negocio = u.optString("negocio", "");            // Sprint 7 (RF-F5)
+        if (!negocio.isEmpty() && !"null".equals(negocio)) {
+            sub += " · " + negocio;
+        }
         return new FilaAdmin(
                 u.optInt("id", 0),
                 u.optString("nombre", "?"),
-                getString(R.string.fila_usuario_sub, u.optString("usuario", "?"),
-                        u.optString("rol", "?")),
+                sub,
                 activo ? getString(R.string.estado_activo) : getString(R.string.estado_inactivo),
                 activo, u);
     }
@@ -320,6 +326,7 @@ public class AdminActivity extends AppCompatActivity {
         EditText edtLogin = v.findViewById(R.id.edtUsuarioLogin);
         EditText edtPassword = v.findViewById(R.id.edtPassword);
         Spinner spRol = v.findViewById(R.id.spRol);
+        EditText edtNegocio = v.findViewById(R.id.edtNegocio);   // Sprint 7 (RF-F5)
         Switch swActivo = v.findViewById(R.id.swActivo);
 
         spRol.setAdapter(new ArrayAdapter<>(this,
@@ -333,6 +340,10 @@ public class AdminActivity extends AppCompatActivity {
             edtPassword.setHint(R.string.hint_password_editar);
             int pos = roles.indexOf(f.crudo.optString("rol", "capturista"));
             spRol.setSelection(pos >= 0 ? pos : 0);
+            String negocio = f.crudo.optString("negocio", "");
+            if (!"null".equals(negocio)) {
+                edtNegocio.setText(negocio);
+            }
             swActivo.setChecked(f.activo);
         }
 
@@ -340,19 +351,27 @@ public class AdminActivity extends AppCompatActivity {
                 .setTitle(f == null ? R.string.dlg_usuario_nuevo : R.string.dlg_usuario_editar)
                 .setView(v)
                 .setPositiveButton(R.string.guardar, (d, w) -> guardarUsuario(f, edtNombre,
-                        edtLogin, edtPassword, spRol, swActivo))
+                        edtLogin, edtPassword, spRol, edtNegocio, swActivo))
                 .setNegativeButton(R.string.cancelar, null)
                 .show();
     }
 
     private void guardarUsuario(FilaAdmin f, EditText edtNombre, EditText edtLogin,
-                                EditText edtPassword, Spinner spRol, Switch swActivo) {
+                                EditText edtPassword, Spinner spRol, EditText edtNegocio,
+                                Switch swActivo) {
         String nombre = edtNombre.getText().toString().trim();
         String rol = roles.get(Math.max(0, spRol.getSelectedItemPosition()));
         String password = edtPassword.getText().toString();
 
         if (nombre.isEmpty()) {
             Toast.makeText(this, R.string.admin_falta_nombre, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Sprint 7 (RF-F5): el rol proveedor SIEMPRE viaja con su negocio.
+        String negocio = edtNegocio.getText().toString().trim();
+        if ("proveedor".equals(rol) && negocio.isEmpty()) {
+            Toast.makeText(this, R.string.admin_falta_negocio, Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -369,12 +388,18 @@ public class AdminActivity extends AppCompatActivity {
                 cuerpo.put("usuario", login);
                 cuerpo.put("password", password);
                 cuerpo.put("rol", rol);
+                if ("proveedor".equals(rol)) {
+                    cuerpo.put("negocio", negocio);
+                }
             } else {
                 cuerpo.put("accion", "actualizar");
                 cuerpo.put("id", f.id);
                 cuerpo.put("nombre", nombre);
                 cuerpo.put("rol", rol);
                 cuerpo.put("activo", swActivo.isChecked() ? 1 : 0);
+                if ("proveedor".equals(rol)) {
+                    cuerpo.put("negocio", negocio);
+                }
                 if (!password.isEmpty()) {
                     cuerpo.put("password", password);   // vacío = no cambiarla
                 }

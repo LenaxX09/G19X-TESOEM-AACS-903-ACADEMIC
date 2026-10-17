@@ -46,7 +46,7 @@ function listarUsuarios(): void
     $id = filter_var($_GET['id'] ?? null, FILTER_VALIDATE_INT,
         ['options' => ['min_range' => 1]]);
 
-    $sql = 'SELECT id, nombre, usuario, rol, activo,
+    $sql = 'SELECT id, nombre, usuario, rol, negocio, activo,
                    DATE_FORMAT(creado_en, "%Y-%m-%d %H:%i") AS creado_en
             FROM usuarios';
     if ($id !== null && $id !== false) {
@@ -113,12 +113,22 @@ function crearUsuario(array $e): void
         responder(409, 'USUARIO_DUPLICADO', "El usuario '$login' ya existe.");
     }
 
+    // Sprint 7 (RF-F5): el rol proveedor REQUIERE su negocio; los demás, NULL.
+    $negocio = null;
+    if ($rol === 'proveedor') {
+        $negocio = trim((string)($e['negocio'] ?? ''));
+        if ($negocio === '' || mb_strlen($negocio) > 100) {
+            responder(400, 'ERROR_VALIDACION',
+                'Un usuario proveedor necesita su negocio (3-100 caracteres).');
+        }
+    }
+
     $stmt = db()->prepare(
-        'INSERT INTO usuarios (nombre, usuario, password_hash, rol)
-         VALUES (:nombre, :usuario, :hash, :rol)');
+        'INSERT INTO usuarios (nombre, usuario, password_hash, rol, negocio)
+         VALUES (:nombre, :usuario, :hash, :rol, :negocio)');
     $stmt->execute([':nombre' => $nombre, ':usuario' => $login,
                     ':hash' => password_hash($password, PASSWORD_DEFAULT),
-                    ':rol' => $rol]);
+                    ':rol' => $rol, ':negocio' => $negocio]);
     $id = (int)db()->lastInsertId();
 
     responder(201, 'OK', "Usuario '$login' creado con rol $rol.", ['usuario_id' => $id]);
@@ -155,6 +165,14 @@ function actualizarUsuario(array $e): void
         validarRol((string)$e['rol']);
         $sets[] = 'rol = :rol';
         $params[':rol'] = (string)$e['rol'];
+    }
+    if (array_key_exists('negocio', $e)) {                     // Sprint 7 (RF-F5)
+        $neg = trim((string)$e['negocio']);
+        if ($neg !== '' && mb_strlen($neg) > 100) {
+            responder(400, 'ERROR_VALIDACION', 'negocio debe tener hasta 100 caracteres.');
+        }
+        $sets[] = 'negocio = :negocio';
+        $params[':negocio'] = ($neg === '') ? null : $neg;
     }
     if (array_key_exists('activo', $e)) {
         $sets[] = 'activo = :activo';
@@ -197,9 +215,9 @@ function contarAdminsActivos(): int
 
 function validarRol(string $rol): void
 {
-    if (!in_array($rol, ['capturista', 'revisor', 'admin'], true)) {
+    if (!in_array($rol, ['capturista', 'revisor', 'admin', 'proveedor'], true)) {
         responder(400, 'ERROR_VALIDACION',
-            'rol debe ser: capturista, revisor o admin.');
+            'rol debe ser: capturista, revisor, admin o proveedor.');
     }
 }
 

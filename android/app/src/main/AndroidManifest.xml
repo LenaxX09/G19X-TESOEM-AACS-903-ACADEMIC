@@ -5,6 +5,8 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- RF-M2: captura con la cámara del dispositivo -->
     <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Sprint 6: push FCM al proveedor (Android 13+ lo pide en runtime) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-feature android:name="android.hardware.camera" android:required="true" />
 
     <!-- HOTFIX 0.4.1: desde Android 11 (API 30) la visibilidad de paquetes está
@@ -31,8 +33,10 @@
         android:usesCleartextTraffic="true"
         android:theme="@style/Theme.CPP">
 
+        <!-- Sprint 5: el LOGIN es la nueva entrada de la app (RF-M1); MainActivity
+             deja de ser launcher y AdminActivity aloja el CRUD (RF-B4). -->
         <activity
-            android:name=".MainActivity"
+            android:name=".LoginActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -40,10 +44,38 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".MainActivity"
+            android:exported="false" />
+
         <!-- Sprint 4: listado de facturas con badges (RF-M5) -->
         <activity
             android:name=".ListadoActivity"
             android:parentActivityName=".MainActivity" />
+
+        <!-- Sprint 5: administración de usuarios y órdenes (RF-B4, solo admin) -->
+        <activity
+            android:name=".AdminActivity"
+            android:parentActivityName=".MainActivity" />
+
+        <!-- Sprint 8: cuentas por pagar del cliente (RF-P1..P3) -->
+        <activity
+            android:name=".PagosActivity"
+            android:parentActivityName=".MainActivity" />
+
+        <!-- Sprint 6: pantalla del proveedor (escucha sus facturas en vivo) -->
+        <activity
+            android:name=".ProveedorActivity"
+            android:parentActivityName=".LoginActivity" />
+
+        <!-- Sprint 6: recibe los push FCM (avisos de factura aunque la app esté cerrada) -->
+        <service
+            android:name=".PushServicio"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
 
         <!-- Comparte la foto temporal con la app de cámara (RF-M2) -->
         <provider

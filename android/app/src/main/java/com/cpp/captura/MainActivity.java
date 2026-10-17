@@ -3,7 +3,6 @@ package com.cpp.captura;
 import android.Manifest;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.graphics.Bitmap;
@@ -30,6 +29,7 @@ import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 import androidx.exifinterface.media.ExifInterface;
 
+import com.android.volley.AuthFailureError;
 import com.android.volley.DefaultRetryPolicy;
 import com.android.volley.NetworkResponse;
 import com.android.volley.Request;
@@ -48,7 +48,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * MainActivity — Sprint 2 "Captura" del MVP CPP (pantalla de la sección 6.3).
@@ -66,6 +68,10 @@ import java.util.List;
  *      (OCR → riesgo → conciliación en el servidor) y muestra el veredicto:
  *      ✅ Aprobada / ⚠️ Con Discrepancia, con % de riesgo y duración.
  *   5. Botón "Ver facturas" → ListadoActivity con badges (RF-M5).
+ *   6. Sprint 5 (RF-M1/RF-B6): TODA petición viaja firmada con el token de
+ *      sesión (cabecera X-CPP-Token, clase Sesion); un 401 regresa al login.
+ *      «⚙️ Administración» (visible solo para admin) abre el CRUD y «🚪 Cerrar
+ *      sesión» hace logout. El rol revisor solo consulta: no puede enviar.
  *
  * Servidor: Laragon en el PC de desarrollo.
  *   - Emulador:     usar 10.0.2.2 (alias del host local).
@@ -82,7 +88,6 @@ public class MainActivity extends AppCompatActivity {
     private static final int TIMEOUT_MS = 30000;       // KPI-1: pipeline ≤ 30 s
 
     private RequestQueue cola;
-    private SharedPreferences prefs;
 
     private EditText txtServidor;
     private Spinner spOrdenes;
@@ -92,6 +97,9 @@ public class MainActivity extends AppCompatActivity {
     private Button btnGaleria;
     private Button btnEnviar;
     private Button btnLista;
+    private Button btnAdmin;       // Sprint 5: CRUD de usuarios/órdenes (solo admin)
+    private Button btnSalir;       // Sprint 5: cerrar sesión (RF-M1)
+    private TextView txtSesion;    // Sprint 5: «👤 nombre (rol) · servidor»
     private ProgressBar barraEnvio;
     private TextView txtResultado;
     private TextView txtPreviewHint;  // 0.6.0-ui: marcador «sin foto» sobre la vista previa
@@ -134,7 +142,6 @@ public class MainActivity extends AppCompatActivity {
             getSupportActionBar().hide();
         }
 
-        prefs = getPreferences(MODE_PRIVATE);
         cola = Volley.newRequestQueue(this);
 
         txtServidor = findViewById(R.id.txtServidor);
@@ -145,12 +152,31 @@ public class MainActivity extends AppCompatActivity {
         btnGaleria = findViewById(R.id.btnGaleria);
         btnEnviar = findViewById(R.id.btnEnviar);
         btnLista = findViewById(R.id.btnLista);
+        btnAdmin = findViewById(R.id.btnAdmin);
+        btnSalir = findViewById(R.id.btnSalir);
+        txtSesion = findViewById(R.id.txtSesion);
         barraEnvio = findViewById(R.id.barraEnvio);
         txtResultado = findViewById(R.id.txtResultado);
         txtPreviewHint = findViewById(R.id.txtPreviewHint);
 
-        // Servidor por defecto: alias del host local visto desde el emulador.
-        txtServidor.setText(prefs.getString("servidor", "10.0.2.2"));
+        // Sprint 5: la IP y la sesión (token/rol/nombre) viven en la clase Sesion;
+        // aquí solo se muestra quién está conectado y a qué servidor.
+        txtServidor.setText(Sesion.servidor(this));
+        txtSesion.setText(getString(R.string.sesion_info,
+                Sesion.nombre(this), Sesion.rol(this), Sesion.servidor(this)));
+        if (!Sesion.esAdmin(this)) {
+            btnAdmin.setVisibility(View.GONE);   // RF-B6: el CRUD es solo para admin
+        }
+
+        // Sprint 8 (RF-P1): cuentas por pagar — apartado del CLIENTE
+        // (capturista/admin/revisor); al proveedor se le oculta.
+        Button btnPagos = findViewById(R.id.btnPagos);
+        if (Sesion.esProveedor(this)) {
+            btnPagos.setVisibility(View.GONE);
+        } else {
+            btnPagos.setOnClickListener(v ->
+                    startActivity(new Intent(this, PagosActivity.class)));
+        }
 
         btnCargar.setOnClickListener(v -> {
             guardarServidor();
@@ -160,6 +186,9 @@ public class MainActivity extends AppCompatActivity {
         btnGaleria.setOnClickListener(v -> elegirDeGaleria());
         btnEnviar.setOnClickListener(v -> enviarFactura());
         btnLista.setOnClickListener(v -> abrirListado());
+        btnAdmin.setOnClickListener(v ->
+                startActivity(new Intent(this, AdminActivity.class)));
+        btnSalir.setOnClickListener(v -> cerrarSesion());
 
         spOrdenes.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
@@ -189,7 +218,7 @@ public class MainActivity extends AppCompatActivity {
     // ========================================================================
 
     private void guardarServidor() {
-        prefs.edit().putString("servidor", host()).apply();
+        Sesion.setServidor(this, host());   // Sprint 5: la IP se comparte con el login
     }
 
     /** Limpia lo tecleado: admite "10.0.2.2", "http://192.168.1.5", "192.168.1.5/". */
@@ -228,7 +257,7 @@ public class MainActivity extends AppCompatActivity {
                             etiquetas.add(o.etiqueta());
                         }
                         ArrayAdapter<String> adaptador = new ArrayAdapter<>(this,
-                                android.R.layout.simple_spinner_item, etiquetas);
+                                R.layout.fila_spinner, etiquetas);   // 0.8.1-night: color fijo (tarjeta clara)
                         adaptador.setDropDownViewResource(
                                 android.R.layout.simple_spinner_dropdown_item);
                         spOrdenes.setAdapter(adaptador);
@@ -239,8 +268,22 @@ public class MainActivity extends AppCompatActivity {
                         mostrarError("Respuesta inesperada del servidor: " + e.getMessage());
                     }
                 },
-                error -> mostrarError("No se pudo conectar con " + host()
-                        + ". ¿Está Laragon iniciado? (" + mensajeVolley(error) + ")"));
+                error -> {
+                    if (Sesion.sinSesion(error)) {
+                        sesionCaducada();
+                        return;
+                    }
+                    mostrarError("No se pudo conectar con " + host()
+                            + ". ¿Está Laragon iniciado? (" + mensajeVolley(error) + ")");
+                }) {
+            // Sprint 5: toda petición sale firmada con el token (RF-M1/RF-B6)
+            @Override
+            public Map<String, String> getHeaders() throws AuthFailureError {
+                Map<String, String> h = new HashMap<>(super.getHeaders());
+                h.putAll(Sesion.cabeceras(MainActivity.this));
+                return h;
+            }
+        };
         peticion.setTag(TAG);
         cola.add(peticion);
     }
@@ -363,6 +406,13 @@ public class MainActivity extends AppCompatActivity {
         }
         imgPreview.setImageBitmap(preview);
         txtPreviewHint.setVisibility(View.GONE);
+        if (Sesion.esRevisor(this)) {
+            // RF-B6 en la app: el revisor es de CONSULTA; la API además lo
+            // rechazaría con 403, pero es mejor explicarlo aquí.
+            btnEnviar.setEnabled(false);
+            pintarResultado(R.color.ambar_alerta, getString(R.string.revisor_solo_lectura));
+            return;
+        }
         btnEnviar.setEnabled(true);
         pintarResultado(R.color.texto_normal, getString(R.string.foto_lista));
     }
@@ -421,8 +471,19 @@ public class MainActivity extends AppCompatActivity {
                 },
                 error -> {
                     finEnvio(false);
+                    if (Sesion.sinSesion(error)) {
+                        sesionCaducada();
+                        return;
+                    }
                     mostrarError("Error de envío: " + mensajeVolley(error));
-                });
+                }) {
+            @Override
+            public Map<String, String> getHeaders() throws AuthFailureError {
+                Map<String, String> h = new HashMap<>(super.getHeaders());
+                h.putAll(Sesion.cabeceras(MainActivity.this));
+                return h;
+            }
+        };
 
         // Sin reintentos: el manejo de duplicados llega en v1.0 (RF-L3)
         peticion.setRetryPolicy(new DefaultRetryPolicy(TIMEOUT_MS, 0, 1.0f));
@@ -449,6 +510,37 @@ public class MainActivity extends AppCompatActivity {
                 .putExtra("servidor", host()));
     }
 
+    // ========================================================================
+    // Sprint 5 — sesión (RF-M1 / RF-B6)
+    // ========================================================================
+
+    /** El servidor respondió 401: la sesión expiró o se cerró → al login. */
+    private void sesionCaducada() {
+        Toast.makeText(this, R.string.sesion_caducada, Toast.LENGTH_LONG).show();
+        Sesion.salirAlLogin(this);
+    }
+
+    /**
+     * Logout: DELETE /api/sesion.php con el token (borra la fila en `sesiones`
+     * en el servidor) y, llegue respuesta o error, se limpia la sesión local
+     * y se regresa al login. Fire-and-forget a propósito.
+     */
+    private void cerrarSesion() {
+        JsonObjectRequest peticion = new JsonObjectRequest(Request.Method.DELETE,
+                urlBase() + "/sesion.php", null,
+                response -> Sesion.salirAlLogin(MainActivity.this),
+                error -> Sesion.salirAlLogin(MainActivity.this)) {
+            @Override
+            public Map<String, String> getHeaders() throws AuthFailureError {
+                Map<String, String> h = new HashMap<>(super.getHeaders());
+                h.putAll(Sesion.cabeceras(MainActivity.this));
+                return h;
+            }
+        };
+        peticion.setTag(TAG);
+        cola.add(peticion);
+    }
+
     /** Dispara el pipeline OCR → riesgo → conciliación y muestra el veredicto. */
     private void procesarFactura(int idFactura) {
         pintarResultado(R.color.texto_normal, getString(R.string.procesando, idFactura));
@@ -466,10 +558,21 @@ public class MainActivity extends AppCompatActivity {
                 },
                 error -> {
                     finEnvio(true);
+                    if (Sesion.sinSesion(error)) {
+                        sesionCaducada();
+                        return;
+                    }
                     // RNF-5: la factura NO se perdió; quedó «Pendiente» en el servidor.
                     pintarResultado(R.color.ambar_alerta, getString(R.string.queda_pendiente,
                             idFactura, mensajeVolley(error)));
-                });
+                }) {
+            @Override
+            public Map<String, String> getHeaders() throws AuthFailureError {
+                Map<String, String> h = new HashMap<>(super.getHeaders());
+                h.putAll(Sesion.cabeceras(MainActivity.this));
+                return h;
+            }
+        };
 
         // El pipeline tarda ~1-3 s, pero se deja el margen completo del KPI-1
         peticion.setRetryPolicy(new DefaultRetryPolicy(TIMEOUT_MS, 0, 1.0f));

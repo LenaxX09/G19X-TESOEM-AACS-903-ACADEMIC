@@ -35,6 +35,7 @@ public final class Sesion {
     private static final String K_ID       = "usuario_id";
     private static final String K_NOMBRE   = "nombre";
     private static final String K_ROL      = "rol";
+    private static final String K_NEGOCIO  = "negocio";   // Sprint 7 (RF-F5)
 
     private Sesion() {
         // clase utilitaria estática: no se instancia
@@ -44,15 +45,16 @@ public final class Sesion {
         return c.getApplicationContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE);
     }
 
-    /** Guarda la sesión completa tras un login exitoso. */
+    /** Guarda la sesión completa tras un login exitoso (negocio: solo proveedor). */
     public static void guardar(Context c, String servidor, String token,
-                               int usuarioId, String nombre, String rol) {
+                               int usuarioId, String nombre, String rol, String negocio) {
         prefs(c).edit()
                 .putString(K_SERVIDOR, servidor)
                 .putString(K_TOKEN, token)
                 .putInt(K_ID, usuarioId)
                 .putString(K_NOMBRE, nombre)
                 .putString(K_ROL, rol)
+                .putString(K_NEGOCIO, negocio == null ? "" : negocio)
                 .apply();
     }
 
@@ -96,6 +98,16 @@ public final class Sesion {
 
     public static boolean esRevisor(Context c) {
         return "revisor".equals(rol(c));
+    }
+
+    /** Sprint 7 (RF-F5): ¿la sesión es de una cuenta de proveedor? */
+    public static boolean esProveedor(Context c) {
+        return "proveedor".equals(rol(c));
+    }
+
+    /** Sprint 7 (RF-F5): el negocio del proveedor (vacío para los demás roles). */
+    public static String negocio(Context c) {
+        return prefs(c).getString(K_NEGOCIO, "");
     }
 
     /** Cabeceras HTTP para toda petición autenticada (RF-M1). */

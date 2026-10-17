@@ -31,7 +31,7 @@ function tokenPedido(): ?string
     return preg_match('/^[a-f0-9]{64}$/', $token) === 1 ? $token : null;
 }
 
-/** Usuario de la sesión vigente (id, nombre, usuario, rol) o null si no hay. */
+/** Usuario de la sesión vigente (id, nombre, usuario, rol, negocio) o null si no hay. */
 function usuarioActual(): ?array
 {
     $token = tokenPedido();
@@ -39,7 +39,7 @@ function usuarioActual(): ?array
         return null;
     }
     $stmt = db()->prepare(
-        'SELECT u.id, u.nombre, u.usuario, u.rol
+        'SELECT u.id, u.nombre, u.usuario, u.rol, u.negocio
            FROM sesiones s
            JOIN usuarios u ON u.id = s.usuario_id
           WHERE s.token = :token

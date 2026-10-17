@@ -51,6 +51,21 @@
         android:paddingEnd="12dp"
         android:paddingBottom="12dp" />
 
+    <!-- Sprint 7 (RF-F7): solo con cuenta de proveedor — enviar sus facturas.
+         En el modo rápido «Soy proveedor» del S6 permanece oculto. -->
+    <Button
+        android:id="@+id/btnEnviarFactura"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_marginEnd="12dp"
+        android:layout_marginBottom="8dp"
+        android:background="@drawable/bg_boton_principal"
+        android:text="@string/proveedor_enviar"
+        android:textColor="@color/texto_boton_principal"
+        android:textStyle="bold"
+        android:visibility="gone" />
+
     <Button
         android:id="@+id/btnSalirProveedor"
         style="?android:attr/borderlessButtonStyle"

@@ -1,5 +1,7 @@
 plugins {
     id 'com.android.application'
+    // Sprint 6: procesa google-services.json (conexión con Firebase)
+    id 'com.google.gms.google-services'
 }
 
 android {
@@ -10,8 +12,8 @@ android {
         applicationId "com.cpp.captura"
         minSdk 24          // Android 7.0+ (cubre el perfil PyME/bodega del PRD)
         targetSdk 36
-        versionCode 10
-        versionName "0.7.2-ui" // Ayuda accionable por motivo de discrepancia en las tarjetas
+        versionCode 18
+        versionName "0.12.0-v1" // S8.2: cada cliente ve SOLO sus propias cuentas (subida_por)
     }
 
     buildTypes {
@@ -39,6 +41,17 @@ dependencies {
     // Hotfix 0.4.3: leer el tag EXIF Orientation para que las fotos verticales
     // no lleguen giradas a la vista previa ni al servidor (OCR)
     implementation 'androidx.exifinterface:exifinterface:1.3.7'
+
+    // Sprint 6 (Firebase) — EXCEPCIÓN documentada a la regla de no-dependencias
+    // (aprobada por el usuario): Firestore guarda clientes/proveedores/
+    // notificaciones y FCM recibe el push del proveedor. El pipeline
+    // (MySQL+PHP+Python+C+Prolog) NO cambia: Firebase solo observa y avisa.
+    implementation platform('com.google.firebase:firebase-bom:33.1.2')
+    implementation 'com.google.firebase:firebase-firestore'
+    implementation 'com.google.firebase:firebase-messaging'
+    // Auth anónima: las reglas de Firestore exigen "app legítima" sin pedir
+    // cuenta Google al usuario (no viene incluida en las dos de arriba)
+    implementation 'com.google.firebase:firebase-auth'
 
     // Volley arrastra kotlin-stdlib-jdk7/jdk8 1.6.21 que choca con el
     // kotlin-stdlib 1.8.x → se alinean para evitar clases duplicadas

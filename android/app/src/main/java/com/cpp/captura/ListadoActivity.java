@@ -16,6 +16,7 @@ import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.android.volley.AuthFailureError;
 import com.android.volley.DefaultRetryPolicy;
 import com.android.volley.NetworkResponse;
 import com.android.volley.Request;
@@ -28,7 +29,9 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * ListadoActivity — Sprint 4 "Integración y Demo" (RF-M5 + RF-M6 simplificado).
@@ -104,7 +107,7 @@ public class ListadoActivity extends AppCompatActivity {
 
         servidor = getIntent().getStringExtra("servidor");
         if (servidor == null || servidor.trim().isEmpty()) {
-            servidor = "10.0.2.2";     // mismo default que MainActivity
+            servidor = Sesion.servidor(this);   // Sprint 5: la IP también vive en la sesión
         }
 
         ActionBar barraApp = getSupportActionBar();
@@ -181,13 +184,28 @@ public class ListadoActivity extends AppCompatActivity {
                 },
                 error -> {
                     barra.setVisibility(View.GONE);
+                    if (Sesion.sinSesion(error)) {
+                        // Sprint 5: token expirado/cerrado → de regreso al login
+                        android.widget.Toast.makeText(ListadoActivity.this,
+                                R.string.sesion_caducada, android.widget.Toast.LENGTH_LONG).show();
+                        Sesion.salirAlLogin(ListadoActivity.this);
+                        return;
+                    }
                     facturas.clear();
                     adaptador.notifyDataSetChanged();
                     pintarResumen();   // sin datos → los tres chips se ocultan
                     txtEstado.setVisibility(View.VISIBLE);
                     txtEstado.setTextColor(ContextCompat.getColor(this, R.color.rojo_error));
                     txtEstado.setText(getString(R.string.error_listado, mensajeVolley(error)));
-                });
+                }) {
+            // Sprint 5: petición autenticada con el token de sesión (RF-M1)
+            @Override
+            public Map<String, String> getHeaders() throws AuthFailureError {
+                Map<String, String> h = new HashMap<>(super.getHeaders());
+                h.putAll(Sesion.cabeceras(ListadoActivity.this));
+                return h;
+            }
+        };
 
         peticion.setRetryPolicy(new DefaultRetryPolicy(TIMEOUT_MS, 0, 1.0f));
         peticion.setTag(TAG);
