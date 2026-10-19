@@ -12,8 +12,8 @@ android {
         applicationId "com.cpp.captura"
         minSdk 24          // Android 7.0+ (cubre el perfil PyME/bodega del PRD)
         targetSdk 36
-        versionCode 18
-        versionName "0.12.0-v1" // S8.2: cada cliente ve SOLO sus propias cuentas (subida_por)
+        versionCode 21
+        versionName "0.14.0-v1" // S10: Firebase puro (Auth/Firestore/Storage) + OCR ML Kit en el teléfono
     }
 
     buildTypes {
@@ -52,6 +52,12 @@ dependencies {
     // Auth anónima: las reglas de Firestore exigen "app legítima" sin pedir
     // cuenta Google al usuario (no viene incluida en las dos de arriba)
     implementation 'com.google.firebase:firebase-auth'
+    // Sprint 10 (EXCEPCIÓN aprobada por el usuario): Firebase no puede
+    // ejecutar Python/C/Prolog, así que el OCR corre EN EL TELÉFONO con
+    // ML Kit (modelo latino integrado: lee español con acentos y ñ).
+    implementation 'com.google.mlkit:text-recognition:16.0.1'
+    // Sprint 10: fotos de facturas y comprobantes en Firebase Storage
+    implementation 'com.google.firebase:firebase-storage'
 
     // Volley arrastra kotlin-stdlib-jdk7/jdk8 1.6.21 que choca con el
     // kotlin-stdlib 1.8.x → se alinean para evitar clases duplicadas

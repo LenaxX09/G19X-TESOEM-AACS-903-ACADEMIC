@@ -54,9 +54,7 @@
             android:parentActivityName=".MainActivity" />
 
         <!-- Sprint 5: administración de usuarios y órdenes (RF-B4, solo admin) -->
-        <activity
-            android:name=".AdminActivity"
-            android:parentActivityName=".MainActivity" />
+        <!-- AdminActivity retirado en el S10 (CRUD ligado al PHP); regresa en el S11 migrado a Firestore. -->
 
         <!-- Sprint 8: cuentas por pagar del cliente (RF-P1..P3) -->
         <activity

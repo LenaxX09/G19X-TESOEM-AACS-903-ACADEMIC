@@ -26,6 +26,13 @@ define('UMBRAL_RIESGO', 40.0);
 // TTL de la sesión en horas; al expirar la app recibe 401 y vuelve al login.
 define('SESION_TTL_HORAS', 8);
 
+// --- Sprint 9 (v1.0, RF-M7): vencimiento de cuentas por pagar -------------
+// Fecha límite de pago = fecha del documento de la factura (o la de subida
+// si el OCR no la leyó) + PAGO_DIAS_LIMITE días. Si faltan menos de
+// ALERTA_VENCE_EN_DIAS días (o ya pasó), la app pinta la cuenta en ROJO.
+define('PAGO_DIAS_LIMITE', 30);
+define('ALERTA_VENCE_EN_DIAS', 3);
+
 // --- Sprint 6 (v1.0, Firebase): push FCM + escritura en Firestore ---
 // Clave de servicio del proyecto cpp-facturas. Es un SECRETO: NO va en git
 // (.gitignore la excluye). Si falta, la API sigue funcionando igual —

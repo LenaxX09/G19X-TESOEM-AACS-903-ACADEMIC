@@ -55,7 +55,8 @@ function listarPagos(): void
     $sql = 'SELECT f.id, o.codigo AS orden_codigo, o.proveedor AS orden_proveedor,
                    f.proveedor_detectado, f.folio, f.monto_facturado, f.riesgo,
                    f.estado, f.motivo_discrepancia, f.ruta_imagen, f.creado_en,
-                   f.pagada_en, f.subida_por, f.evidencia_pago
+                   f.pagada_en, f.subida_por, f.evidencia_pago,
+                   COALESCE(f.fecha_documento, DATE(f.creado_en)) AS fecha_base_pago
             FROM facturas f
             JOIN ordenes_compra o ON o.id = f.orden_id';
 
@@ -71,12 +72,38 @@ function listarPagos(): void
     $q2->execute([':yo' => $miId]);
     $pagadas = $q2->fetchAll();
 
+    // Sprint 9 (RF-M7): fecha límite de pago = fecha del documento (o la de
+    // subida si el OCR no la leyó) + PAGO_DIAS_LIMITE días (30 por defecto,
+    // config.php). Con ALERTA_VENCE_EN_DIAS (3) o menos por vencer, la app
+    // pinta la cuenta en ROJO. Se calcula aquí para que la regla viva en el
+    // servidor (la app solo colorea).
+    $porPagar = marcarVencimiento($porPagar);
+    $pagadas  = marcarVencimiento($pagadas);
+
     responder(200, 'OK', 'Tus cuentas por pagar y pagadas.', [
         'por_pagar'      => $porPagar,
         'total_por_pagar' => count($porPagar),
         'pagadas'        => $pagadas,
         'total_pagadas'  => count($pagadas),
     ]);
+}
+
+/** S9 (RF-M7): añade a cada fila fecha_limite, dias_restantes y vence_pronto. */
+function marcarVencimiento(array $lista): array
+{
+    foreach ($lista as &$f) {
+        $base = (string)($f['fecha_base_pago'] ?? '');
+        unset($f['fecha_base_pago']);
+        if ($base === '') {
+            continue;
+        }
+        $limite = strtotime($base . ' +' . (int)PAGO_DIAS_LIMITE . ' days');
+        $hoy    = strtotime(date('Y-m-d'));
+        $f['fecha_limite']   = date('Y-m-d', $limite);
+        $f['dias_restantes'] = (int)floor(($limite - $hoy) / 86400);
+        $f['vence_pronto']   = $f['dias_restantes'] <= (int)ALERTA_VENCE_EN_DIAS;
+    }
+    return $lista;
 }
 
 // ============================================================================

@@ -73,8 +73,14 @@ function fb_token(): ?string
         return $token;
     }
 
+    // S10: se suma `identitytoolkit` (Auth Admin REST) para la semilla.
+    $alcance = 'https://www.googleapis.com/auth/firebase.messaging'
+             . ' https://www.googleapis.com/auth/datastore'
+             . ' https://www.googleapis.com/auth/identitytoolkit';
+
     // Caché en disco: evita firmar+pedir token en cada factura (~2 s ahorrados)
-    $cache = sys_get_temp_dir() . '/cpp_fb_token.json';
+    // El nombre incluye el scope: si cambia, no se reusan tokens viejos.
+    $cache = sys_get_temp_dir() . '/cpp_fb_' . md5($alcance) . '.json';
     if (is_file($cache)) {
         $c = json_decode((string)@file_get_contents($cache), true);
         if (is_array($c) && ($c['exp'] ?? 0) > time() + 60) {
@@ -92,8 +98,7 @@ function fb_token(): ?string
     $cabecera = fb_b64url(json_encode(['alg' => 'RS256', 'typ' => 'JWT']));
     $cuerpo   = fb_b64url(json_encode([
         'iss'   => $sa['client_email'],
-        'scope' => 'https://www.googleapis.com/auth/firebase.messaging'
-                 . ' https://www.googleapis.com/auth/datastore',
+        'scope' => $alcance,
         'aud'   => $sa['token_uri'],
         'iat'   => $ahora,
         'exp'   => $ahora + 3600,

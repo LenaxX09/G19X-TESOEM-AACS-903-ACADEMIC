@@ -1,71 +1,58 @@
 package com.cpp.captura;
 
 import android.Manifest;
-import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.android.volley.AuthFailureError;
-import com.android.volley.DefaultRetryPolicy;
-import com.android.volley.Request;
-import com.android.volley.RequestQueue;
-import com.android.volley.toolbox.JsonObjectRequest;
-import com.android.volley.toolbox.Volley;
+import com.google.firebase.firestore.FieldValue;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
- * ProveedorActivity — Sprint 6 (RF-F3/F4): el "buzón" del proveedor.
+ * ProveedorActivity — Sprint 10 «Sin servidor»: EL PROVEEDOR SUBE LAS CUENTAS.
  *
- * Se llega desde el botón «🏬 Soy proveedor» del login: el teléfono queda
- * asociado al proveedor elegido (Firestore `proveedores` + tema FCM) y esta
- * pantalla escucha EN TIEMPO REAL la colección `notificaciones`: en cuanto
- * alguien sube una factura de ese proveedor, aparece aquí al instante —
- * sin botón de actualizar. Con la app cerrada, el aviso llega como push
- * del sistema (lo envía api/facturas.php vía FCM y lo muestra PushServicio).
+ * Modelo nuevo (aclarado por el usuario): el proveedor registra lo que el
+ * cliente le debe → se guarda en Firestore (`ordenes`: clienteCorreo, monto,
+ * fechaLimite) → el cliente lo ve AL INSTANTE en «💰 Cuentas por pagar»
+ * (oyente en tiempo real, sin push de servidor) y lo paga adjuntando su
+ * comprobante a Storage; aquí la lista se actualiza sola cuando eso pasa.
+ *
+ * Sin Laragon, sin IP: todo pasa por Firebase.
  */
 public class ProveedorActivity extends AppCompatActivity {
 
     private static final int REQ_NOTIFICACIONES = 2001;
 
-    private String proveedor;
-    private NotisAdapter adaptador;
-    private RequestQueue cola;                       // Sprint 7: logout con el token
-    private final List<FirebaseServicio.Noti> notis = new ArrayList<>();
+    private final List<QueryDocumentSnapshot> cuentas = new ArrayList<>();
+    private CuentasAdapter adaptador;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_proveedor);
-
-        proveedor = getIntent().getStringExtra("proveedor");
-        // Sprint 7 (RF-F7): con cuenta propia, el negocio viene de la sesión.
-        if ((proveedor == null || proveedor.isEmpty()) && Sesion.esProveedor(this)) {
-            proveedor = Sesion.negocio(this);
-        }
-        if (proveedor == null || proveedor.isEmpty()) {
-            proveedor = FirebaseServicio.proveedorGuardado(this);
-        }
-        if (proveedor == null || proveedor.isEmpty()) {
-            finish();
-            return;
-        }
 
         ActionBar barraApp = getSupportActionBar();
         if (barraApp != null) {
@@ -73,36 +60,24 @@ public class ProveedorActivity extends AppCompatActivity {
             barraApp.setDisplayShowTitleEnabled(false);
         }
 
+        String negocio = Sesion.negocio(this);
         TextView txtSub = findViewById(R.id.txtSubProveedor);
-        txtSub.setText(getString(R.string.subtitulo_proveedor, proveedor));
+        txtSub.setText(getString(R.string.subtitulo_proveedor,
+                negocio == null || negocio.isEmpty() ? Sesion.correo(this) : negocio));
 
         RecyclerView rec = findViewById(R.id.recNotificaciones);
-        adaptador = new NotisAdapter();
+        adaptador = new CuentasAdapter();
         rec.setLayoutManager(new LinearLayoutManager(this));
         rec.setAdapter(adaptador);
 
         TextView txtEstado = findViewById(R.id.txtEstadoProveedor);
         txtEstado.setText(R.string.proveedor_escuchando);
 
-        Button btnSalir = findViewById(R.id.btnSalirProveedor);
-        cola = Volley.newRequestQueue(this);
+        findViewById(R.id.btnSubirCuenta).setOnClickListener(v -> dialogoNuevaCuenta());
+        findViewById(R.id.btnSalirProveedor).setOnClickListener(v ->
+                Sesion.salirAlLogin(ProveedorActivity.this));
 
-        if (Sesion.esProveedor(this)) {
-            // Sprint 7 (RF-F7): perfil EXCLUSIVO con cuenta — puede ENVIAR sus
-            // facturas (MainActivity cargará solo SUS órdenes vía la API) y
-            // cerrar sesión de verdad (borra el token en el servidor).
-            Button btnEnviar = findViewById(R.id.btnEnviarFactura);
-            btnEnviar.setVisibility(View.VISIBLE);
-            btnEnviar.setOnClickListener(v ->
-                    startActivity(new Intent(this, MainActivity.class)));
-            btnSalir.setText(R.string.proveedor_cerrar_sesion);
-            btnSalir.setOnClickListener(v -> cerrarSesion());
-        } else {
-            // Modo rápido «Soy proveedor» (S6): solo mirar el buzón.
-            btnSalir.setOnClickListener(v -> finish());
-        }
-
-        // Android 13+: pedir permiso para que el PUSH se vea (no el listener).
+        // Android 13+: pedir permiso para que los avisos del sistema se vean.
         if (Build.VERSION.SDK_INT >= 33
                 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
                 != PackageManager.PERMISSION_GRANTED) {
@@ -110,65 +85,132 @@ public class ProveedorActivity extends AppCompatActivity {
                     REQ_NOTIFICACIONES);
         }
 
-        // RF-F4: oyente en tiempo real (app abierta).
-        FirebaseServicio.escuchar(proveedor, lista -> runOnUiThread(() -> {
-            notis.clear();
-            notis.addAll(lista);
+        // Las cuentas de ESTE proveedor, EN TIEMPO REAL (se re-pintan solas
+        // cuando el cliente paga). Sin orderBy (sin índice compuesto): Java ordena.
+        FirebaseServicio.escucharOrdenesTodas(lista -> runOnUiThread(() -> {
+            String uid = Sesion.uid(ProveedorActivity.this);
+            cuentas.clear();
+            for (QueryDocumentSnapshot d : lista) {
+                if (uid.equals(d.getString("proveedorUid"))) {
+                    cuentas.add(d);
+                }
+            }
+            Collections.sort(cuentas, (a, b) -> Long.compare(creado(b), creado(a)));
             adaptador.notifyDataSetChanged();
-            txtEstado.setText(notis.isEmpty()
-                    ? getString(R.string.proveedor_sin_facturas)
-                    : getString(R.string.proveedor_con_facturas, notis.size()));
+            txtEstado.setText(cuentas.isEmpty()
+                    ? getString(R.string.proveedor_sin_cuentas)
+                    : getString(R.string.proveedor_cuentas, cuentas.size()));
         }));
+    }
+
+    private long creado(QueryDocumentSnapshot d) {
+        Date c = d.getDate("creado");
+        return c == null ? 0 : c.getTime();
+    }
+
+    // ========================================================================
+    // ➕ Subir cuenta (lo que el cliente le debe)
+    // ========================================================================
+
+    private void dialogoNuevaCuenta() {
+        View v = LayoutInflater.from(this).inflate(R.layout.dialog_cuenta, null);
+        EditText edtCliente = v.findViewById(R.id.edtCuentaCliente);
+        EditText edtCodigo = v.findViewById(R.id.edtCuentaCodigo);
+        EditText edtMonto = v.findViewById(R.id.edtCuentaMonto);
+        EditText edtLimite = v.findViewById(R.id.edtCuentaLimite);
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.cuenta_titulo)
+                .setView(v)
+                .setPositiveButton(R.string.reg_crear, (d, w) -> {
+                    String cliente = edtCliente.getText().toString().trim();
+                    String codigo = edtCodigo.getText().toString().trim();
+                    String limite = edtLimite.getText().toString().trim();
+                    double monto;
+                    try {
+                        monto = Double.parseDouble(edtMonto.getText().toString().trim());
+                    } catch (NumberFormatException e) {
+                        monto = 0;
+                    }
+                    if (!cliente.contains("@") || codigo.length() < 2 || monto <= 0
+                            || !limite.matches("\\d{4}-\\d{2}-\\d{2}")) {
+                        Toast.makeText(this, R.string.cuenta_faltan_datos,
+                                Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    guardarCuenta(cliente, codigo, monto, limite);
+                })
+                .setNegativeButton(R.string.cancelar, null)
+                .show();
+    }
+
+    private void guardarCuenta(String cliente, String codigo, double monto, String limite) {
+        Toast.makeText(this, R.string.cuenta_guardando, Toast.LENGTH_SHORT).show();
+
+        Map<String, Object> orden = new HashMap<>();
+        orden.put("codigo", codigo);
+        orden.put("negocio", Sesion.negocio(this));
+        orden.put("proveedorUid", Sesion.uid(this));
+        orden.put("clienteCorreo", cliente);
+        orden.put("monto", monto);
+        orden.put("fechaEmision", hoy());
+        orden.put("fechaLimite", limite);
+        orden.put("estado", "pendiente");
+        orden.put("creado", FieldValue.serverTimestamp());
+
+        FirebaseServicio.guardarOrden(orden,
+                id -> runOnUiThread(() -> Toast.makeText(this,
+                        R.string.cuenta_exito, Toast.LENGTH_LONG).show()),
+                e -> runOnUiThread(() -> Toast.makeText(this,
+                        "Error al subir la cuenta: " + e, Toast.LENGTH_LONG).show()));
+    }
+
+    private String hoy() {
+        return new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
     }
 
     @Override
     public boolean onSupportNavigateUp() {
-        finish();     // ⬅ volver al login
+        Sesion.salirAlLogin(this);   // ⬅ al login (cierra la sesión)
         return true;
     }
 
-    /** Sprint 7 (RF-F5): logout real — DELETE /sesion.php con el token y al login. */
-    private void cerrarSesion() {
-        JsonObjectRequest peticion = new JsonObjectRequest(Request.Method.DELETE,
-                "http://" + Sesion.servidor(this) + "/cpp/api/sesion.php", null,
-                r -> Sesion.salirAlLogin(ProveedorActivity.this),
-                e -> Sesion.salirAlLogin(ProveedorActivity.this)) {
-            @Override
-            public Map<String, String> getHeaders() throws AuthFailureError {
-                // Copia mutable: super.getHeaders() es inmutable (hotfix 0.8.2).
-                Map<String, String> h = new HashMap<>(super.getHeaders());
-                h.putAll(Sesion.cabeceras(ProveedorActivity.this));
-                return h;
-            }
-        };
-        peticion.setRetryPolicy(new DefaultRetryPolicy(10000, 0, 1.0f));
-        cola.add(peticion);
-    }
-
-    /** Adaptador mínimo que reutiliza la fila genérica de administración. */
-    private class NotisAdapter extends RecyclerView.Adapter<NotisAdapter.Fila> {
+    /** Una fila por cuenta: código · cliente · monto · estado. */
+    private class CuentasAdapter extends RecyclerView.Adapter<CuentasAdapter.Fila> {
 
         @NonNull
         @Override
         public Fila onCreateViewHolder(@NonNull ViewGroup padre, int tipo) {
-            View v = LayoutInflater.from(padre.getContext())
-                    .inflate(R.layout.fila_admin, padre, false);
-            return new Fila(v);
+            return new Fila(LayoutInflater.from(padre.getContext())
+                    .inflate(R.layout.fila_admin, padre, false));
         }
 
         @Override
         public void onBindViewHolder(@NonNull Fila fila, int pos) {
-            FirebaseServicio.Noti n = notis.get(pos);
-            fila.titulo.setText(n.titulo);
-            fila.sub.setText(n.detalle);
-            fila.estado.setText(n.fecha);
+            QueryDocumentSnapshot d = cuentas.get(pos);
+            String cliente = texto(d, "clienteCorreo");
+            fila.titulo.setText("🧾 " + texto(d, "codigo") + " · "
+                    + (cliente.isEmpty() ? "?" : cliente));
+
+            Double monto = d.getDouble("monto");
+            String sub = texto(d, "negocio") + " · $"
+                    + (monto == null ? "?" : String.format(Locale.US, "%.2f", monto));
+            if (!texto(d, "fechaLimite").isEmpty()) {
+                sub += " · vence " + texto(d, "fechaLimite");
+            }
+            fila.sub.setText(sub);
+
+            boolean pagada = "pagada".equals(texto(d, "estado"));
+            fila.estado.setText(pagada
+                    ? getString(R.string.fila_cuenta_estado_pagada, texto(d, "pagadaEn"))
+                    : getString(R.string.fila_cuenta_estado_pend));
             fila.estado.setTextColor(ContextCompat.getColor(ProveedorActivity.this,
-                    R.color.verde_ok));
+                    pagada ? R.color.verde_ok : R.color.ambar_alerta));
         }
 
         @Override
         public int getItemCount() {
-            return notis.size();
+            return cuentas.size();
         }
 
         class Fila extends RecyclerView.ViewHolder {
@@ -183,5 +225,10 @@ public class ProveedorActivity extends AppCompatActivity {
                 estado = v.findViewById(R.id.txtFilaEstado);
             }
         }
+    }
+
+    private String texto(QueryDocumentSnapshot d, String clave) {
+        String s = d.getString(clave);
+        return s == null ? "" : s;
     }
 }

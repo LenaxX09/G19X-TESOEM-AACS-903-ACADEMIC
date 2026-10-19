@@ -33,7 +33,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="@string/subtitulo_login"
+                android:text="@string/subtitulo_login_s10"
                 android:textColor="@color/blanco_90"
                 android:textSize="12sp" />
         </LinearLayout>
@@ -50,15 +50,14 @@
             android:padding="16dp">
 
             <EditText
-                android:id="@+id/txtServidorLogin"
+                android:id="@+id/txtCorreoLogin"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="@string/hint_servidor"
-                android:inputType="text"
+                android:hint="@string/hint_correo"
+                android:inputType="textEmailAddress"
                 android:maxLines="1"
                 android:textColor="@color/texto_sobre_tarjeta"
-                android:textColorHint="@color/hint_sobre_tarjeta"
-                android:textSize="14sp" />
+                android:textColorHint="@color/hint_sobre_tarjeta" />
 
             <EditText
                 android:id="@+id/txtUsuarioLogin"
@@ -92,18 +91,6 @@
             android:background="@drawable/bg_boton_principal"
             android:text="@string/btn_entrar"
             android:textColor="@color/texto_boton_principal"
-            android:textStyle="bold" />
-
-        <!-- Sprint 6: entrada del proveedor (buzón de notificaciones en vivo) -->
-        <Button
-            android:id="@+id/btnSoyProveedor"
-            style="?android:attr/borderlessButtonStyle"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:background="@drawable/bg_boton_pill"
-            android:text="@string/btn_soy_proveedor"
-            android:textColor="@color/primario"
             android:textStyle="bold" />
 
         <!-- Sprint 7/8: crear cuenta (proveedor se autoregistra; cliente va

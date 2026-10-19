@@ -8,8 +8,11 @@
  * Cadena orquestada (contratos fijados en MVP §6.4, ya verificados en C3):
  *   1) OCR (Python) .... "PYTHON_BIN" "RUTA_MOTOR_OCR" <imagen>    → JSON 1 línea
  *   2) Riesgo (C) ...... RUTA_BIN_RIESGO <monto> <promedio>        → "27.3"
- *   3) Conciliar (Prolog) "SWIPL_BIN" "RUTA_REGLA_PROLOG" <9 args> → APROBADA|DISCREPANCIA:<motivo>
+ *   3) Conciliar (Prolog) "SWIPL_BIN" "RUTA_REGLA_PROLOG" <10 args> → APROBADA|DISCREPANCIA:<motivo>
  *   4) UPDATE facturas (..., procesado_en = NOW())                 → KPI-1 (≤ 30 s)
+ *
+ *   1b) PRE-CHECK duplicados (S9 · RF-L3): mismo folio o monto+fecha+proveedor
+ *       ya registrados -> regla 0 de regla.pl: DISCREPANCIA:FACTURA_DUPLICADA.
  *
  * SEGURIDAD (R3/RM4 → RNF-4 del PRD):
  *   · escapeshellarg() en TODOS los argumentos dinámicos.
@@ -157,6 +160,10 @@ function ejecutarPipeline(array $factura): array
     $folio     = trim((string)($ocr['folio'] ?? ''));
     $monto     = isset($ocr['monto']) ? filter_var($ocr['monto'], FILTER_VALIDATE_FLOAT) : false;
 
+    // S9 (RF-D5 completo): el OCR también devolvió su TEXTO crudo; se guarda
+    // para auditoría (qué leyó de verdad). Recorte defensivo a 60k caracteres.
+    $textoOcr  = mb_substr(trim((string)($ocr['texto'] ?? '')), 0, 60000);
+
     // Nulls del OCR → decisión de S4: sin monto/fecha/proveedor no se puede
     // conciliar; la factura queda «Pendiente» (RNF-5) para reintento/revisión.
     $faltantes = [];
@@ -173,6 +180,12 @@ function ejecutarPipeline(array $factura): array
     // Recortes defensivos según las columnas de MySQL (VARCHAR 100/50)
     $proveedor = mb_substr($proveedor, 0, 100);
     $folio     = substr($folio, 0, 50);
+
+    // --- 1b) PRE-CHECK duplicados (S9 · RF-L3) ------------------------------
+    // ¿Ya existe OTRA factura con el mismo folio o con la misma terna
+    // monto+fecha+proveedor? El resultado viaja a regla.pl como REGLA 0:
+    // un duplicado NO se aprueba aunque todo lo demás calce.
+    $duplicadoDe = buscarDuplicado($id, $folio, $monto, $fecha, $proveedor);
 
     // --- 2) MOTOR 2 · riesgo en C (contrato §6.4) --------------------------
     $promedio = (float)($factura['historial_promedio'] ?? 0); // NULL → 0 → 50.0
@@ -199,6 +212,7 @@ function ejecutarPipeline(array $factura): array
         sprintf('%.2F', (float)$factura['monto_autorizado']),
         a_ascii((string)$factura['orden_proveedor']),  // proveedor de la orden
         (string)$factura['fecha_emision'],             // fecha de la orden
+        $duplicadoDe !== null ? 'si' : 'no',           // RF-L3 (S9): duplicado
     ];
     $cmdProlog = '"' . SWIPL_BIN . '" "' . RUTA_REGLA_PROLOG . '" '
         . implode(' ', array_map('escapeshellarg', $args));
@@ -225,6 +239,7 @@ function ejecutarPipeline(array $factura): array
                 riesgo              = :riesgo,
                 estado              = :estado,
                 motivo_discrepancia = :motivo,
+                texto_ocr           = :texto,
                 procesado_en        = NOW()
           WHERE id = :id');
     $stmt->execute([
@@ -235,6 +250,7 @@ function ejecutarPipeline(array $factura): array
         ':riesgo'    => number_format($riesgo, 2, '.', ''),
         ':estado'    => $estado,
         ':motivo'    => $motivo,
+        ':texto'     => $textoOcr,
         ':id'        => $id,
     ]);
 
@@ -251,6 +267,7 @@ function ejecutarPipeline(array $factura): array
         'estado'                  => $estado,
         'veredicto'               => $veredicto,
         'motivo_discrepancia'     => $motivo,
+        'duplicada_de'            => $duplicadoDe,   // RF-L3 (S9): id original
         'riesgo'                  => number_format($riesgo, 1, '.', ''),
         'monto'                   => number_format($monto, 2, '.', ''),
         'folio'                   => $folio !== '' ? $folio : null,
@@ -263,6 +280,50 @@ function ejecutarPipeline(array $factura): array
         'segundos_desde_creacion' => $desdeCreacion,   // KPI-1: ≤ 30 s
         'kpi1_ok'                 => $desdeCreacion <= 30.0,
     ]];
+}
+
+// ============================================================================
+// Sprint 9 · RF-L3: PRE-CHECK de duplicados (alimenta la regla 0 de regla.pl)
+// Devuelve el id de la factura ORIGINAL si ya existe (mismo folio, o misma
+// terna monto+fecha+proveedor comparando por slug, tolerante a acentos) o
+// null si la factura es inédita.
+// ============================================================================
+function buscarDuplicado(int $id, string $folio, float $monto,
+                         string $fecha, string $proveedor): ?int
+{
+    // a) Mismo FOLIO (el folio vacío no cuenta como evidencia)
+    if ($folio !== '') {
+        $stmt = db()->prepare(
+            'SELECT id FROM facturas
+              WHERE id <> :id AND folio = :folio
+              ORDER BY id LIMIT 1');
+        $stmt->execute([':id' => $id, ':folio' => $folio]);
+        $original = $stmt->fetchColumn();
+        if ($original !== false) {
+            return (int)$original;
+        }
+    }
+
+    // b) Misma TERNA monto + fecha + proveedor (comparación tolerante)
+    require_once __DIR__ . '/firebase.php';           // fb_slug() (espejo S7)
+    $slugNuevo = fb_slug($proveedor);
+    if ($slugNuevo === '') {
+        return null;
+    }
+    $stmt = db()->prepare(
+        'SELECT id, proveedor_detectado FROM facturas
+          WHERE id <> :id AND monto_facturado = :monto
+            AND fecha_documento = :fecha
+            AND proveedor_detectado IS NOT NULL');
+    $stmt->execute([':id' => $id,
+                    ':monto' => number_format($monto, 2, '.', ''),
+                    ':fecha' => $fecha]);
+    while ($fila = $stmt->fetch()) {
+        if (fb_slug((string)$fila['proveedor_detectado']) === $slugNuevo) {
+            return (int)$fila['id'];
+        }
+    }
+    return null;
 }
 
 // ============================================================================

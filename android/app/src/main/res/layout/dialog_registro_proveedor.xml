@@ -12,11 +12,11 @@
         android:padding="20dp">
 
         <EditText
-            android:id="@+id/edtRegUsuario"
+            android:id="@+id/edtRegCorreo"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="@string/reg_usuario_hint"
-            android:inputType="text"
+            android:hint="@string/reg_correo_hint"
+            android:inputType="textEmailAddress"
             android:maxLines="1" />
 
         <EditText

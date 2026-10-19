@@ -170,4 +170,203 @@ public final class FirebaseServicio {
             Log.w(TAG, "escuchar: " + e.getMessage());
         }
     }
+
+    // ========================================================================
+    // Sprint 10 «Sin servidor»: Firestore + Storage como backend COMPLETO
+    // (Auth da la identidad; aquí viven perfiles, cuentas/órdenes, facturas
+    //  conciliadas en el teléfono y los comprobantes de pago).
+    // ========================================================================
+
+    /** Callback de perfil: valores o mensaje de error. */
+    public interface PerfilCb {
+        void listo(String nombre, String correo, String rol, String negocio);
+        void error(String mensaje);
+    }
+
+    /** Lee usuarios/{uid} (el rol y el negocio viven en el perfil). */
+    public static void cargarPerfil(String uid, PerfilCb cb) {
+        FirebaseFirestore.getInstance().collection("usuarios").document(uid).get()
+                .addOnSuccessListener(d -> {
+                    if (d.exists()) {
+                        cb.listo(d.getString("nombre"), d.getString("correo"),
+                                d.getString("rol"), d.getString("negocio"));
+                    } else {
+                        cb.error("Tu cuenta no tiene perfil en Firestore.");
+                    }
+                })
+                .addOnFailureListener(e -> cb.error(e.getMessage()));
+    }
+
+    /** Registro público de proveedor: crea su perfil con rol "proveedor". */
+    public static void crearPerfilProveedor(String uid, String nombre, String correo,
+                                            String negocio, Runnable ok, Consumer<String> err) {
+        Map<String, Object> doc = new HashMap<>();
+        doc.put("nombre", nombre);
+        doc.put("correo", correo);
+        doc.put("rol", "proveedor");
+        doc.put("negocio", negocio);
+        doc.put("creado", FieldValue.serverTimestamp());
+        FirebaseFirestore.getInstance().collection("usuarios").document(uid).set(doc)
+                .addOnSuccessListener(v -> ok.run())
+                .addOnFailureListener(e -> err.accept(e.getMessage()));
+    }
+
+    /** S10: el proveedor SUBE la cuenta que el cliente le debe → Firestore. */
+    public static void guardarOrden(Map<String, Object> orden,
+                                    Consumer<String> alId, Consumer<String> err) {
+        FirebaseFirestore.getInstance().collection("ordenes").add(orden)
+                .addOnSuccessListener(ref -> alId.accept(ref.getId()))
+                .addOnFailureListener(e -> err.accept(e.getMessage()));
+    }
+
+    /** S10: cuentas dirigidas a un cliente, EN TIEMPO REAL (sin orderBy). */
+    public static void escucharOrdenesCliente(String correo,
+                                              Consumer<List<QueryDocumentSnapshot>> alLlegar) {
+        FirebaseFirestore.getInstance().collection("ordenes")
+                .whereEqualTo("clienteCorreo", correo)
+                .addSnapshotListener((valor, error) -> {
+                    if (error != null || valor == null) {
+                        Log.w(TAG, "ordenes cliente: " + (error != null ? error.getMessage() : "sin datos"));
+                        return;
+                    }
+                    alLlegar.accept(aLista(valor));
+                });
+    }
+
+    /** S10 (admin): TODAS las cuentas, en tiempo real. */
+    public static void escucharOrdenesTodas(Consumer<List<QueryDocumentSnapshot>> alLlegar) {
+        FirebaseFirestore.getInstance().collection("ordenes")
+                .addSnapshotListener((valor, error) -> {
+                    if (error != null || valor == null) {
+                        Log.w(TAG, "ordenes todas: " + (error != null ? error.getMessage() : "sin datos"));
+                        return;
+                    }
+                    alLlegar.accept(aLista(valor));
+                });
+    }
+
+    private static List<QueryDocumentSnapshot> aLista(com.google.firebase.firestore.QuerySnapshot valor) {
+        List<QueryDocumentSnapshot> lista = new ArrayList<>();
+        for (QueryDocumentSnapshot d : valor) {
+            lista.add(d);
+        }
+        return lista;
+    }
+
+    /** S10: sube el comprobante de pago a Storage y devuelve su URL https. */
+    public static void subirComprobante(String ordenId, byte[] jpeg,
+                                        Consumer<String> alUrl, Consumer<String> err) {
+        subirImagen("comprobantes/" + ordenId + ".jpg", jpeg, alUrl, err);
+    }
+
+    /** S10: sube la foto de una factura conciliada a Storage. */
+    public static void subirFotoFactura(byte[] jpeg,
+                                        Consumer<String> alUrl, Consumer<String> err) {
+        subirImagen("facturas/" + System.currentTimeMillis() + ".jpg", jpeg, alUrl, err);
+    }
+
+    private static void subirImagen(String ruta, byte[] jpeg,
+                                    Consumer<String> alUrl, Consumer<String> err) {
+        try {
+            com.google.firebase.storage.StorageReference ref =
+                    com.google.firebase.storage.FirebaseStorage.getInstance()
+                            .getReference().child(ruta);
+            ref.putBytes(jpeg)
+                    .addOnFailureListener(e -> err.accept(e.getMessage()))
+                    .addOnSuccessListener(t -> ref.getDownloadUrl()
+                            .addOnSuccessListener(u -> alUrl.accept(u.toString()))
+                            .addOnFailureListener(e -> err.accept(e.getMessage())));
+        } catch (Exception e) {
+            err.accept(e.getMessage());
+        }
+    }
+
+    /** S10: guarda la factura conciliada (pipeline corrido EN EL TELÉFONO). */
+    public static void guardarFactura(Map<String, Object> factura,
+                                      Consumer<String> alId, Consumer<String> err) {
+        FirebaseFirestore.getInstance().collection("facturas").add(factura)
+                .addOnSuccessListener(ref -> alId.accept(ref.getId()))
+                .addOnFailureListener(e -> err.accept(e.getMessage()));
+    }
+
+    /** S10: facturas subidas por este cliente (admin: todas), en vivo. */
+    public static void escucharFacturas(String correo, boolean todas,
+                                        Consumer<List<QueryDocumentSnapshot>> alLlegar) {
+        com.google.firebase.firestore.Query q = FirebaseFirestore.getInstance().collection("facturas");
+        if (!todas) {
+            q = q.whereEqualTo("subidoPor", correo);
+        }
+        q.addSnapshotListener((valor, error) -> {
+            if (error != null || valor == null) {
+                Log.w(TAG, "facturas: " + (error != null ? error.getMessage() : "sin datos"));
+                return;
+            }
+            alLlegar.accept(aLista(valor));
+        });
+    }
+
+    /** S10: promedio histórico del proveedor (alimenta el riesgo); 0 si no hay. */
+    public static void historialPromedio(String proveedorSlug, Consumer<Double> alPromedio) {
+        FirebaseFirestore.getInstance().collection("facturas")
+                .whereEqualTo("proveedorSlug", proveedorSlug).limit(50).get()
+                .addOnSuccessListener(valor -> {
+                    double suma = 0;
+                    int n = 0;
+                    for (QueryDocumentSnapshot d : valor) {
+                        Double monto = d.getDouble("monto");
+                        if (monto != null && monto > 0) {
+                            suma += monto;
+                            n++;
+                        }
+                    }
+                    alPromedio.accept(n == 0 ? 0.0 : suma / n);
+                })
+                .addOnFailureListener(e -> alPromedio.accept(0.0));
+    }
+
+    /**
+     * S10: pre-check de duplicados (RF-L3): mismo folio, o la misma terna
+     * monto+fecha+proveedorSlug. Devuelve el id de la ORIGINAL o null.
+     */
+    public static void buscarDuplicado(String folio, double monto, String fecha,
+                                       String proveedorSlug,
+                                       Consumer<String> alOriginal, Consumer<String> err) {
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        if (folio != null && !folio.isEmpty()) {
+            db.collection("facturas").whereEqualTo("folio", folio).limit(1).get()
+                    .addOnSuccessListener(valor -> {
+                        for (QueryDocumentSnapshot d : valor) {
+                            alOriginal.accept(d.getId());
+                            return;
+                        }
+                        duplicadoPorTerna(db, monto, fecha, proveedorSlug, alOriginal, err);
+                    })
+                    .addOnFailureListener(e ->
+                            duplicadoPorTerna(db, monto, fecha, proveedorSlug, alOriginal, err));
+        } else {
+            duplicadoPorTerna(db, monto, fecha, proveedorSlug, alOriginal, err);
+        }
+    }
+
+    private static void duplicadoPorTerna(FirebaseFirestore db, double monto, String fecha,
+                                          String proveedorSlug,
+                                          Consumer<String> alOriginal, Consumer<String> err) {
+        if (fecha == null || proveedorSlug == null || proveedorSlug.isEmpty()) {
+            alOriginal.accept(null);
+            return;
+        }
+        db.collection("facturas")
+                .whereEqualTo("monto", monto)
+                .whereEqualTo("fecha", fecha)
+                .whereEqualTo("proveedorSlug", proveedorSlug)
+                .limit(1).get()
+                .addOnSuccessListener(valor -> {
+                    for (QueryDocumentSnapshot d : valor) {
+                        alOriginal.accept(d.getId());
+                        return;
+                    }
+                    alOriginal.accept(null);
+                })
+                .addOnFailureListener(e -> err.accept(e.getMessage()));
+    }
 }

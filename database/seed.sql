@@ -1,16 +1,18 @@
 -- ============================================================================
 -- CPP — Plataforma Inteligente para la Gestión de Cuentas por Pagar
--- Script de base de datos + datos semilla (Sprint 1 / Fase 1)
+-- Script de base de datos + datos semilla (Sprint 1 / Fase 1 · v1.0 en S5)
 --
 -- Cumple: RF-D1, RF-D2, RF-D3, RF-D4 (integridad FK) y RF-D5 simplificado
 --         (columnas folio y riesgo en `facturas`).
--- Checklist MVP 9.1: "crear las 3 tablas con al menos 1 orden de compra e
---         historial de proveedor de prueba".
+-- v1.0 (Sprint 5): usuarios.password_hash VARCHAR(255) — admite bcrypt de
+--         password_hash() además del SHA-256 del seed — y tabla `sesiones`
+--         para el login con token X-CPP-Token (RF-M1 / RF-B6).
 --
 -- Motor:    MySQL 5.7+ / MariaDB 10.4+ (Laragon o XAMPP)
 -- Importar: phpMyAdmin → pestaña "Importar" → seleccionar este archivo
 --           o por consola:  mysql -u root -p < database\seed.sql
 -- Es re-ejecutable: borra y recrea las tablas (solo para entorno de desarrollo).
+-- SI YA TIENES DATOS y no quieres partir de cero: usar migrar_v1.sql.
 -- ============================================================================
 
 CREATE DATABASE IF NOT EXISTS cpp
@@ -21,11 +23,13 @@ USE cpp;
 
 -- ----------------------------------------------------------------------------
 -- Tabla: usuarios (RF-D1)
--- El login real llega en v1.0 (RF-M1 / RF-B6); el MVP usa usuarios semilla.
--- password_hash = SHA-256 en hex (CHAR 64). v1.0 migrará a password_hash() PHP.
+-- Sprint 5 (v1.0, RF-M1/RF-B6): password_hash pasa de CHAR(64) a VARCHAR(255)
+-- para admitir bcrypt (password_hash de PHP, ~60 chars). Los usuarios semilla
+-- siguen con SHA-256 hex y sesion.php acepta AMBOS formatos.
 -- ----------------------------------------------------------------------------
 DROP TABLE IF EXISTS facturas;
 DROP TABLE IF EXISTS historial_proveedor;
+DROP TABLE IF EXISTS sesiones;
 DROP TABLE IF EXISTS ordenes_compra;
 DROP TABLE IF EXISTS usuarios;
 
@@ -33,10 +37,26 @@ CREATE TABLE usuarios (
   id            INT AUTO_INCREMENT PRIMARY KEY,
   nombre        VARCHAR(100) NOT NULL,
   usuario       VARCHAR(50)  NOT NULL UNIQUE,
-  password_hash CHAR(64)     NOT NULL COMMENT 'SHA-256 hex del password (demo)',
-  rol           ENUM('capturista','revisor','admin') NOT NULL DEFAULT 'capturista',
+  password_hash VARCHAR(255) NOT NULL COMMENT 'bcrypt (v1.0) o SHA-256 hex del seed (demo)',
+  rol           ENUM('capturista','revisor','admin','proveedor') NOT NULL DEFAULT 'capturista',
+  negocio       VARCHAR(100)  NULL COMMENT 'S7 RF-F5: solo rol proveedor — nombre de su negocio (calza con ordenes_compra.proveedor)',
   activo        TINYINT(1)   NOT NULL DEFAULT 1,
   creado_en     TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+-- ----------------------------------------------------------------------------
+-- Tabla: sesiones (Sprint 5, RF-M1/RF-B6)
+-- Una fila por sesión abierta: token aleatorio de 64 hex + vigencia.
+-- El login (api/sesion.php) crea; el logout o la expiración (TTL 8 h) destruye.
+-- ----------------------------------------------------------------------------
+CREATE TABLE sesiones (
+  token      CHAR(64)  PRIMARY KEY COMMENT 'bin2hex(random_bytes(32))',
+  usuario_id INT       NOT NULL,
+  creado_en  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  expira_en  DATETIME  NOT NULL,
+  CONSTRAINT fk_sesiones_usuario FOREIGN KEY (usuario_id)
+      REFERENCES usuarios (id) ON DELETE CASCADE,
+  INDEX idx_sesiones_expira (expira_en)
 ) ENGINE=InnoDB;
 
 -- ----------------------------------------------------------------------------
@@ -68,9 +88,14 @@ CREATE TABLE facturas (
   estado              ENUM('Pendiente','Aprobada','Con Discrepancia','Rechazada')
                       NOT NULL DEFAULT 'Pendiente',
   motivo_discrepancia VARCHAR(255)  NULL,
+  texto_ocr           MEDIUMTEXT    NULL COMMENT 'S9 RF-D5: texto crudo que devolvió el OCR (auditoría)',
   ruta_imagen         VARCHAR(255)  NOT NULL,
   creado_en           TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   procesado_en        TIMESTAMP     NULL COMMENT 'KPI-1: creado_en → procesado_en ≤ 30 s',
+  pagada              TINYINT(1)   NOT NULL DEFAULT 0 COMMENT 'S8 RF-P2: 1 = ya pagada por el cliente',
+  pagada_en           TIMESTAMP    NULL COMMENT 'S8: cuándo se marcó pagada',
+  evidencia_pago      VARCHAR(255)  NULL COMMENT 'S8.3: foto del comprobante que subió el cliente para pagar',
+  subida_por          INT           NULL COMMENT 'S8.2: cliente que subió la factura (cada quien ve solo la suya)',
   CONSTRAINT fk_facturas_orden FOREIGN KEY (orden_id)
       REFERENCES ordenes_compra (id),
   INDEX idx_facturas_estado (estado),
@@ -91,11 +116,14 @@ CREATE TABLE historial_proveedor (
 
 -- ============================ DATOS SEMILLA =================================
 
--- Usuarios de demostración (password de todos: demo1234)
-INSERT INTO usuarios (nombre, usuario, password_hash, rol) VALUES
-('Administrador Demo', 'admin',      SHA2('demo1234', 256), 'admin'),
-('Capturista Demo',    'capturista', SHA2('demo1234', 256), 'capturista'),
-('Revisor Contable',   'revisor',    SHA2('demo1234', 256), 'revisor');
+-- Usuarios de demostración (password de todos: demo1234).
+-- Sprint 7 (RF-F5): 'proveedor' es el 4.º rol — cuenta EXCLUSIVA de proveedor
+-- con su negocio (solo ve y factura las órdenes de "Papelería Central").
+INSERT INTO usuarios (nombre, usuario, password_hash, rol, negocio) VALUES
+('Administrador Demo', 'admin',      SHA2('demo1234', 256), 'admin',      NULL),
+('Capturista Demo',    'capturista', SHA2('demo1234', 256), 'capturista', NULL),
+('Revisor Contable',   'revisor',    SHA2('demo1234', 256), 'revisor',    NULL),
+('Proveedor Demo',     'proveedor',  SHA2('demo1234', 256), 'proveedor',  'Papelería Central');
 
 -- Órdenes de compra. La OC-001 es la del guion de demo (MVP sección 9.2):
 --   Factura A: Papelería Central 4,850.00  → Aprobada (≤ 5,000 y riesgo bajo)

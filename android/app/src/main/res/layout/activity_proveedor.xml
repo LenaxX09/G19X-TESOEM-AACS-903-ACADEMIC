@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Sprint 6: buzón del proveedor — escucha en TIEMPO REAL sus facturas. -->
+<!-- Sprint 10: perfil del proveedor — SUBE LAS CUENTAS que le deben sus
+     clientes y las ve actualizarse en vivo (cuando pagan, cambian solas). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -51,20 +52,18 @@
         android:paddingEnd="12dp"
         android:paddingBottom="12dp" />
 
-    <!-- Sprint 7 (RF-F7): solo con cuenta de proveedor — enviar sus facturas.
-         En el modo rápido «Soy proveedor» del S6 permanece oculto. -->
+    <!-- Sprint 10: EL proveedor sube la cuenta (antes era «Enviar factura»). -->
     <Button
-        android:id="@+id/btnEnviarFactura"
+        android:id="@+id/btnSubirCuenta"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginStart="12dp"
         android:layout_marginEnd="12dp"
         android:layout_marginBottom="8dp"
         android:background="@drawable/bg_boton_principal"
-        android:text="@string/proveedor_enviar"
+        android:text="@string/btn_subir_cuenta"
         android:textColor="@color/texto_boton_principal"
-        android:textStyle="bold"
-        android:visibility="gone" />
+        android:textStyle="bold" />
 
     <Button
         android:id="@+id/btnSalirProveedor"
@@ -75,7 +74,9 @@
         android:layout_marginEnd="12dp"
         android:layout_marginBottom="12dp"
         android:background="@drawable/bg_boton_pill"
-        android:text="@string/btn_salir_proveedor"
-        android:textColor="@color/primario"
+        android:text="@string/proveedor_cerrar_sesion"
+        android:textColor="@color/rojo_error"
         android:textStyle="bold" />
 </LinearLayout>
+<!-- CORTE-S10: el bloque viejo del Sprint 6 se elimina (raíz duplicada) -->
+

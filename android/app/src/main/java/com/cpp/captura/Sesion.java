@@ -4,92 +4,81 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 
-import com.android.volley.NetworkResponse;
-import com.android.volley.VolleyError;
-
-import java.util.HashMap;
-import java.util.Map;
+import com.google.firebase.auth.FirebaseAuth;
 
 /**
- * Sesion — Sprint 5 "Acceso y roles" (RF-M1 / RF-B6).
+ * Sesion â€” Sprint 10 Â«Sin servidorÂ»: la sesiÃ³n vive en FIREBASE AUTH.
  *
- * Guarda en SharedPreferences TODO lo que la app necesita saber de la sesión
- * iniciada: servidor, token X-CPP-Token, y el usuario (id, nombre, rol).
- * Antes de la v1.0 la app no sabía QUIÉN enviaba la factura; ahora cada
- * petición sale firmada con el token y la API decide qué rol puede hacer qué.
+ * Antes (S5-S9) la app guardaba servidor + token X-CPP-Token y cada peticiÃ³n
+ * iba al PHP de Laragon. Ahora:
+ *   Â· La identidad la maneja FirebaseAuth (correo/contraseÃ±a); no hay IP que
+ *     teclear ni token propio: google-services.json apunta al proyecto.
+ *   Â· AquÃ­ solo se cachea el PERFIL (usuarios/{uid} de Firestore): nombre,
+ *     correo, rol y negocio, para enrutar la app igual que antes.
  *
- * Puntos clave:
- *   · cabeceras()  → el Map que Volley manda en cada petición autenticada.
- *   · sinSesion()  → ¿el servidor respondió 401? (token expirado/cerrado).
- *   · salirAlLogin → limpia la sesión y vuelve a la pantalla de login.
- *
- * Deuda honesta (v1.1): el token viaja en prefs SIN cifrar. En el entorno
- * local de demo es aceptable; para producción se usará EncryptedSharedPreferences
- * (requiere dependencia nueva, y la regla del proyecto es no agregar dependencias).
+ * Kept-compatible: esAdmin()/esRevisor()/esProveedor()/negocio()/salirAlLogin()
+ * se conservan para no reescribir toda la app; servidor()/cabeceras()/
+ * sinSesion() DESAPARECEN junto con el HTTP a Laragon.
  */
 public final class Sesion {
 
     private static final String PREFS = "cpp_sesion";
-    private static final String K_SERVIDOR = "servidor";
-    private static final String K_TOKEN    = "token";
-    private static final String K_ID       = "usuario_id";
-    private static final String K_NOMBRE   = "nombre";
-    private static final String K_ROL      = "rol";
-    private static final String K_NEGOCIO  = "negocio";   // Sprint 7 (RF-F5)
+    private static final String K_UID    = "uid";
+    private static final String K_NOMBRE = "nombre";
+    private static final String K_CORREO = "correo";
+    private static final String K_ROL    = "rol";
+    private static final String K_NEGOCIO = "negocio";   // solo proveedor
 
     private Sesion() {
-        // clase utilitaria estática: no se instancia
+        // clase utilitaria estÃ¡tica: no se instancia
     }
 
     private static SharedPreferences prefs(Context c) {
         return c.getApplicationContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE);
     }
 
-    /** Guarda la sesión completa tras un login exitoso (negocio: solo proveedor). */
-    public static void guardar(Context c, String servidor, String token,
-                               int usuarioId, String nombre, String rol, String negocio) {
+    /** Cachea el perfil leÃ­do de Firestore usuarios/{uid} tras el login. */
+    public static void guardar(Context c, String uid, String nombre, String correo,
+                               String rol, String negocio) {
         prefs(c).edit()
-                .putString(K_SERVIDOR, servidor)
-                .putString(K_TOKEN, token)
-                .putInt(K_ID, usuarioId)
+                .putString(K_UID, uid)
                 .putString(K_NOMBRE, nombre)
+                .putString(K_CORREO, correo)
                 .putString(K_ROL, rol)
                 .putString(K_NEGOCIO, negocio == null ? "" : negocio)
                 .apply();
     }
 
-    /** Guarda solo la IP del servidor (MainActivity permite editarla al vuelo). */
-    public static void setServidor(Context c, String servidor) {
-        prefs(c).edit().putString(K_SERVIDOR, servidor).apply();
-    }
-
-    public static String servidor(Context c) {
-        return servidor(c, "10.0.2.2");   // mismo default histórico: alias del host desde el emulador
-    }
-
-    public static String servidor(Context c, String porDefecto) {
-        return prefs(c).getString(K_SERVIDOR, porDefecto);
-    }
-
-    public static String token(Context c) {
-        return prefs(c).getString(K_TOKEN, "");
+    public static String uid(Context c) {
+        return prefs(c).getString(K_UID, "");
     }
 
     public static String nombre(Context c) {
         return prefs(c).getString(K_NOMBRE, "");
     }
 
+    public static String correo(Context c) {
+        return prefs(c).getString(K_CORREO, "");
+    }
+
     public static String rol(Context c) {
         return prefs(c).getString(K_ROL, "");
     }
 
-    public static int id(Context c) {
-        return prefs(c).getInt(K_ID, 0);
+    public static String negocio(Context c) {
+        return prefs(c).getString(K_NEGOCIO, "");
     }
 
-    /** ¿Hay un token guardado? (si expiró en el servidor, el primer 401 regresa al login). */
+    /** Â¿Hay perfil cacheado Y sesiÃ³n vigente en Firebase Auth? */
     public static boolean activa(Context c) {
-        return !token(c).isEmpty();
+        if (prefs(c).getString(K_UID, "").isEmpty()) {
+            return false;
+        }
+        try {
+            return FirebaseAuth.getInstance().getCurrentUser() != null;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     public static boolean esAdmin(Context c) {
@@ -100,39 +89,22 @@ public final class Sesion {
         return "revisor".equals(rol(c));
     }
 
-    /** Sprint 7 (RF-F5): ¿la sesión es de una cuenta de proveedor? */
     public static boolean esProveedor(Context c) {
         return "proveedor".equals(rol(c));
     }
 
-    /** Sprint 7 (RF-F5): el negocio del proveedor (vacío para los demás roles). */
-    public static String negocio(Context c) {
-        return prefs(c).getString(K_NEGOCIO, "");
-    }
-
-    /** Cabeceras HTTP para toda petición autenticada (RF-M1). */
-    public static Map<String, String> cabeceras(Context c) {
-        Map<String, String> h = new HashMap<>();
-        String t = token(c);
-        if (!t.isEmpty()) {
-            h.put("X-CPP-Token", t);
-        }
-        return h;
-    }
-
-    /** ¿La respuesta fue 401 NO_AUTENTICADO? → hay que volver a iniciar sesión. */
-    public static boolean sinSesion(VolleyError error) {
-        NetworkResponse r = error.networkResponse;
-        return r != null && r.statusCode == 401;
-    }
-
-    /** Borra la sesión local (logout o caducidad). */
+    /** Borra el perfil local (logout o caducidad). */
     public static void cerrar(Context c) {
         prefs(c).edit().clear().apply();
     }
 
-    /** Cierra y regresa al login limpiando la pila de actividades. */
+    /** Cierra Firebase Auth, limpia el perfil y regresa al login. */
     public static void salirAlLogin(Context c) {
+        try {
+            FirebaseAuth.getInstance().signOut();
+        } catch (Exception ignored) {
+            // sin FirebaseApp (p. ej. pruebas de instrumentaciÃ³n): seguir
+        }
         cerrar(c);
         Intent i = new Intent(c, LoginActivity.class);
         i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);

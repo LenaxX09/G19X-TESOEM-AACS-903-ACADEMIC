@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Sprint 8 (RF-P3): diálogo para REVISAR la foto de una factura del
-     apartado de pagos + acción de pagar/despagar (botones del diálogo). -->
+<!-- Sprint 8/9: diálogo de una cuenta. En POR PAGAR el ImageView se oculta
+     (ajuste S9.1: sin foto — el cliente ADJUNTA su comprobante para pagar);
+     en PAGADAS muestra la foto de la factura para revisarla clasificada. -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
