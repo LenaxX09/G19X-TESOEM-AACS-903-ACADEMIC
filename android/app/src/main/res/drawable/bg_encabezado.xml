@@ -9,6 +9,6 @@
         android:endColor="@color/primario_medio"
         android:startColor="@color/primario" />
     <corners
-        android:bottomLeftRadius="20dp"
-        android:bottomRightRadius="20dp" />
+        android:bottomLeftRadius="24dp"
+        android:bottomRightRadius="24dp" />
 </shape>

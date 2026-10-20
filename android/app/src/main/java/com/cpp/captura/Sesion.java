@@ -16,9 +16,10 @@ import com.google.firebase.auth.FirebaseAuth;
  *   Â· AquÃ­ solo se cachea el PERFIL (usuarios/{uid} de Firestore): nombre,
  *     correo, rol y negocio, para enrutar la app igual que antes.
  *
- * Kept-compatible: esAdmin()/esRevisor()/esProveedor()/negocio()/salirAlLogin()
- * se conservan para no reescribir toda la app; servidor()/cabeceras()/
- * sinSesion() DESAPARECEN junto con el HTTP a Laragon.
+ * S10.3: los roles admin/capturista/revisor SE UNIFICARON en «cliente»:
+ * cada EMPRESA cliente tiene UNA cuenta (un correo) con todas las funciones
+ * y nadie puede crear más usuarios (los pagos se atan a ese correo).
+ * esProveedor()/negocio()/salirAlLogin() se conservan.
  */
 public final class Sesion {
 
@@ -81,12 +82,9 @@ public final class Sesion {
         }
     }
 
-    public static boolean esAdmin(Context c) {
-        return "admin".equals(rol(c));
-    }
-
-    public static boolean esRevisor(Context c) {
-        return "revisor".equals(rol(c));
+    /** S10.3: rol único de empresa — todo lo que NO es proveedor es CLIENTE. */
+    public static boolean esCliente(Context c) {
+        return !esProveedor(c);
     }
 
     public static boolean esProveedor(Context c) {

@@ -156,7 +156,7 @@ public final class FirebaseServicio {
                             String monto = d.getString("monto");
                             Date creado = d.getDate("creado");
                             lista.add(new Noti(
-                                    "🧾 Factura #" + (fid == null ? "?" : fid)
+                                    "Factura #" + (fid == null ? "?" : fid)
                                             + (orden == null ? "" : " · " + orden),
                                     "Registrada para conciliación"
                                             + (monto != null && !monto.isEmpty() ? " · " + monto : ""),
@@ -211,11 +211,42 @@ public final class FirebaseServicio {
                 .addOnFailureListener(e -> err.accept(e.getMessage()));
     }
 
+    /**
+     * S10.3: registro de CLIENTE — un perfil por empresa (UN correo).
+     * Tiene todas las funciones y no existen más usuarios que crear.
+     */
+    public static void crearPerfilCliente(String uid, String nombre, String correo,
+                                          String empresa, Runnable ok, Consumer<String> err) {
+        Map<String, Object> doc = new HashMap<>();
+        doc.put("nombre", nombre);
+        doc.put("correo", correo);
+        doc.put("rol", "cliente");
+        doc.put("negocio", "");        // campo histórico: solo el proveedor lo usa
+        doc.put("empresa", empresa);
+        doc.put("creado", FieldValue.serverTimestamp());
+        FirebaseFirestore.getInstance().collection("usuarios").document(uid).set(doc)
+                .addOnSuccessListener(v -> ok.run())
+                .addOnFailureListener(e -> err.accept(e.getMessage()));
+    }
+
     /** S10: el proveedor SUBE la cuenta que el cliente le debe → Firestore. */
     public static void guardarOrden(Map<String, Object> orden,
                                     Consumer<String> alId, Consumer<String> err) {
         FirebaseFirestore.getInstance().collection("ordenes").add(orden)
                 .addOnSuccessListener(ref -> alId.accept(ref.getId()))
+                .addOnFailureListener(e -> err.accept(e.getMessage()));
+    }
+
+    /**
+     * S10.1: ¿tiene ese correo una cuenta real en la app? Busca su perfil
+     * usuarios/{uid} (lo crean la semilla y el registro). Con esto el
+     * proveedor NO puede subir cuentas a un correo que no existe (typo).
+     */
+    public static void existeCorreo(String correo, Consumer<Boolean> alResultado,
+                                    Consumer<String> err) {
+        FirebaseFirestore.getInstance().collection("usuarios")
+                .whereEqualTo("correo", correo).limit(1).get()
+                .addOnSuccessListener(valor -> alResultado.accept(!valor.isEmpty()))
                 .addOnFailureListener(e -> err.accept(e.getMessage()));
     }
 

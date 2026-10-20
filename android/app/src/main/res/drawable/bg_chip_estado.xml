@@ -3,6 +3,6 @@
      pastel lo fija Java con el color de cada estado. -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
-    <corners android:radius="16dp" />
-    <solid android:color="@color/blanco" />
+    <corners android:radius="20dp" />
+    <solid android:color="@color/tarjeta" />
 </shape>

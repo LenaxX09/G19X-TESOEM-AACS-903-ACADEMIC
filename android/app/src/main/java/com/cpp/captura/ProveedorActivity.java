@@ -119,7 +119,7 @@ public class ProveedorActivity extends AppCompatActivity {
         EditText edtMonto = v.findViewById(R.id.edtCuentaMonto);
         EditText edtLimite = v.findViewById(R.id.edtCuentaLimite);
 
-        new AlertDialog.Builder(this)
+        new AlertDialog.Builder(this, R.style.CPPDialogo)
                 .setTitle(R.string.cuenta_titulo)
                 .setView(v)
                 .setPositiveButton(R.string.reg_crear, (d, w) -> {
@@ -138,7 +138,21 @@ public class ProveedorActivity extends AppCompatActivity {
                                 Toast.LENGTH_LONG).show();
                         return;
                     }
-                    guardarCuenta(cliente, codigo, monto, limite);
+                    // S10.1: la cuenta SOLO va a un correo con cuenta real en
+                    // la app (perfil usuarios/{uid}); un typo no queda perdido.
+                    final double montoFinal = monto;   // lambda exige efectivamente final
+                    Toast.makeText(this, R.string.cuenta_verificando, Toast.LENGTH_SHORT).show();
+                    FirebaseServicio.existeCorreo(cliente, existe -> {
+                        if (!existe) {
+                            runOnUiThread(() -> Toast.makeText(this,
+                                    R.string.cuenta_cliente_inexistente,
+                                    Toast.LENGTH_LONG).show());
+                            return;
+                        }
+                        guardarCuenta(cliente, codigo, montoFinal, limite);
+                    }, e -> runOnUiThread(() -> Toast.makeText(this,
+                            "Error al verificar el correo: " + e,
+                            Toast.LENGTH_LONG).show()));
                 })
                 .setNegativeButton(R.string.cancelar, null)
                 .show();
@@ -189,7 +203,7 @@ public class ProveedorActivity extends AppCompatActivity {
         public void onBindViewHolder(@NonNull Fila fila, int pos) {
             QueryDocumentSnapshot d = cuentas.get(pos);
             String cliente = texto(d, "clienteCorreo");
-            fila.titulo.setText("🧾 " + texto(d, "codigo") + " · "
+            fila.titulo.setText(texto(d, "codigo") + " · "
                     + (cliente.isEmpty() ? "?" : cliente));
 
             Double monto = d.getDouble("monto");

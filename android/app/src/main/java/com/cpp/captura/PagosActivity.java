@@ -105,11 +105,9 @@ public class PagosActivity extends AppCompatActivity {
     }
 
     private void cargar() {
-        if (Sesion.esAdmin(this)) {
-            FirebaseServicio.escucharOrdenesTodas(this::recibir);
-        } else {
-            FirebaseServicio.escucharOrdenesCliente(Sesion.correo(this), this::recibir);
-        }
+        // S10.3: rol único de empresa (cliente): cada correo ve SOLO sus
+        // cuentas — así los pagos nunca se mezclan entre empresas.
+        FirebaseServicio.escucharOrdenesCliente(Sesion.correo(this), this::recibir);
     }
 
     private void recibir(List<QueryDocumentSnapshot> lista) {
@@ -181,7 +179,7 @@ public class PagosActivity extends AppCompatActivity {
         boolean enPorPagar = MODO_POR_PAGAR.equals(modo);
 
         Double monto = d.getDouble("monto");
-        StringBuilder info = new StringBuilder("🧾 ").append(texto(d, "codigo"))
+        StringBuilder info = new StringBuilder().append(texto(d, "codigo"))
                 .append(" · ").append(texto(d, "negocio")).append('\n')
                 .append(texto(d, "clienteCorreo"))
                 .append(" · $").append(monto == null ? "?"
@@ -191,7 +189,7 @@ public class PagosActivity extends AppCompatActivity {
                     texto(d, "fechaLimite")));
         }
         if (!enPorPagar && !texto(d, "pagadaEn").isEmpty()) {
-            info.append('\n').append("💰 Pagada el ").append(texto(d, "pagadaEn"));
+            info.append('\n').append("Pagada el ").append(texto(d, "pagadaEn"));
         }
         // S9.1: la pendiente no lleva NINGUNA foto — se paga adjuntando el
         // comprobante; sin él no puede pasar a pagadas.
@@ -214,7 +212,7 @@ public class PagosActivity extends AppCompatActivity {
         }
 
         if (enPorPagar) {
-            new AlertDialog.Builder(this)
+            new AlertDialog.Builder(this, R.style.CPPDialogo)
                     .setTitle(getString(R.string.pagos_cuenta_titulo))
                     .setView(v)
                     .setPositiveButton(R.string.pago_elegir_comprobante,
@@ -222,7 +220,7 @@ public class PagosActivity extends AppCompatActivity {
                     .setNegativeButton(R.string.cancelar, null)
                     .show();
         } else {
-            new AlertDialog.Builder(this)
+            new AlertDialog.Builder(this, R.style.CPPDialogo)
                     .setTitle(getString(R.string.pagos_cuenta_titulo))
                     .setView(v)
                     .setPositiveButton(R.string.pago_desmarcar,
@@ -282,7 +280,7 @@ public class PagosActivity extends AppCompatActivity {
                 url -> ref.update(pagos(url))
                         .addOnSuccessListener(v -> runOnUiThread(() ->
                                 Toast.makeText(this,
-                                        "✅ Comprobante recibido: la cuenta pasó a PAGADAS.",
+                                        "Comprobante recibido: la cuenta pasó a PAGADAS.",
                                         Toast.LENGTH_LONG).show()))
                         .addOnFailureListener(e -> runOnUiThread(() ->
                                 Toast.makeText(this, "Error: " + e.getMessage(),
@@ -371,7 +369,7 @@ public class PagosActivity extends AppCompatActivity {
         @Override
         public void onBindViewHolder(@NonNull Fila fila, int pos) {
             final QueryDocumentSnapshot d = lista.get(pos);
-            fila.titulo.setText("🧾 " + texto(d, "codigo") + " · " + texto(d, "negocio"));
+            fila.titulo.setText(texto(d, "codigo") + " · " + texto(d, "negocio"));
 
             Double monto = d.getDouble("monto");
             fila.sub.setText(texto(d, "clienteCorreo") + " · $"

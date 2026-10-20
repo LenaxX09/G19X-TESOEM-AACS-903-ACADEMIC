@@ -2,6 +2,7 @@
 <!-- Sprint 8 (RF-P1..P3): cuentas por pagar del cliente — pestañas
      por pagar/pagadas, chips de clasificación en Pagadas y lista. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:fitsSystemWindows="true"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/fondo_pantalla"
@@ -148,6 +149,6 @@
         android:layout_marginBottom="12dp"
         android:background="@drawable/bg_boton_pill"
         android:text="@string/btn_salir_proveedor"
-        android:textColor="@color/primario"
+        android:textColor="@color/celeste"
         android:textStyle="bold" />
 </LinearLayout>

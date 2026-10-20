@@ -1,9 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Tema base de la app (AppCompat: ActionBar simple, sin dependencias de Material) -->
+    <!-- Tema base de la app (AppCompat: ActionBar simple, sin dependencias de Material).
+         0.14.2-ui (S10.2): tema OSCURO azul rey — windowBackground azul noche
+         para que ni el arranque dé destello blanco. -->
     <style name="Theme.CPP" parent="Theme.AppCompat.DayNight.DarkActionBar">
         <item name="colorPrimary">@color/primario</item>
         <item name="colorPrimaryDark">@color/primario_oscuro</item>
         <item name="colorAccent">@color/acento</item>
+        <item name="android:windowBackground">@color/fondo_pantalla</item>
+        <!-- S10.3: la app es oscura SIEMPRE (setDefaultNightMode en App.java);
+             forceDarkAllowed=false evita que Android 10+ la "re-oscurezca". -->
+        <item name="android:forceDarkAllowed">false</item>
+        <item name="android:colorBackground">@color/fondo_pantalla</item>
+        <item name="alertDialogTheme">@style/CPPDialogo</item>
+        <item name="android:textColorHint">@color/hint_sobre_tarjeta</item>
+    </style>
+
+    <!-- Diálogos con la misma superficie morada oscura que las tarjetas y
+         texto LILA claro fijo (los AlertDialog de AppCompat seguirían el
+         modo claro/oscuro del sistema y romperían los textos de dialog_cuenta
+         y dialog_registro_proveedor). Se usa desde Java:
+         new AlertDialog.Builder(this, R.style.CPPDialogo) -->
+    <style name="CPPDialogo" parent="Theme.AppCompat.Dialog.Alert">
+        <item name="android:windowBackground">@drawable/bg_tarjeta_blanca</item>
+        <item name="colorAccent">@color/acento</item>
+        <item name="android:textColor">@color/texto_sobre_tarjeta</item>
+        <item name="android:textColorPrimary">@color/texto_sobre_tarjeta</item>
+        <item name="android:textColorHint">@color/hint_sobre_tarjeta</item>
+        <item name="colorControlActivated">@color/acento</item>
+        <item name="colorControlNormal">@color/hint_sobre_tarjeta</item>
     </style>
 </resources>
+

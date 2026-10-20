@@ -1,120 +1,114 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Cuentas</string>
-    <string name="titulo">🧾 CPP · Captura de facturas</string>
-    <string name="subtitulo">Fotografía o elige una factura y el sistema la concilia contra la orden seleccionada</string>
-    <string name="hint_servidor">IP del servidor (10.0.2.2 = este PC)</string>
-    <string name="btn_cargar">↻ Órdenes</string>
-    <string name="btn_foto">📷 Cámara</string>
-    <string name="btn_galeria">🖼️ Galería</string>
-    <string name="btn_enviar">📤 Enviar factura</string>
-    <string name="desc_preview">Vista previa de la factura fotografiada</string>
+ <string name="app_name">Cuentas</string>
+ <string name="titulo">CPP · Captura de facturas</string>
+ <string name="subtitulo">Fotografía o elige una factura y el sistema la concilia contra la orden seleccionada</string>
+ <string name="btn_cargar">↻ Órdenes</string>
+ <string name="btn_foto">Cámara</string>
+ <string name="btn_galeria">Galería</string>
+ <string name="btn_enviar">Enviar factura</string>
+ <string name="desc_preview">Vista previa de la factura fotografiada</string>
 
-    <string name="sin_permiso_camara">Sin permiso de cámara no se puede fotografiar la factura (RF-M2).</string>
-    <string name="sin_app_camara">Este dispositivo no tiene ninguna app de cámara.</string>
-    <string name="sin_app_galeria">Este dispositivo no tiene selector de imágenes.</string>
-    <string name="galeria_error">No se pudo leer la imagen elegida de la galería.</string>
-    <string name="foto_cancelada">Captura cancelada: no se tomó ninguna foto.</string>
-    <string name="foto_lista">Foto lista. Verifica la orden y pulsa «Enviar factura».</string>
-    <string name="falta_orden">Selecciona primero la orden de compra a la que corresponde la factura.</string>
-    <string name="falta_foto">Toma primero la foto de la factura.</string>
-    <string name="enviando">Enviando a %1$s …</string>
-    <string name="exito_toast">Foto recibida por el servidor</string>
-    <string name="respuesta_rara">El servidor respondió, pero sin los datos esperados.</string>
+ <string name="sin_permiso_camara">Sin permiso de cámara no se puede fotografiar la factura (RF-M2).</string>
+ <string name="sin_app_camara">Este dispositivo no tiene ninguna app de cámara.</string>
+ <string name="sin_app_galeria">Este dispositivo no tiene selector de imágenes.</string>
+ <string name="galeria_error">No se pudo leer la imagen elegida de la galería.</string>
+ <string name="foto_cancelada">Captura cancelada: no se tomó ninguna foto.</string>
+ <string name="foto_lista">Foto lista. Verifica la orden y pulsa «Enviar factura».</string>
+ <string name="falta_orden">Selecciona primero la orden de compra a la que corresponde la factura.</string>
+ <string name="falta_foto">Toma primero la foto de la factura.</string>
+ <string name="respuesta_rara">El servidor respondió, pero sin los datos esperados.</string>
 
-    <!-- Sprint 4: procesamiento (GET /api/procesar.php) y veredicto -->
-    <string name="procesando">🔎 Procesando factura Nº %1$d (OCR → riesgo → conciliación)…</string>
-    <string name="procesada_ok">✅ Factura Nº %1$d APROBADA · riesgo %2$s %% · pipeline %3$s s.\nTambién quedó en el listado (botón «Ver facturas»).</string>
-    <string name="procesada_discrepancia">⚠️ Factura Nº %1$d CON DISCREPANCIA\n%2$s\nriesgo %3$s %% · pipeline %4$s s</string>
-    <string name="procesada_pendiente">⏳ Factura Nº %1$d sigue «%2$s». Reintenta desde el listado.</string>
-    <string name="queda_pendiente">⏳ Factura Nº %1$d registrada, pero quedó «Pendiente»: falló el pipeline (%2$s).\nPulsa «Ver facturas» y actualiza para reintentar.</string>
+ <!-- Sprint 4: procesamiento (GET /api/procesar.php) y veredicto -->
+ <string name="procesando">Procesando factura Nº %1$d (OCR → riesgo → conciliación)…</string>
+ <string name="procesada_ok">Factura Nº %1$d APROBADA · riesgo %2$s %% · pipeline %3$s s.\nTambién quedó en el listado (botón «Ver facturas»).</string>
+ <string name="procesada_discrepancia">Factura Nº %1$d CON DISCREPANCIA\n%2$s\nriesgo %3$s %% · pipeline %4$s s</string>
+ <string name="procesada_pendiente">Factura Nº %1$d sigue «%2$s». Reintenta desde el listado.</string>
+ <string name="queda_pendiente">Factura Nº %1$d registrada, pero quedó «Pendiente»: falló el pipeline (%2$s).\nPulsa «Ver facturas» y actualiza para reintentar.</string>
 
-    <!-- Sprint 4: pantalla de listado (RF-M5) -->
-    <string name="btn_lista">📋 Ver facturas</string>
-    <string name="titulo_listado">🗂️ CPP · Facturas</string>
-    <string name="subtitulo_listado">Resultado de la conciliación por factura</string>
-    <string name="btn_actualizar">↻ Actualizar</string>
-    <string name="sin_facturas">Todavía no hay facturas registradas.\nToma una foto y envíala desde la pantalla de captura.</string>
-    <string name="cargando_listado">Consultando %1$s …</string>
-    <string name="error_listado">No se pudo consultar el listado:\n%1$s</string>
-    <string name="fila_titulo">Nº %1$d · %2$s · %3$s</string>
-    <string name="fila_estado">%1$s · riesgo %2$s %%</string>
-    <string name="fila_motivo">Motivo: %1$s</string>
+ <!-- Sprint 4: pantalla de listado (RF-M5) -->
+ <string name="btn_lista">Ver facturas</string>
+ <string name="titulo_listado">CPP · Facturas</string>
+ <string name="subtitulo_listado">Resultado de la conciliación por factura</string>
+ <string name="btn_actualizar">↻ Actualizar</string>
+ <string name="sin_facturas">Todavía no hay facturas registradas.\nToma una foto y envíala desde la pantalla de captura.</string>
+ <string name="cargando_listado">Consultando %1$s …</string>
+ <string name="error_listado">No se pudo consultar el listado:\n%1$s</string>
+ <string name="fila_titulo">Nº %1$d · %2$s · %3$s</string>
+ <string name="fila_estado">%1$s · riesgo %2$s %%</string>
+ <string name="fila_motivo">Motivo: %1$s</string>
 
-    <!-- 0.6.0-ui: pulido de la interfaz -->
-    <string name="label_orden">Orden de compra a conciliar</string>
-    <string name="hint_preview">📷 La foto de la factura aparecerá aquí</string>
-    <string name="chip_ok">✅ %1$d aprobadas</string>
-    <string name="chip_alerta">⚠️ %1$d con discrepancia</string>
-    <string name="chip_pend">⏳ %1$d pendientes</string>
+ <!-- 0.6.0-ui: pulido de la interfaz -->
+ <string name="label_orden">Orden de compra a conciliar</string>
+ <string name="hint_preview">La foto de la factura aparecerá aquí</string>
+ <string name="chip_ok">%1$d aprobadas</string>
+ <string name="chip_alerta">%1$d con discrepancia</string>
+ <string name="chip_pend">%1$d pendientes</string>
 
-    <!-- 0.7.2-ui: qué HACER ante cada discrepancia (apoyo para la retro H4) -->
-    <string name="ayuda_monto_excede">💡 El monto cobrado supera el autorizado en la orden. Pide nota de crédito o factura corregida al proveedor, o amplía la orden.</string>
-    <string name="ayuda_riesgo_alto">💡 El monto se aleja del historial de este proveedor. Confirma con compras que el precio nuevo sea legítimo.</string>
-    <string name="ayuda_proveedor">💡 ¿Elegiste la orden correcta? Reenvía la misma foto contra la orden de este proveedor.</string>
-    <string name="ayuda_fecha">💡 Verifica la fecha leída: las fotos de baja calidad hacen que el OCR confunda dígitos. Reenvía con una foto nítida.</string>
-    <string name="ayuda_generica">💡 Revisa los datos extraídos (monto, folio, proveedor) y vuelve a enviar la foto si algo se leyó mal.</string>
+ <!-- 0.7.2-ui: qué HACER ante cada discrepancia (apoyo para la retro H4) -->
+ <string name="ayuda_monto_excede">El monto cobrado supera el autorizado en la orden. Pide nota de crédito o factura corregida al proveedor, o amplía la orden.</string>
+ <string name="ayuda_riesgo_alto">El monto se aleja del historial de este proveedor. Confirma con compras que el precio nuevo sea legítimo.</string>
+ <string name="ayuda_proveedor">¿Elegiste la orden correcta? Reenvía la misma foto contra la orden de este proveedor.</string>
+ <string name="ayuda_fecha">Verifica la fecha leída: las fotos de baja calidad hacen que el OCR confunda dígitos. Reenvía con una foto nítida.</string>
+ <string name="ayuda_generica">Revisa los datos extraídos (monto, folio, proveedor) y vuelve a enviar la foto si algo se leyó mal.</string>
 
-    <!-- ══════════ Sprint 5: login + roles + administración (RF-M1/B6/B4) ══════════ -->
-    <string name="titulo_login">🔐 CPP · Iniciar sesión</string>
-    <string name="subtitulo_login">Identifícate para capturar o revisar facturas</string>
-    <string name="hint_usuario">Usuario (admin · capturista · revisor)</string>
-    <string name="hint_password">Contraseña</string>
-    <string name="btn_entrar">🔓 Entrar</string>
-    <string name="login_conectando">Iniciando sesión en %1$s …</string>
-    <string name="login_error">No se pudo iniciar sesión:\n%1$s</string>
-    <string name="sesion_caducada">Tu sesión expiró o fue cerrada. Inicia sesión de nuevo.</string>
-    <string name="sesion_info">👤 %1$s (%2$s) · servidor %3$s</string>
-    <string name="btn_salir">🚪 Cerrar sesión</string>
-    <string name="btn_admin">⚙️ Administración</string>
-    <string name="revisor_solo_lectura">Tu rol «revisor» es de consulta: puedes ver facturas pero no enviarlas. Pide al administrador el rol capturista.</string>
+ <!-- ══════════ Sprint 5: login + roles + administración (RF-M1/B6/B4) ══════════ -->
+ <string name="titulo_login">CPP · Iniciar sesión</string>
+ <string name="subtitulo_login">Identifícate para capturar o revisar facturas</string>
+ <string name="hint_password">Contraseña</string>
+ <string name="btn_entrar">Entrar</string>
+ <string name="login_error">No se pudo iniciar sesión:\n%1$s</string>
+ <string name="sesion_caducada">Tu sesión expiró o fue cerrada. Inicia sesión de nuevo.</string>
+ <string name="btn_salir">Cerrar sesión</string>
+ <string name="btn_admin">Administración</string>
+ <string name="revisor_solo_lectura">Tu rol «revisor» es de consulta: puedes ver facturas pero no enviarlas. Pide al administrador el rol capturista.</string>
 
-    <!-- Administración (solo admin) -->
-    <string name="titulo_admin">⚙️ CPP · Administración</string>
-    <string name="subtitulo_admin">Usuarios y órdenes de compra — solo administradores</string>
-    <string name="modo_usuarios">👥 Usuarios</string>
-    <string name="modo_ordenes">🧾 Órdenes de compra</string>
-    <string name="btn_nuevo">＋ Nuevo registro</string>
-    <string name="admin_solo_admin">Esta pantalla es solo para administradores.</string>
-    <string name="admin_sin_datos">No hay registros todavía.\nPulsa «Nuevo registro» para crear uno.</string>
-    <string name="admin_cargando">Consultando %1$s …</string>
-    <string name="admin_error">%1$s</string>
-    <string name="fila_usuario_sub">%1$s · rol %2$s</string>
-    <string name="fila_orden_sub">%1$s · autorizado $%2$s · emitida %3$s</string>
-    <string name="estado_activo">Activo</string>
-    <string name="estado_inactivo">Inactivo</string>
-    <string name="orden_abierta">Abierta</string>
-    <string name="orden_cerrada">Cerrada</string>
-    <string name="dlg_usuario_nuevo">Nuevo usuario</string>
-    <string name="dlg_usuario_editar">Editar usuario</string>
-    <string name="dlg_orden_nueva">Nueva orden de compra</string>
-    <string name="dlg_orden_editar">Editar orden de compra</string>
-    <string name="hint_nombre">Nombre completo</string>
-    <string name="hint_login">Usuario (para iniciar sesión)</string>
-    <string name="hint_password_nuevo">Contraseña (mínimo 6 caracteres)</string>
-    <string name="hint_password_editar">Nueva contraseña (vacío = no cambiarla)</string>
-    <string name="hint_codigo">Código (p. ej. OC-004)</string>
-    <string name="hint_proveedor">Proveedor</string>
-    <string name="hint_monto">Monto autorizado</string>
-    <string name="hint_fecha">Fecha de emisión (YYYY-MM-DD)</string>
-    <string name="usuario_activo">Usuario activo</string>
-    <string name="guardar">Guardar</string>
-    <string name="cancelar">Cancelar</string>
-    <string name="admin_falta_nombre">Escribe el nombre.</string>
-    <string name="admin_falta_usuario_pass">Usuario obligatorio y contraseña de al menos 6 caracteres.</string>
-    <string name="admin_falta_orden">Completa código, proveedor, monto mayor a 0 y fecha YYYY-MM-DD.</string>
+ <!-- Administración (solo admin) -->
+ <string name="titulo_admin">CPP · Administración</string>
+ <string name="subtitulo_admin">Usuarios y órdenes de compra — solo administradores</string>
+ <string name="modo_usuarios">Usuarios</string>
+ <string name="modo_ordenes">Órdenes de compra</string>
+ <string name="btn_nuevo">＋ Nuevo registro</string>
+ <string name="admin_solo_admin">Esta pantalla es solo para administradores.</string>
+ <string name="admin_sin_datos">No hay registros todavía.\nPulsa «Nuevo registro» para crear uno.</string>
+ <string name="admin_cargando">Consultando %1$s …</string>
+ <string name="admin_error">%1$s</string>
+ <string name="fila_usuario_sub">%1$s · rol %2$s</string>
+ <string name="fila_orden_sub">%1$s · autorizado $%2$s · emitida %3$s</string>
+ <string name="estado_activo">Activo</string>
+ <string name="estado_inactivo">Inactivo</string>
+ <string name="orden_abierta">Abierta</string>
+ <string name="orden_cerrada">Cerrada</string>
+ <string name="dlg_usuario_nuevo">Nuevo usuario</string>
+ <string name="dlg_usuario_editar">Editar usuario</string>
+ <string name="dlg_orden_nueva">Nueva orden de compra</string>
+ <string name="dlg_orden_editar">Editar orden de compra</string>
+ <string name="hint_nombre">Nombre completo</string>
+ <string name="hint_login">Usuario (para iniciar sesión)</string>
+ <string name="hint_password_nuevo">Contraseña (mínimo 6 caracteres)</string>
+ <string name="hint_password_editar">Nueva contraseña (vacío = no cambiarla)</string>
+ <string name="hint_codigo">Código (p. ej. OC-004)</string>
+ <string name="hint_proveedor">Proveedor</string>
+ <string name="hint_monto">Monto autorizado</string>
+ <string name="hint_fecha">Fecha de emisión (YYYY-MM-DD)</string>
+ <string name="usuario_activo">Usuario activo</string>
+ <string name="guardar">Guardar</string>
+ <string name="cancelar">Cancelar</string>
+ <string name="admin_falta_nombre">Escribe el nombre.</string>
+ <string name="admin_falta_usuario_pass">Usuario obligatorio y contraseña de al menos 6 caracteres.</string>
+ <string name="admin_falta_orden">Completa código, proveedor, monto mayor a 0 y fecha YYYY-MM-DD.</string>
 
-    <!-- ══════════ Sprint 6: Firebase (clientes, proveedores, notificaciones) ══════════ -->
-    <string name="btn_soy_proveedor">🏬 Soy proveedor</string>
-    <string name="proveedor_error">No se pudo leer la lista de proveedores:\n%1$s</string>
-    <string name="titulo_proveedor">🏬 CPP · Facturas de mi negocio</string>
-    <string name="subtitulo_proveedor">Avisos en vivo de %1$s — deja esta pantalla abierta o cierra la app: el aviso llega igual</string>
-    <string name="proveedor_escuchando">⏳ Escuchando facturas nuevas…</string>
-    <string name="proveedor_sin_facturas">Todavía no hay facturas registradas para ti.</string>
-    <string name="proveedor_con_facturas">✅ %1$d facturas registradas (se actualiza solo)</string>
-    <string name="btn_salir_proveedor">⬅ Volver al inicio de sesión</string>
+ <!-- ══════════ Sprint 6: Firebase (clientes, proveedores, notificaciones) ══════════ -->
+ <string name="btn_soy_proveedor">Soy proveedor</string>
+ <string name="proveedor_error">No se pudo leer la lista de proveedores:\n%1$s</string>
+ <string name="titulo_proveedor">CPP · Facturas de mi negocio</string>
+ <string name="subtitulo_proveedor">Avisos en vivo de %1$s — deja esta pantalla abierta o cierra la app: el aviso llega igual</string>
+ <string name="proveedor_escuchando">Escuchando facturas nuevas…</string>
+ <string name="proveedor_sin_facturas">Todavía no hay facturas registradas para ti.</string>
+ <string name="proveedor_con_facturas">%1$d facturas registradas (se actualiza solo)</string>
+ <string name="btn_salir_proveedor">⬅ Volver al inicio de sesión</string>
 <!-- ══════════ Sprint 7: cuentas de proveedor (RF-F5..F7) ══════════ -->
-<string name="btn_crear_proveedor">🆕 Crear cuenta de proveedor</string>
+<string name="btn_crear_proveedor">Crear cuenta de proveedor</string>
 <string name="reg_titulo">Crear cuenta de proveedor</string>
 <string name="reg_usuario_hint">Usuario (letras y números, sin acentos)</string>
 <string name="reg_password_hint">Contraseña (mínimo 6 caracteres)</string>
@@ -122,52 +116,52 @@
 <string name="reg_crear">Crear cuenta y entrar</string>
 <string name="reg_faltan_datos">Completa todo: usuario, contraseña (mín. 6) y tu negocio (mín. 3 letras).</string>
 <string name="reg_creando">Creando tu cuenta…</string>
-<string name="reg_exito">✅ Cuenta creada. ¡Bienvenido, %1$s!</string>
-<string name="proveedor_enviar">📤 Enviar una factura</string>
-<string name="proveedor_cerrar_sesion">🚪 Cerrar sesión</string>
+<string name="reg_exito">Cuenta creada. ¡Bienvenido, %1$s!</string>
+<string name="proveedor_enviar">Enviar una factura</string>
+<string name="proveedor_cerrar_sesion">Cerrar sesión</string>
 <string name="hint_negocio_usuario">Negocio (solo si el rol es proveedor)</string>
 <string name="admin_falta_negocio">Un proveedor necesita su negocio: el nombre con el que se registran sus órdenes.</string>
 <!-- ══════════ Sprint 8: cuentas por pagar (RF-P1..P3) ══════════ -->
-<string name="btn_crear_cuenta">🆕 Crear cuenta</string>
+<string name="btn_crear_cuenta">Crear cuenta</string>
 <string name="tipo_cuenta_titulo">¿Qué tipo de cuenta necesitas?</string>
-<string name="tipo_cuenta_proveedor">🏬 Proveedor — mi negocio factura</string>
-<string name="tipo_cuenta_cliente">🏢 Cliente — personal de la empresa</string>
+<string name="tipo_cuenta_proveedor">Proveedor — mi negocio factura</string>
+<string name="tipo_cuenta_cliente">Cliente — personal de la empresa</string>
 <string name="cliente_info_titulo">Cuentas del cliente (personal de la empresa)</string>
-<string name="cliente_info">El CLIENTE es la empresa que paga sus cuentas. Su personal trabaja con tres roles:\n\n📷 capturista — sube las facturas que recibe la empresa\n\n🔍 revisor — consulta y audita (solo lectura)\n\n👑 admin — administra usuarios y órdenes, y paga\n\nPor seguridad estas cuentas NO se crean solas: pide a un administrador que te dé la tuya desde ⚙️ Administración → Usuarios. El registro público es solo para proveedores.</string>
-<string name="btn_pagos">💰 Cuentas por pagar</string>
-<string name="titulo_pagos">💰 CPP · Cuentas por pagar</string>
+<string name="cliente_info">El CLIENTE es la empresa que paga sus cuentas. Su personal trabaja con tres roles:\n\n capturista — sube las facturas que recibe la empresa\n\n revisor — consulta y audita (solo lectura)\n\n admin — administra usuarios y órdenes, y paga\n\nPor seguridad estas cuentas NO se crean solas: pide a un administrador que te dé la tuya desde Administración → Usuarios. El registro público es solo para proveedores.</string>
+<string name="btn_pagos">Cuentas por pagar</string>
+<string name="titulo_pagos">CPP · Cuentas por pagar</string>
 <string name="subtitulo_pagos">Tus cuentas: pendientes y pagadas — toca una pendiente para pagarla con tu comprobante, o una pagada para revisar su foto</string>
-<string name="tab_por_pagar">⏳ POR PAGAR (%1$d)</string>
-<string name="tab_pagadas">✅ PAGADAS (%1$d)</string>
+<string name="tab_por_pagar">POR PAGAR (%1$d)</string>
+<string name="tab_pagadas">PAGADAS (%1$d)</string>
 <string name="chip_todas">Todas</string>
-<string name="chip_aprobadas">✅ Aprobadas</string>
-<string name="chip_no_coinciden">❌ No coinciden</string>
-<string name="chip_discrepancias">⚠️ Discrepancia</string>
-<string name="pagos_vacio_por_pagar">No hay facturas aprobadas pendientes de pago. ¡Al día! 🎉</string>
+<string name="chip_aprobadas">Aprobadas</string>
+<string name="chip_no_coinciden">No coinciden</string>
+<string name="chip_discrepancias">Discrepancia</string>
+<string name="pagos_vacio_por_pagar">No hay facturas aprobadas pendientes de pago. ¡Al día!</string>
 <string name="pagos_vacio_pagadas">Aún no has marcado facturas como pagadas.</string>
 <string name="pagos_vacio_filtro">Ninguna factura pagada en esta clasificación.</string>
-<string name="pago_marcar">💰 Marcar como pagada</string>
-<string name="pago_desmarcar">↩️ Devolver a por pagar</string>
+<string name="pago_marcar">Marcar como pagada</string>
+<string name="pago_desmarcar">↩ Devolver a por pagar</string>
 <string name="pagos_error">No se pudieron cargar las cuentas:\n%1$s</string>
 <string name="pagos_cargando">Cargando cuentas…</string>
 <!-- ══════════ Sprint 9: inteligencia del tablero (RF-L3/D5/M6/M7) ══════════ -->
-<string name="filtro_activa">🔎 Filtro: %1$s · %2$d de %3$d facturas — toca el chip otra vez para quitarlo</string>
-<string name="ayuda_duplicada">💡 Esa factura ya se había subido antes: revisa la original para no pagarla dos veces.</string>
-<string name="pago_elegir_comprobante">📷 Adjuntar comprobante y pagar</string>
+<string name="filtro_activa">Filtro: %1$s · %2$d de %3$d facturas — toca el chip otra vez para quitarlo</string>
+<string name="ayuda_duplicada">Esa factura ya se había subido antes: revisa la original para no pagarla dos veces.</string>
+<string name="pago_elegir_comprobante">Adjuntar comprobante y pagar</string>
 <string name="pago_cancelado">Pago cancelado: sin la foto del comprobante no se puede marcar pagada.</string>
 <string name="pago_comprobante_error">No se pudo leer la foto del comprobante.</string>
 <string name="pago_enviando_comprobante">Enviando comprobante…</string>
-<string name="pago_limite">📅 Límite de pago: %1$s</string>
-<string name="pago_ayuda_comprobante">📎 Para pasarla a PAGADAS necesitas adjuntar la foto de tu comprobante de pago: sin esa evidencia no se puede marcar pagada.</string>
-<string name="pago_vence">⏰ Vence en %1$d día(s) — límite %2$s: ¡págala pronto!</string>
-<string name="pago_vencida">🚨 VENCIDA hace %1$d día(s) — límite %2$s</string>
+<string name="pago_limite">Límite de pago: %1$s</string>
+<string name="pago_ayuda_comprobante">Para pasarla a PAGADAS necesitas adjuntar la foto de tu comprobante de pago: sin esa evidencia no se puede marcar pagada.</string>
+<string name="pago_vence">Vence en %1$d día(s) — límite %2$s: ¡págala pronto!</string>
+<string name="pago_vencida">VENCIDA hace %1$d día(s) — límite %2$s</string>
 <!-- ══════════ Sprint 10: Firebase sin servidor (Auth/Firestore/Storage/ML Kit) ══════════ -->
 <string name="hint_correo">Correo (capturista@cpp.demo · admin@cpp.demo …)</string>
 <string name="login_faltan_datos">Escribe tu correo y una contraseña de al menos 6 caracteres.</string>
-<string name="login_firebase">🔐 Conectando con Firebase…</string>
+<string name="login_firebase">Conectando con Firebase…</string>
 <string name="reg_correo_hint">Correo electrónico (será tu usuario)</string>
 <string name="subtitulo_login_s10">Sin servidor ni IP: entra con tu correo — la app habla directo con Firebase</string>
-<string name="btn_subir_cuenta">➕ Subir cuenta (lo que te deben)</string>
+<string name="btn_subir_cuenta">Subir cuenta (lo que te deben)</string>
 <string name="cuenta_titulo">Nueva cuenta para un cliente</string>
 <string name="cuenta_cliente_hint">Correo del cliente (ej. capturista@cpp.demo)</string>
 <string name="cuenta_codigo_hint">Código/referencia (ej. OC-101)</string>
@@ -175,16 +169,18 @@
 <string name="cuenta_limite_hint">Fecha límite de pago (AAAA-MM-DD)</string>
 <string name="cuenta_faltan_datos">Completa todo: correo del cliente, código, monto mayor a 0 y fecha límite (AAAA-MM-DD).</string>
 <string name="cuenta_guardando">Subiendo cuenta a Firebase…</string>
-<string name="cuenta_exito">✅ Cuenta subida: el cliente la verá al instante en «💰 Cuentas por pagar».</string>
-<string name="proveedor_sin_cuentas">Aún no has subido cuentas. Toca «➕ Subir cuenta».</string>
-<string name="proveedor_cuentas">✅ %1$d cuentas (se actualizan solas)</string>
-<string name="fila_cuenta_estado_pend">⏳ Pendiente de pago</string>
-<string name="fila_cuenta_estado_pagada">💰 Pagada el %1$s</string>
-<string name="ordenes_sin_datos">Sin cuentas todavía: pide a tu proveedor que suba una con «➕ Subir cuenta».</string>
-<string name="ocr_movil">🔎 Leyendo la factura EN EL TELÉFONO (ML Kit)…</string>
-<string name="ocr_incompleto">⚠️ El OCR del teléfono no pudo leer: %1$s.\nToma la foto más de cerca y con buena luz, o elígela de la galería.</string>
-<string name="pagos_cuenta_titulo">💰 Cuenta</string>
-<string name="sesion_linea">👤 %1$s (%2$s) · %3$s</string>
+<string name="cuenta_exito">Cuenta subida: el cliente la verá al instante en «Cuentas por pagar».</string>
+<string name="cuenta_verificando">Verificando que el cliente exista…</string>
+<string name="cuenta_cliente_inexistente">Ese correo no tiene cuenta en la app. El cliente debe registrarse (o ser creado) primero: así ninguna cuenta queda subida a un correo equivocado.</string>
+<string name="proveedor_sin_cuentas">Aún no has subido cuentas. Toca «Subir cuenta».</string>
+<string name="proveedor_cuentas">%1$d cuentas (se actualizan solas)</string>
+<string name="fila_cuenta_estado_pend">Pendiente de pago</string>
+<string name="fila_cuenta_estado_pagada">Pagada el %1$s</string>
+<string name="ordenes_sin_datos">Sin cuentas todavía: pide a tu proveedor que suba una con «Subir cuenta».</string>
+<string name="ocr_movil">Leyendo la factura EN EL TELÉFONO (ML Kit)…</string>
+<string name="ocr_incompleto">El OCR del teléfono no pudo leer: %1$s.\nToma la foto más de cerca y con buena luz, o elígela de la galería.</string>
+<string name="pagos_cuenta_titulo">Cuenta</string>
+<string name="sesion_linea">%1$s (%2$s) · %3$s</string>
 <string name="sesion_cerrada">Sesión cerrada.</string>
 </resources>
 

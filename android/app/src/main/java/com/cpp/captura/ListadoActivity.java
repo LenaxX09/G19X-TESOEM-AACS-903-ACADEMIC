@@ -112,7 +112,7 @@ public class ListadoActivity extends AppCompatActivity {
         txtEstado.setTextColor(ContextCompat.getColor(this, R.color.texto_normal));
         txtEstado.setText(R.string.pagos_cargando);
 
-        FirebaseServicio.escucharFacturas(Sesion.correo(this), Sesion.esAdmin(this),
+        FirebaseServicio.escucharFacturas(Sesion.correo(this), false,
                 lista -> runOnUiThread(() -> {
                     barra.setVisibility(View.GONE);
                     todas.clear();
@@ -225,11 +225,11 @@ public class ListadoActivity extends AppCompatActivity {
             int color;
             switch (f.estado) {
                 case "Aprobada":
-                    badge = "✅";
+                    badge = "✓";
                     color = ContextCompat.getColor(ListadoActivity.this, R.color.verde_ok);
                     break;
                 default:
-                    badge = "⚠️";
+                    badge = "!";
                     color = ContextCompat.getColor(ListadoActivity.this, R.color.ambar_alerta);
                     break;
             }

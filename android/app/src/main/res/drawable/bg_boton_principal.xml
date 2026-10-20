@@ -5,13 +5,13 @@
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_enabled="false">
         <shape android:shape="rectangle">
-            <corners android:radius="10dp" />
+            <corners android:radius="28dp" />
             <solid android:color="@color/gris_pendiente_claro" />
         </shape>
     </item>
     <item>
         <shape android:shape="rectangle">
-            <corners android:radius="10dp" />
+            <corners android:radius="28dp" />
             <solid android:color="@color/acento" />
         </shape>
     </item>

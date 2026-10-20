@@ -289,11 +289,6 @@ public class MainActivity extends AppCompatActivity {
         }
         imgPreview.setImageBitmap(preview);
         txtPreviewHint.setVisibility(View.GONE);
-        if (Sesion.esRevisor(this)) {
-            btnEnviar.setEnabled(false);
-            pintarResultado(R.color.ambar_alerta, getString(R.string.revisor_solo_lectura));
-            return;
-        }
         btnEnviar.setEnabled(true);
         pintarResultado(R.color.texto_normal, getString(R.string.foto_lista));
     }
@@ -417,13 +412,13 @@ public class MainActivity extends AppCompatActivity {
 
         if ("APROBADA".equals(veredicto)) {
             pintarResultado(R.color.verde_ok,
-                    "✅ Factura APROBADA · riesgo " + riesgoTxt + "% · " + duracion
+                    "Factura APROBADA · riesgo " + riesgoTxt + "% · " + duracion
                             + " s\nPipeline corrido EN EL TELÉFONO (ML Kit + Java). "
                             + "También quedó en el listado.");
         } else {
             String motivo = veredicto.substring(veredicto.indexOf(':') + 1);
             pintarResultado(R.color.ambar_alerta,
-                    "⚠️ Factura CON DISCREPANCIA\nMotivo: " + motivo
+                    "Factura CON DISCREPANCIA\nMotivo: " + motivo
                             + "\nriesgo " + riesgoTxt + "% · " + duracion + " s");
         }
     }

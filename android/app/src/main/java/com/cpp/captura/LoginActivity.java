@@ -25,7 +25,7 @@ import com.google.firebase.auth.FirebaseUser;
  * usuarios/{uid} en Firestore (rol/negocio) y la app enruta como siempre:
  * proveedor â†’ su perfil; capturista/revisor/admin â†’ captura.
  *
- * Cuentas demo (clave demo1234, creadas por api/semilla_firebase.php):
+ * Cuentas demo (clave cppdemo123, creadas por api/semilla_firebase.php):
  *   admin@cpp.demo Â· capturista@cpp.demo Â· revisor@cpp.demo Â· proveedor@cpp.demo
  */
 public class LoginActivity extends AppCompatActivity {
@@ -133,27 +133,89 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     // ========================================================================
-    // Crear cuenta (S8.1): proveedor público; cliente → lo crea el admin
+    // Crear cuenta (S10.3): proveedor y cliente se registran SOLOS — UNA
+    // cuenta (un correo) por empresa; nadie puede crear más usuarios.
     // ========================================================================
 
     private void dialogoTipoCuenta() {
         String[] opciones = {getString(R.string.tipo_cuenta_proveedor),
                 getString(R.string.tipo_cuenta_cliente)};
-        new AlertDialog.Builder(this)
+        new AlertDialog.Builder(this, R.style.CPPDialogo)
                 .setTitle(R.string.tipo_cuenta_titulo)
                 .setItems(opciones, (d, cual) -> {
                     if (cual == 0) {
                         dialogoRegistroProveedor();
                     } else {
-                        new AlertDialog.Builder(this)
-                                .setTitle(R.string.cliente_info_titulo)
-                                .setMessage(R.string.cliente_info)
-                                .setPositiveButton(R.string.cancelar, null)
-                                .show();
+                        dialogoRegistroCliente();
                     }
                 })
                 .setNegativeButton(R.string.cancelar, null)
                 .show();
+    }
+
+    /**
+     * S10.3: registro de CLIENTE — una sola cuenta (un correo) por empresa.
+     * Con ella la empresa tiene TODAS las funciones (capturar, revisar,
+     * pagar) y no existen más usuarios que crear: los pagos se atan a ese
+     * correo y nunca se mezclan entre empresas.
+     */
+    private void dialogoRegistroCliente() {
+        View v = LayoutInflater.from(this).inflate(R.layout.dialog_registro_cliente, null);
+        EditText edtCorreo = v.findViewById(R.id.edtCliCorreo);
+        EditText edtClave = v.findViewById(R.id.edtCliClave);
+        EditText edtEmpresa = v.findViewById(R.id.edtCliEmpresa);
+
+        new AlertDialog.Builder(this, R.style.CPPDialogo)
+                .setTitle(R.string.reg_cli_titulo)
+                .setView(v)
+                .setPositiveButton(R.string.reg_crear, (d, w) -> {
+                    String correo = edtCorreo.getText().toString().trim();
+                    String clave = edtClave.getText().toString();
+                    String empresa = edtEmpresa.getText().toString().trim();
+                    if (!correo.contains("@") || clave.length() < 6 || empresa.length() < 3) {
+                        pintar(R.color.ambar_alerta, getString(R.string.reg_cli_faltan_datos));
+                        return;
+                    }
+                    registrarCliente(correo, clave, empresa);
+                })
+                .setNegativeButton(R.string.cancelar, null)
+                .show();
+    }
+
+    /** Auth (correo/clave) + perfil Firestore rol «cliente» con su empresa. */
+    private void registrarCliente(String correo, String clave, String empresa) {
+        barra.setVisibility(View.VISIBLE);
+        pintar(R.color.texto_normal, getString(R.string.reg_creando));
+
+        auth.createUserWithEmailAndPassword(correo, clave)
+                .addOnSuccessListener(resultado -> {
+                    FirebaseUser u = resultado.getUser();
+                    if (u == null) {
+                        barra.setVisibility(View.GONE);
+                        pintar(R.color.rojo_error, getString(R.string.respuesta_rara));
+                        return;
+                    }
+                    String nombre = correo.contains("@")
+                            ? correo.substring(0, correo.indexOf('@')) : correo;
+                    FirebaseServicio.crearPerfilCliente(u.getUid(), nombre, correo, empresa,
+                            () -> {
+                                barra.setVisibility(View.GONE);
+                                Sesion.guardar(LoginActivity.this, u.getUid(), nombre,
+                                        correo, "cliente", empresa);
+                                pintar(R.color.verde_ok, getString(R.string.reg_cli_exito, empresa));
+                                startActivity(new Intent(LoginActivity.this,
+                                        MainActivity.class));
+                                finish();
+                            },
+                            e -> {
+                                barra.setVisibility(View.GONE);
+                                pintar(R.color.rojo_error, getString(R.string.login_error, e));
+                            });
+                })
+                .addOnFailureListener(e -> {
+                    barra.setVisibility(View.GONE);
+                    pintar(R.color.rojo_error, getString(R.string.login_error, e.getMessage()));
+                });
     }
 
     /** Registro público de proveedor: Auth (correo/clave) + perfil Firestore. */
@@ -163,7 +225,7 @@ public class LoginActivity extends AppCompatActivity {
         EditText edtClave = v.findViewById(R.id.edtRegPassword);
         EditText edtNegocio = v.findViewById(R.id.edtRegNegocio);
 
-        new AlertDialog.Builder(this)
+        new AlertDialog.Builder(this, R.style.CPPDialogo)
                 .setTitle(R.string.reg_titulo)
                 .setView(v)
                 .setPositiveButton(R.string.reg_crear, (d, w) -> {
