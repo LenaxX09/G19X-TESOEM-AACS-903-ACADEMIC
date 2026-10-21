@@ -1,6 +1,7 @@
 package com.cpp.captura;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -52,6 +53,14 @@ public class ProveedorActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // S10.5: candado obligatorio — sin verificar huella/contraseña no se entra.
+        if (Candado.requiereCandado(this)) {
+            startActivity(new Intent(this, CandadoActivity.class));
+            finish();
+            return;
+        }
+
         setContentView(R.layout.activity_proveedor);
 
         ActionBar barraApp = getSupportActionBar();
@@ -183,6 +192,118 @@ public class ProveedorActivity extends AppCompatActivity {
         return new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
     }
 
+    // ========================================================================
+    // S10.6: ficha de una cuenta — el PROVEEDOR decide sobre las vencidas
+    // ========================================================================
+
+    private int diasDe(String fechaLimite) {
+        long jl = Motores.juliano(fechaLimite);
+        long jh = Motores.juliano(hoy());
+        if (jl < 0 || jh < 0) {
+            return Integer.MAX_VALUE;
+        }
+        return (int) (jl - jh);
+    }
+
+    /** Vencida, no pagada y no reabierta: el pago del cliente está CERRADO. */
+    private boolean esCerrada(QueryDocumentSnapshot d) {
+        int dias = diasDe(texto(d, "fechaLimite"));
+        return !"pagada".equals(texto(d, "estado"))
+                && dias != Integer.MAX_VALUE && dias < 0
+                && !Boolean.TRUE.equals(d.getBoolean("reabierta"));
+    }
+
+    private void dialogoCuenta(QueryDocumentSnapshot d) {
+        Double monto = d.getDouble("monto");
+        Double interes = d.getDouble("interes");
+        StringBuilder info = new StringBuilder()
+                .append(texto(d, "codigo")).append(" · ")
+                .append(texto(d, "negocio")).append('\n')
+                .append(texto(d, "clienteCorreo"))
+                .append(" · $").append(monto == null ? "?"
+                        : String.format(Locale.US, "%.2f", monto)).append('\n');
+        if (interes != null && interes > 0) {
+            info.append(getString(R.string.incluye_interes,
+                    String.format(Locale.US, "%.2f", interes))).append('\n');
+        }
+        info.append("Vence: ").append(texto(d, "fechaLimite"));
+        if ("pagada".equals(texto(d, "estado"))) {
+            info.append('\n').append(getString(R.string.fila_cuenta_estado_pagada,
+                    texto(d, "pagadaEn")));
+        }
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this, R.style.CPPDialogo)
+                .setTitle(R.string.pagos_cuenta_titulo)
+                .setMessage(info.toString())
+                .setNeutralButton(R.string.cancelar, null);
+
+        // S10.6: si está CERRADA (vencida sin reabrir), el proveedor decide.
+        if (esCerrada(d)) {
+            builder.setMessage(info + "\n\n"
+                            + getString(R.string.prov_info_cerrada, texto(d, "clienteCorreo")))
+                    .setPositiveButton(R.string.prov_agregar_interes,
+                            (dlg, w) -> dialogoInteres(d))
+                    .setNegativeButton(R.string.prov_reabrir,
+                            (dlg, w) -> reabrir(d));
+        }
+        builder.show();
+    }
+
+    /** Reabre el pago tal cual (sin interés): el cliente vuelve a poder pagar. */
+    private void reabrir(QueryDocumentSnapshot d) {
+        Map<String, Object> cambios = new HashMap<>();
+        cambios.put("reabierta", true);
+        d.getReference().update(cambios)
+                .addOnSuccessListener(v -> Toast.makeText(this,
+                        getString(R.string.prov_reabierta_ok, texto(d, "clienteCorreo")),
+                        Toast.LENGTH_LONG).show())
+                .addOnFailureListener(e -> Toast.makeText(this,
+                        "Error al reabrir: " + e.getMessage(), Toast.LENGTH_LONG).show());
+    }
+
+    /** Agrega el interés acordado al monto y REABRE el pago. */
+    private void dialogoInteres(QueryDocumentSnapshot d) {
+        View v = LayoutInflater.from(this).inflate(R.layout.dialog_interes, null);
+        EditText edtInteres = v.findViewById(R.id.edtInteres);
+
+        new AlertDialog.Builder(this, R.style.CPPDialogo)
+                .setTitle(R.string.interes_titulo)
+                .setView(v)
+                .setPositiveButton(R.string.interes_agregar, (dlg, w) -> {
+                    double interes;
+                    try {
+                        interes = Double.parseDouble(edtInteres.getText()
+                                .toString().trim().replace(',', '.'));
+                    } catch (NumberFormatException e) {
+                        interes = 0;
+                    }
+                    if (interes <= 0) {
+                        Toast.makeText(this, R.string.interes_monto_mal,
+                                Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    double montoActual = d.getDouble("monto") == null
+                            ? 0 : d.getDouble("monto");
+                    double interesPrevio = d.getDouble("interes") == null
+                            ? 0 : d.getDouble("interes");
+                    Map<String, Object> cambios = new HashMap<>();
+                    cambios.put("monto", montoActual + interes);
+                    cambios.put("interes", interesPrevio + interes);
+                    cambios.put("reabierta", true);
+                    d.getReference().update(cambios)
+                            .addOnSuccessListener(x -> Toast.makeText(this,
+                                    getString(R.string.prov_interes_ok,
+                                            String.format(Locale.US, "%.2f",
+                                                    montoActual + interes)),
+                                    Toast.LENGTH_LONG).show())
+                            .addOnFailureListener(e -> Toast.makeText(this,
+                                    "Error al agregar el interés: " + e.getMessage(),
+                                    Toast.LENGTH_LONG).show());
+                })
+                .setNegativeButton(R.string.cancelar, null)
+                .show();
+    }
+
     @Override
     public boolean onSupportNavigateUp() {
         Sesion.salirAlLogin(this);   // ⬅ al login (cierra la sesión)
@@ -215,11 +336,28 @@ public class ProveedorActivity extends AppCompatActivity {
             fila.sub.setText(sub);
 
             boolean pagada = "pagada".equals(texto(d, "estado"));
-            fila.estado.setText(pagada
-                    ? getString(R.string.fila_cuenta_estado_pagada, texto(d, "pagadaEn"))
-                    : getString(R.string.fila_cuenta_estado_pend));
-            fila.estado.setTextColor(ContextCompat.getColor(ProveedorActivity.this,
-                    pagada ? R.color.verde_ok : R.color.ambar_alerta));
+            boolean reabierta = Boolean.TRUE.equals(d.getBoolean("reabierta"));
+            if (pagada) {
+                fila.estado.setText(getString(R.string.fila_cuenta_estado_pagada,
+                        texto(d, "pagadaEn")));
+                fila.estado.setTextColor(ContextCompat.getColor(
+                        ProveedorActivity.this, R.color.verde_ok));
+            } else if (esCerrada(d)) {          // S10.6: tú decides
+                fila.estado.setText(R.string.prov_fila_cerrada);
+                fila.estado.setTextColor(ContextCompat.getColor(
+                        ProveedorActivity.this, R.color.rojo_error));
+            } else if (reabierta) {             // S10.6: reabierta tras acuerdo
+                fila.estado.setText(R.string.fila_reabierta);
+                fila.estado.setTextColor(ContextCompat.getColor(
+                        ProveedorActivity.this, R.color.verde_ok));
+            } else {
+                fila.estado.setText(R.string.fila_cuenta_estado_pend);
+                fila.estado.setTextColor(ContextCompat.getColor(
+                        ProveedorActivity.this, R.color.ambar_alerta));
+            }
+
+            // S10.6: tocar la cuenta abre su ficha (decisión si está cerrada).
+            fila.itemView.setOnClickListener(v -> dialogoCuenta(d));
         }
 
         @Override

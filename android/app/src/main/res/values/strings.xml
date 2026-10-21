@@ -52,51 +52,16 @@
  <string name="ayuda_fecha">Verifica la fecha leída: las fotos de baja calidad hacen que el OCR confunda dígitos. Reenvía con una foto nítida.</string>
  <string name="ayuda_generica">Revisa los datos extraídos (monto, folio, proveedor) y vuelve a enviar la foto si algo se leyó mal.</string>
 
- <!-- ══════════ Sprint 5: login + roles + administración (RF-M1/B6/B4) ══════════ -->
  <string name="titulo_login">CPP · Iniciar sesión</string>
- <string name="subtitulo_login">Identifícate para capturar o revisar facturas</string>
+ <string name="subtitulo_login">Entra con el correo de tu empresa o de tu negocio</string>
  <string name="hint_password">Contraseña</string>
  <string name="btn_entrar">Entrar</string>
  <string name="login_error">No se pudo iniciar sesión:\n%1$s</string>
  <string name="sesion_caducada">Tu sesión expiró o fue cerrada. Inicia sesión de nuevo.</string>
  <string name="btn_salir">Cerrar sesión</string>
  <string name="btn_admin">Administración</string>
- <string name="revisor_solo_lectura">Tu rol «revisor» es de consulta: puedes ver facturas pero no enviarlas. Pide al administrador el rol capturista.</string>
 
- <!-- Administración (solo admin) -->
- <string name="titulo_admin">CPP · Administración</string>
- <string name="subtitulo_admin">Usuarios y órdenes de compra — solo administradores</string>
- <string name="modo_usuarios">Usuarios</string>
- <string name="modo_ordenes">Órdenes de compra</string>
- <string name="btn_nuevo">＋ Nuevo registro</string>
- <string name="admin_solo_admin">Esta pantalla es solo para administradores.</string>
- <string name="admin_sin_datos">No hay registros todavía.\nPulsa «Nuevo registro» para crear uno.</string>
- <string name="admin_cargando">Consultando %1$s …</string>
- <string name="admin_error">%1$s</string>
- <string name="fila_usuario_sub">%1$s · rol %2$s</string>
- <string name="fila_orden_sub">%1$s · autorizado $%2$s · emitida %3$s</string>
- <string name="estado_activo">Activo</string>
- <string name="estado_inactivo">Inactivo</string>
- <string name="orden_abierta">Abierta</string>
- <string name="orden_cerrada">Cerrada</string>
- <string name="dlg_usuario_nuevo">Nuevo usuario</string>
- <string name="dlg_usuario_editar">Editar usuario</string>
- <string name="dlg_orden_nueva">Nueva orden de compra</string>
- <string name="dlg_orden_editar">Editar orden de compra</string>
- <string name="hint_nombre">Nombre completo</string>
- <string name="hint_login">Usuario (para iniciar sesión)</string>
- <string name="hint_password_nuevo">Contraseña (mínimo 6 caracteres)</string>
- <string name="hint_password_editar">Nueva contraseña (vacío = no cambiarla)</string>
- <string name="hint_codigo">Código (p. ej. OC-004)</string>
- <string name="hint_proveedor">Proveedor</string>
- <string name="hint_monto">Monto autorizado</string>
- <string name="hint_fecha">Fecha de emisión (YYYY-MM-DD)</string>
- <string name="usuario_activo">Usuario activo</string>
- <string name="guardar">Guardar</string>
  <string name="cancelar">Cancelar</string>
- <string name="admin_falta_nombre">Escribe el nombre.</string>
- <string name="admin_falta_usuario_pass">Usuario obligatorio y contraseña de al menos 6 caracteres.</string>
- <string name="admin_falta_orden">Completa código, proveedor, monto mayor a 0 y fecha YYYY-MM-DD.</string>
 
  <!-- ══════════ Sprint 6: Firebase (clientes, proveedores, notificaciones) ══════════ -->
  <string name="btn_soy_proveedor">Soy proveedor</string>
@@ -108,26 +73,29 @@
  <string name="proveedor_con_facturas">%1$d facturas registradas (se actualiza solo)</string>
  <string name="btn_salir_proveedor">⬅ Volver al inicio de sesión</string>
 <!-- ══════════ Sprint 7: cuentas de proveedor (RF-F5..F7) ══════════ -->
-<string name="btn_crear_proveedor">Crear cuenta de proveedor</string>
 <string name="reg_titulo">Crear cuenta de proveedor</string>
-<string name="reg_usuario_hint">Usuario (letras y números, sin acentos)</string>
 <string name="reg_password_hint">Contraseña (mínimo 6 caracteres)</string>
 <string name="reg_negocio_hint">Nombre de tu negocio (como aparece en las órdenes)</string>
 <string name="reg_crear">Crear cuenta y entrar</string>
 <string name="reg_faltan_datos">Completa todo: usuario, contraseña (mín. 6) y tu negocio (mín. 3 letras).</string>
 <string name="reg_creando">Creando tu cuenta…</string>
 <string name="reg_exito">Cuenta creada. ¡Bienvenido, %1$s!</string>
+<!-- ══════════ Sprint 10.3: rol único CLIENTE — una empresa, un correo ══════════ -->
+<string name="rol_cliente">Cliente</string>
+<string name="reg_cli_titulo">Crear cuenta de cliente (empresa)</string>
+<string name="reg_cli_empresa_hint">Nombre de tu empresa (así se firma tu perfil)</string>
+<string name="reg_cli_faltan_datos">Completa todo: correo, contraseña (mín. 6) y el nombre de tu empresa (mín. 3 letras).</string>
+<string name="reg_cli_exito">Cuenta creada. ¡Bienvenido, %1$s! Con este correo tu empresa tiene todas las funciones.</string>
+<string name="reg_correo_en_uso">Ese correo ya tiene cuenta. Cada empresa cliente usa UN solo correo (así sus pagos nunca se mezclan): pulsa «Entrar» o prueba con otro correo.</string>
 <string name="proveedor_enviar">Enviar una factura</string>
 <string name="proveedor_cerrar_sesion">Cerrar sesión</string>
-<string name="hint_negocio_usuario">Negocio (solo si el rol es proveedor)</string>
-<string name="admin_falta_negocio">Un proveedor necesita su negocio: el nombre con el que se registran sus órdenes.</string>
 <!-- ══════════ Sprint 8: cuentas por pagar (RF-P1..P3) ══════════ -->
 <string name="btn_crear_cuenta">Crear cuenta</string>
 <string name="tipo_cuenta_titulo">¿Qué tipo de cuenta necesitas?</string>
 <string name="tipo_cuenta_proveedor">Proveedor — mi negocio factura</string>
-<string name="tipo_cuenta_cliente">Cliente — personal de la empresa</string>
-<string name="cliente_info_titulo">Cuentas del cliente (personal de la empresa)</string>
-<string name="cliente_info">El CLIENTE es la empresa que paga sus cuentas. Su personal trabaja con tres roles:\n\n capturista — sube las facturas que recibe la empresa\n\n revisor — consulta y audita (solo lectura)\n\n admin — administra usuarios y órdenes, y paga\n\nPor seguridad estas cuentas NO se crean solas: pide a un administrador que te dé la tuya desde Administración → Usuarios. El registro público es solo para proveedores.</string>
+<string name="tipo_cuenta_cliente">Cliente — mi empresa paga sus cuentas</string>
+<string name="cliente_info_titulo">Cuenta de la empresa cliente</string>
+<string name="cliente_info">El CLIENTE es la EMPRESA que paga sus cuentas y se registra con UN SOLO CORREO por empresa.\n\nCon esa única cuenta tiene TODAS las funciones: subir facturas, revisar el listado y pagar.\n\nYa no existen los roles capturista/revisor/admin ni se agregan usuarios: los pagos quedan atados al correo de la empresa y nunca se mezclan con los de otra.</string>
 <string name="btn_pagos">Cuentas por pagar</string>
 <string name="titulo_pagos">CPP · Cuentas por pagar</string>
 <string name="subtitulo_pagos">Tus cuentas: pendientes y pagadas — toca una pendiente para pagarla con tu comprobante, o una pagada para revisar su foto</string>
@@ -156,14 +124,14 @@
 <string name="pago_vence">Vence en %1$d día(s) — límite %2$s: ¡págala pronto!</string>
 <string name="pago_vencida">VENCIDA hace %1$d día(s) — límite %2$s</string>
 <!-- ══════════ Sprint 10: Firebase sin servidor (Auth/Firestore/Storage/ML Kit) ══════════ -->
-<string name="hint_correo">Correo (capturista@cpp.demo · admin@cpp.demo …)</string>
+<string name="hint_correo">Correo (cliente@cpp.demo · proveedor@cpp.demo)</string>
 <string name="login_faltan_datos">Escribe tu correo y una contraseña de al menos 6 caracteres.</string>
 <string name="login_firebase">Conectando con Firebase…</string>
 <string name="reg_correo_hint">Correo electrónico (será tu usuario)</string>
 <string name="subtitulo_login_s10">Sin servidor ni IP: entra con tu correo — la app habla directo con Firebase</string>
 <string name="btn_subir_cuenta">Subir cuenta (lo que te deben)</string>
 <string name="cuenta_titulo">Nueva cuenta para un cliente</string>
-<string name="cuenta_cliente_hint">Correo del cliente (ej. capturista@cpp.demo)</string>
+<string name="cuenta_cliente_hint">Correo del cliente (ej. cliente@cpp.demo)</string>
 <string name="cuenta_codigo_hint">Código/referencia (ej. OC-101)</string>
 <string name="cuenta_monto_hint">Monto que debe el cliente ($)</string>
 <string name="cuenta_limite_hint">Fecha límite de pago (AAAA-MM-DD)</string>
@@ -182,5 +150,39 @@
 <string name="pagos_cuenta_titulo">Cuenta</string>
 <string name="sesion_linea">%1$s (%2$s) · %3$s</string>
 <string name="sesion_cerrada">Sesión cerrada.</string>
+<!-- ══════════ Sprint 10.4: recordatorios de pago (WorkManager, sin servidor) ══════════ -->
+<string name="recordar_canal">Recordatorios de pago</string>
+<string name="recordar_tres">%1$s vence en 3 días</string>
+<string name="recordar_uno">%1$s vence mañana</string>
+<string name="recordar_vencida">%1$s está VENCIDA</string>
+<string name="recordar_cuerpo">Recuerda pagarla: $%1$s · %2$s · límite %3$s</string>
+<!-- ══════════ Sprint 10.5: candado obligatorio (huella o PIN del teléfono) ══════════ -->
+<string name="candado_titulo">CPP · App bloqueada</string>
+<string name="candado_sub">Tu sesión está protegida: verifica que eres tú para continuar</string>
+<string name="candado_biometrico_titulo">Verifica que eres tú</string>
+<string name="candado_biometrico_sub">Usa la huella con la que desbloqueas tu teléfono (o su PIN/patrón si no tiene lector)</string>
+<string name="candado_reintentar">Volver a intentar</string>
+<string name="candado_cancelado">Verificación cancelada: toca «Volver a intentar».</string>
+<string name="candado_sin_bloqueo">Tu teléfono no tiene huella ni PIN de bloqueo configurados: no hay con qué verificar. Configura un bloqueo de pantalla en Ajustes y vuelve a intentar.</string>
+<string name="candado_salir">Cerrar sesión</string>
+<!-- ══════════ Sprint 10.6: cuenta vencida → pago CERRADO (acuerdo con el proveedor) ══════════ -->
+<string name="fila_cerrada">CERRADA · vencida hace %1$d día(s) — límite %2$s</string>
+<string name="fila_reabierta">PAGO REABIERTO por tu proveedor — págala pronto</string>
+<string name="incluye_interes">Incluye $%1$s de interés acordado</string>
+<string name="cerrada_titulo">Pago cerrado</string>
+<string name="cerrada_msg">La fecha límite (%1$s) ya pasó: el pago de esta cuenta quedó CERRADO.\n\nComunícate con tu proveedor %2$s para llegar a un acuerdo. Él puede REABRIRTE el pago o agregarle un INTERÉS desde su app.</string>
+<string name="entendido">Entendido</string>
+<string name="prov_info_cerrada">Venció y su pago está CERRADO para %1$s. Tú decides cómo seguir:</string>
+<string name="prov_fila_cerrada">CERRADA · toca para decidir</string>
+<string name="prov_reabrir">Reabrir pago</string>
+<string name="prov_agregar_interes">Agregar interés…</string>
+<string name="interes_titulo">Interés acordado con el cliente</string>
+<string name="interes_hint">Monto del interés a agregar ($)</string>
+<string name="interes_agregar">Agregar y reabrir</string>
+<string name="interes_monto_mal">Escribe el interés: número mayor a 0 (ej. 150 o 150.50).</string>
+<string name="prov_reabierta_ok">Pago reabierto: %1$s ya puede pagarte de nuevo.</string>
+<string name="prov_interes_ok">Interés agregado y pago reabierto: la cuenta queda en $%1$s.</string>
+<string name="recordar_cerrada_titulo">%1$s venció: pago cerrado</string>
+<string name="recordar_cerrada_cuerpo">El límite (%2$s) pasó. Comunícate con tu proveedor %1$s para acordar: puede reabrirte el pago o agregar un interés.</string>
 </resources>
 

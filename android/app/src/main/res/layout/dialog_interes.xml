@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- S10.6: el proveedor agrega el INTERÉS acordado con el cliente a una
+     cuenta vencida; se suma al monto y REABRE el pago. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <EditText
+        android:id="@+id/edtInteres"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="@string/interes_hint"
+        android:inputType="numberDecimal"
+        android:maxLines="1"
+        android:textColor="@color/texto_sobre_tarjeta"
+        android:textColorHint="@color/hint_sobre_tarjeta" />
+</LinearLayout>

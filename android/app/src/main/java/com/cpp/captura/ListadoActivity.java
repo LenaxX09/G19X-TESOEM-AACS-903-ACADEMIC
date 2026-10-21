@@ -1,5 +1,6 @@
 package com.cpp.captura;
 
+import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -31,7 +32,7 @@ import java.util.Locale;
  * Cada factura fue conciliada EN EL TELÉFONO (ML Kit + Java, ver Motores) y
  * guardada en la colección `facturas`; aquí se listan EN VIVO (oyente) con
  * sus badges ✅/⚠️, motivo, consejo 💡 y los CHIPS FILTRABLES del S9 (RF-M6).
- * El cliente ve las suyas (subidoPor); el admin ve todas.
+ * La EMPRESA cliente ve solo las suyas (subidoPor = su correo único, S10.3).
  */
 public class ListadoActivity extends AppCompatActivity {
 
@@ -79,6 +80,14 @@ public class ListadoActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // S10.5: candado obligatorio — sin verificar huella/contraseña no se entra.
+        if (Candado.requiereCandado(this)) {
+            startActivity(new Intent(this, CandadoActivity.class));
+            finish();
+            return;
+        }
+
         setContentView(R.layout.activity_listado);
 
         ActionBar barraApp = getSupportActionBar();

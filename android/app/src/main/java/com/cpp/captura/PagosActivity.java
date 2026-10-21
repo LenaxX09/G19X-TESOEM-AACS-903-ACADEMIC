@@ -78,6 +78,15 @@ public class PagosActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // S10.5: candado obligatorio (las notificaciones de recordatorio
+        // caen directo aquí: también hay que verificar primero).
+        if (Candado.requiereCandado(this)) {
+            startActivity(new Intent(this, CandadoActivity.class));
+            finish();
+            return;
+        }
+
         setContentView(R.layout.activity_pagos);
 
         if (getSupportActionBar() != null) {
@@ -164,6 +173,30 @@ public class PagosActivity extends AppCompatActivity {
         return (int) (jl - jh);
     }
 
+    /** S10.6: ¿ya pasó su fecha límite? */
+    private boolean vencida(QueryDocumentSnapshot d) {
+        int dias = diasRestantes(texto(d, "fechaLimite"));
+        return dias != Integer.MAX_VALUE && dias < 0;
+    }
+
+    /**
+     * S10.6: cuenta vencida y SIN reabrir por el proveedor → su pago está
+     * CERRADO: el cliente no puede pagarla hasta llegar a un acuerdo.
+     */
+    private boolean esCerrada(QueryDocumentSnapshot d) {
+        return vencida(d) && !Boolean.TRUE.equals(d.getBoolean("reabierta"));
+    }
+
+    /** S10.6: diálogo de cuenta cerrada — queda hablar con el proveedor. */
+    private void dialogoCerrada(QueryDocumentSnapshot d) {
+        new AlertDialog.Builder(this, R.style.CPPDialogo)
+                .setTitle(R.string.cerrada_titulo)
+                .setMessage(getString(R.string.cerrada_msg,
+                        texto(d, "fechaLimite"), texto(d, "negocio")))
+                .setPositiveButton(R.string.entendido, null)
+                .show();
+    }
+
     private String hoy() {
         return new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
     }
@@ -173,6 +206,13 @@ public class PagosActivity extends AppCompatActivity {
     // ========================================================================
 
     private void dialogCuenta(final QueryDocumentSnapshot d) {
+        // S10.6: cuenta VENCIDA sin reabrir → pago CERRADO: no se puede pagar
+        // desde la app; hay que llegar a un acuerdo con el proveedor.
+        if (MODO_POR_PAGAR.equals(modo) && esCerrada(d)) {
+            dialogoCerrada(d);
+            return;
+        }
+
         View v = LayoutInflater.from(this).inflate(R.layout.dialog_pago, null);
         ImageView img = v.findViewById(R.id.imgFotoPago);
         TextView txt = v.findViewById(R.id.txtInfoPago);
@@ -195,6 +235,14 @@ public class PagosActivity extends AppCompatActivity {
         // comprobante; sin él no puede pasar a pagadas.
         if (enPorPagar) {
             img.setVisibility(View.GONE);
+            if (vencida(d)) {   // S10.6: reabierta por el proveedor tras el acuerdo
+                info.append('\n').append(getString(R.string.fila_reabierta));
+            }
+            Double interes = d.getDouble("interes");   // S10.6: interés acordado
+            if (interes != null && interes > 0) {
+                info.append('\n').append(getString(R.string.incluye_interes,
+                        String.format(Locale.US, "%.2f", interes)));
+            }
             info.append('\n').append(getString(R.string.pago_ayuda_comprobante));
         }
         txt.setText(info.toString());
@@ -382,9 +430,16 @@ public class PagosActivity extends AppCompatActivity {
                 // RF-M7: rojo si vence en ≤3 días o ya venció (julianos local).
                 int dias = diasRestantes(texto(d, "fechaLimite"));
                 if (dias != Integer.MAX_VALUE && dias < 0) {
-                    textoEstado = getString(R.string.pago_vencida, -dias,
-                            texto(d, "fechaLimite"));
-                    color = R.color.rojo_error;
+                    // S10.6: pasada la fecha el pago se CIERRA; solo el
+                    // proveedor puede REABRIRLO (acuerdo con el cliente).
+                    if (Boolean.TRUE.equals(d.getBoolean("reabierta"))) {
+                        textoEstado = getString(R.string.fila_reabierta);
+                        color = R.color.verde_ok;
+                    } else {
+                        textoEstado = getString(R.string.fila_cerrada, -dias,
+                                texto(d, "fechaLimite"));
+                        color = R.color.rojo_error;
+                    }
                 } else if (dias != Integer.MAX_VALUE && dias <= 3) {
                     textoEstado = getString(R.string.pago_vence, dias,
                             texto(d, "fechaLimite"));

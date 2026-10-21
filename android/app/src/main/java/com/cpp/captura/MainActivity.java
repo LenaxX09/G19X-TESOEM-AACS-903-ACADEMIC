@@ -7,6 +7,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.AdapterView;
@@ -58,6 +59,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQ_CAMARA = 1001;
     private static final int REQ_PERMISO_CAMARA = 1002;
     private static final int REQ_GALERIA = 1003;
+    private static final int REQ_NOTIFICACIONES = 1004;   // S10.4: recordatorios
     private static final int MAX_LADO_ENVIO = 1600;
     private static final int MAX_LADO_PREVIEW = 1000;
 
@@ -93,6 +95,15 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // S10.5: candado obligatorio — sin verificar huella/contraseña no se
+        // entra (cubre también llegar aquí tocando una notificación).
+        if (Candado.requiereCandado(this)) {
+            startActivity(new Intent(this, CandadoActivity.class));
+            finish();
+            return;
+        }
+
         setContentView(R.layout.activity_main);
 
         txtSesion = findViewById(R.id.txtSesion);
@@ -105,11 +116,28 @@ public class MainActivity extends AppCompatActivity {
         barraEnvio = findViewById(R.id.barraEnvio);
         txtResultado = findViewById(R.id.txtResultado);
 
+        // S10.3: la línea de sesión muestra el PERFIL DE LA EMPRESA (rol
+        // único «cliente»: su empresa) — no hace falta el viejo rol interno.
+        String empresa = Sesion.negocio(this);
         txtSesion.setText(getString(R.string.sesion_linea,
-                Sesion.nombre(this), Sesion.rol(this), Sesion.correo(this)));
+                Sesion.nombre(this),
+                empresa == null || empresa.isEmpty() ? getString(R.string.rol_cliente) : empresa,
+                Sesion.correo(this)));
 
-        // Sprint 10: el CRUD de administración se migra a Firestore en el S11.
+        // S10.3: sin CRUD de usuarios — cada empresa cliente es UN correo
+        // y nadie crea más usuarios; «Administración» desapareció con los roles.
         findViewById(R.id.btnAdmin).setVisibility(View.GONE);
+
+        // S10.4: recordatorios de pago — el teléfono revisa SOLO las cuentas
+        // de la empresa (una vez al día + un chequeo al abrir la app) y avisa
+        // cuando algo vence en 3 días, mañana o ya venció.
+        RecordatorioWorker.programar(this);
+        if (Build.VERSION.SDK_INT >= 33
+                && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},
+                    REQ_NOTIFICACIONES);
+        }
 
         btnFoto.setOnClickListener(v -> pedirCamara());
         btnGaleria.setOnClickListener(v -> elegirDeGaleria());

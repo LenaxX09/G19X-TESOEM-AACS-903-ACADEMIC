@@ -214,6 +214,8 @@ public final class FirebaseServicio {
     /**
      * S10.3: registro de CLIENTE — un perfil por empresa (UN correo).
      * Tiene todas las funciones y no existen más usuarios que crear.
+     * La empresa se guarda en "negocio" (Sesion la muestra) y también
+     * en "empresa" (campo explícito del perfil).
      */
     public static void crearPerfilCliente(String uid, String nombre, String correo,
                                           String empresa, Runnable ok, Consumer<String> err) {
@@ -221,7 +223,7 @@ public final class FirebaseServicio {
         doc.put("nombre", nombre);
         doc.put("correo", correo);
         doc.put("rol", "cliente");
-        doc.put("negocio", "");        // campo histórico: solo el proveedor lo usa
+        doc.put("negocio", empresa);   // para que cargarPerfil()/Sesion la recuperen
         doc.put("empresa", empresa);
         doc.put("creado", FieldValue.serverTimestamp());
         FirebaseFirestore.getInstance().collection("usuarios").document(uid).set(doc)

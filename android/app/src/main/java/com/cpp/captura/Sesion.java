@@ -28,7 +28,7 @@ public final class Sesion {
     private static final String K_NOMBRE = "nombre";
     private static final String K_CORREO = "correo";
     private static final String K_ROL    = "rol";
-    private static final String K_NEGOCIO = "negocio";   // solo proveedor
+    private static final String K_NEGOCIO = "negocio";   // proveedor: su negocio · cliente: su empresa
 
     private Sesion() {
         // clase utilitaria estÃ¡tica: no se instancia
@@ -105,6 +105,18 @@ public final class Sesion {
         }
         cerrar(c);
         Intent i = new Intent(c, LoginActivity.class);
+        i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        c.startActivity(i);
+    }
+
+    /**
+     * S10.5: abre la pantalla que corresponde al rol del perfil cacheado
+     * (proveedor → su buzón; cliente → captura/pagos). La usa el CANDADO
+     * al verificarse y el login tras enrutar.
+     */
+    public static void abrirPantallaSegunRol(Context c) {
+        Intent i = new Intent(c, esProveedor(c)
+                ? ProveedorActivity.class : MainActivity.class);
         i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         c.startActivity(i);
     }

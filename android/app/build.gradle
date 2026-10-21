@@ -12,8 +12,8 @@ android {
         applicationId "com.cpp.captura"
         minSdk 24          // Android 7.0+ (cubre el perfil PyME/bodega del PRD)
         targetSdk 36
-        versionCode 23
-        versionName "0.14.2-v1" // S10.2: azul rey + sin emojis + formas estilo Mercado Pago
+        versionCode 28
+        versionName "0.18.0-v1" // S10.6: cuenta vencida → pago CERRADO; el proveedor reabre o agrega interés
     }
 
     buildTypes {
@@ -27,6 +27,14 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
+}
+
+// S10.4: guava ya viaja en el RUNTIME (lo arrastran mlkit/firebase) pero no
+// en el classpath de COMPILACIÓN, y work-runtime necesita su ListenableFuture
+// para compilar el Worker. Se declara explícita; el listenablefuture:9999.0
+// -empty que traen esos POM sigue evitando la clase duplicada.
+dependencies {
+    compileOnly 'com.google.guava:guava:32.0.1-android'
 }
 
 dependencies {
@@ -58,6 +66,12 @@ dependencies {
     implementation 'com.google.mlkit:text-recognition:16.0.1'
     // Sprint 10: fotos de facturas y comprobantes en Firebase Storage
     implementation 'com.google.firebase:firebase-storage'
+    // S10.4 (misma excepción aprobada): WorkManager despierta al teléfono una
+    // vez al día para revisar las cuentas por vencer y lanzar el recordatorio
+    // de pago — SIN servidor, igual que todo el S10.
+    implementation 'androidx.work:work-runtime:2.9.1'
+    // S10.5 (misma excepción): BiometricPrompt para el candado de huella.
+    implementation 'androidx.biometric:biometric:1.1.0'
 
     // Volley arrastra kotlin-stdlib-jdk7/jdk8 1.6.21 que choca con el
     // kotlin-stdlib 1.8.x → se alinean para evitar clases duplicadas

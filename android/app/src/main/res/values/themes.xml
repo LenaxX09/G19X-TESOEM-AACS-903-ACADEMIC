@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Tema base de la app (AppCompat: ActionBar simple, sin dependencias de Material).
-         0.14.2-ui (S10.2): tema OSCURO azul rey — windowBackground azul noche
-         para que ni el arranque dé destello blanco. -->
+         0.15.0-ui (S10.3): tema OSCURO FIJO — windowBackground nocturno para que
+         ni el arranque dé destello blanco. La paleta oscura vive en values/colors.xml
+         (sin variante night): la app se ve igual pase lo que pase con el teléfono. -->
     <style name="Theme.CPP" parent="Theme.AppCompat.DayNight.DarkActionBar">
         <item name="colorPrimary">@color/primario</item>
         <item name="colorPrimaryDark">@color/primario_oscuro</item>

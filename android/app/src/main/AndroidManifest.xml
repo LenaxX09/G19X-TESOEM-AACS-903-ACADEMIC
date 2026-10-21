@@ -49,13 +49,20 @@
             android:name=".MainActivity"
             android:exported="false" />
 
+        <!-- S10.5: candado obligatorio (huella o contraseña) — se muestra al
+             abrir la app con sesión vigente y al entrar por notificación. -->
+        <activity
+            android:name=".CandadoActivity"
+            android:exported="false" />
+
         <!-- Sprint 4: listado de facturas con badges (RF-M5) -->
         <activity
             android:name=".ListadoActivity"
             android:parentActivityName=".MainActivity" />
 
-        <!-- Sprint 5: administración de usuarios y órdenes (RF-B4, solo admin) -->
-        <!-- AdminActivity retirado en el S10 (CRUD ligado al PHP); regresa en el S11 migrado a Firestore. -->
+        <!-- S10.3: AdminActivity NO regresa. Los roles admin/capturista/revisor
+             se unificaron en «cliente»: UNA cuenta (un correo) por empresa
+             cliente con todas las funciones y sin CRUD de usuarios. -->
 
         <!-- Sprint 8: cuentas por pagar del cliente (RF-P1..P3) -->
         <activity

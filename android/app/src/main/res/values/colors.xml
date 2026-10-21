@@ -1,35 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- 0.14.2-ui (S10.2): paleta AZUL REY y tonalidades cercanas (noche azul),
-         con formas estilo Mercado Pago (tarjetas planas 16dp, botones píldora). -->
-    <color name="primario">#2451E6</color>
+    <!-- 0.15.0-ui (S10.3): la paleta del TEMA OSCURO es ahora la ÚNICA
+          paleta. Antes estos tonos solo salían cuando el teléfono estaba
+          en modo noche (values-night); el usuario prefirió ese look, así
+          que la app es oscura SIEMPRE (App.java fuerza MODE_NIGHT_YES) y
+          la paleta nocturna se fijó aquí: el look ya no depende del tema
+          del teléfono. Formas estilo Mercado Pago de la 0.14.2-ui
+          (tarjetas planas 16dp, botones píldora). -->
+    <color name="primario">#9FA8DA</color>
     <color name="primario_oscuro">#0A1230</color>
     <color name="acento">#3D6DFF</color>
-    <color name="texto_normal">#D9E2FF</color>
+    <color name="texto_normal">#E0E0E0</color>
     <color name="verde_ok">#6FE39B</color>
     <color name="rojo_error">#FF7B8F</color>
     <color name="ambar_alerta">#FFC24D</color>
     <color name="gris_pendiente">#97A6CF</color>
-    <color name="fondo_preview">#0F1A3C</color>
+    <color name="fondo_preview">#2B2B2B</color>
 
     <!-- 0.6.0-ui: interfaz pulida (sin dependencias nuevas, solo drawables) -->
     <color name="blanco">#FFFFFF</color>
-    <color name="borde_tarjeta">#27376B</color>
+    <color name="borde_tarjeta">#3A3A3A</color>
     <color name="gris_pendiente_claro">#1C2A55</color>
 
-    <!-- 0.7.0-ui: más color — banner degradado, fondo lavanda, pastel azul -->
-    <color name="fondo_pantalla">#0A102A</color>
+    <!-- 0.7.0-ui: más color — banner degradado y superficies -->
+    <color name="fondo_pantalla">#121212</color>
     <color name="tarjeta">#121C42</color>
-    <color name="primario_pastel">#1A2B5E</color>
+    <color name="primario_pastel">#2C3352</color>
     <color name="primario_medio">#4F7CFF</color>
     <color name="celeste">#A9C4FF</color>
     <color name="blanco_90">#E6FFFFFF</color>
 
-    <!-- 0.8.1-night: texto FIJO (sin variante noche) para todo lo que vive
-         ENCIMA de una tarjeta clara: las tarjetas pastel se quedan claras
-         también de noche (decisión 0.6.0-ui), así que su texto debe ser
-         oscuro SIEMPRE. El texto del TEMA (que se aclara de noche) solo se
-         usa sobre fondo_pantalla. -->
+    <!-- 0.8.1-night: texto FIJO para todo lo que vive ENCIMA de una tarjeta:
+          nunca cambia con el tema del teléfono (la app es oscura siempre). -->
     <color name="texto_sobre_tarjeta">#E4EBFF</color>
     <color name="hint_sobre_tarjeta">#8FA1D6</color>
 </resources>

@@ -15,6 +15,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseAuthUserCollisionException;
 import com.google.firebase.auth.FirebaseUser;
 
 /**
@@ -22,11 +23,12 @@ import com.google.firebase.auth.FirebaseUser;
  *
  * Se entra con CORREO y contraseÃ±a (nada de IP del servidor: google-services
  * apunta solo al proyecto cpp-facturas). Tras autenticar, se lee el perfil
- * usuarios/{uid} en Firestore (rol/negocio) y la app enruta como siempre:
- * proveedor â†’ su perfil; capturista/revisor/admin â†’ captura.
+ * usuarios/{uid} de Firestore y la app enruta: proveedor a su perfil y
+ * cliente (la EMPRESA) a captura/pagos. S10.3: los roles admin/capturista/
+ * revisor se unificaron en el rol unico "cliente" (UN correo por empresa).
  *
  * Cuentas demo (clave cppdemo123, creadas por api/semilla_firebase.php):
- *   admin@cpp.demo Â· capturista@cpp.demo Â· revisor@cpp.demo Â· proveedor@cpp.demo
+ *   cliente@cpp.demo · proveedor@cpp.demo
  */
 public class LoginActivity extends AppCompatActivity {
 
@@ -45,9 +47,11 @@ public class LoginActivity extends AppCompatActivity {
         FirebaseServicio.init();
         auth = FirebaseAuth.getInstance();
 
-        // SesiÃ³n vigente (Auth + perfil cacheado) â†’ directo a su pantalla.
+        // SesiÃ³n vigente (Auth + perfil cacheado) â†’ S10.5: primero el
+        // CANDADO obligatorio (huella o contraseña), nunca directo adentro.
         if (Sesion.activa(this)) {
-            rutear();
+            Candado.bloquear();   // app recién abierta: volver a bloquear
+            startActivity(new Intent(this, CandadoActivity.class));
             finish();
             return;
         }
@@ -110,6 +114,9 @@ public class LoginActivity extends AppCompatActivity {
                 Sesion.guardar(LoginActivity.this, uid,
                         nombre == null ? correo : nombre,
                         correo, rol, negocio);
+                // S10.5: acaba de dar su contraseña → app desbloqueada; el
+                // candado (huella/PIN del teléfono) sale en la próxima apertura.
+                Candado.desbloquear();
                 rutear();
                 finish();
             }
@@ -138,18 +145,15 @@ public class LoginActivity extends AppCompatActivity {
     // ========================================================================
 
     private void dialogoTipoCuenta() {
-        String[] opciones = {getString(R.string.tipo_cuenta_proveedor),
-                getString(R.string.tipo_cuenta_cliente)};
+        // S10.5: BOTONES (no lista de ítems): en el Motorola la lista del
+        // diálogo no respondía al toque — con botones siempre funciona.
         new AlertDialog.Builder(this, R.style.CPPDialogo)
                 .setTitle(R.string.tipo_cuenta_titulo)
-                .setItems(opciones, (d, cual) -> {
-                    if (cual == 0) {
-                        dialogoRegistroProveedor();
-                    } else {
-                        dialogoRegistroCliente();
-                    }
-                })
-                .setNegativeButton(R.string.cancelar, null)
+                .setPositiveButton(R.string.tipo_cuenta_cliente,
+                        (d, w) -> dialogoRegistroCliente())
+                .setNegativeButton(R.string.tipo_cuenta_proveedor,
+                        (d, w) -> dialogoRegistroProveedor())
+                .setNeutralButton(R.string.cancelar, null)
                 .show();
     }
 
@@ -203,6 +207,9 @@ public class LoginActivity extends AppCompatActivity {
                                 Sesion.guardar(LoginActivity.this, u.getUid(), nombre,
                                         correo, "cliente", empresa);
                                 pintar(R.color.verde_ok, getString(R.string.reg_cli_exito, empresa));
+                                // S10.5: el candado (huella/PIN del teléfono)
+                                // protege su sesión desde la próxima apertura.
+                                Candado.desbloquear();
                                 startActivity(new Intent(LoginActivity.this,
                                         MainActivity.class));
                                 finish();
@@ -214,7 +221,13 @@ public class LoginActivity extends AppCompatActivity {
                 })
                 .addOnFailureListener(e -> {
                     barra.setVisibility(View.GONE);
-                    pintar(R.color.rojo_error, getString(R.string.login_error, e.getMessage()));
+                    if (e instanceof FirebaseAuthUserCollisionException) {
+                        // S10.3: UN correo por empresa — si ya existe, se entra con él.
+                        pintar(R.color.ambar_alerta, getString(R.string.reg_correo_en_uso));
+                    } else {
+                        pintar(R.color.rojo_error,
+                                getString(R.string.login_error, e.getMessage()));
+                    }
                 });
     }
 
@@ -262,6 +275,9 @@ public class LoginActivity extends AppCompatActivity {
                                 Sesion.guardar(LoginActivity.this, u.getUid(), nombre,
                                         correo, "proveedor", negocio);
                                 pintar(R.color.verde_ok, getString(R.string.reg_exito, negocio));
+                                // S10.5: el candado (huella/PIN del teléfono)
+                                // protege su sesión desde la próxima apertura.
+                                Candado.desbloquear();
                                 startActivity(new Intent(LoginActivity.this,
                                         ProveedorActivity.class));
                                 finish();
@@ -273,7 +289,13 @@ public class LoginActivity extends AppCompatActivity {
                 })
                 .addOnFailureListener(e -> {
                     barra.setVisibility(View.GONE);
-                    pintar(R.color.rojo_error, getString(R.string.login_error, e.getMessage()));
+                    if (e instanceof FirebaseAuthUserCollisionException) {
+                        // S10.3: UN correo por empresa — si ya existe, se entra con él.
+                        pintar(R.color.ambar_alerta, getString(R.string.reg_correo_en_uso));
+                    } else {
+                        pintar(R.color.rojo_error,
+                                getString(R.string.login_error, e.getMessage()));
+                    }
                 });
     }
 
