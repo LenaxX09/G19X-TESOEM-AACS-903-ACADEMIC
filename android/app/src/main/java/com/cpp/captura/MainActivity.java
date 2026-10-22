@@ -104,6 +104,10 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
+        // S10.7: vigilancia de sesión — si BORRAN esta cuenta en Firebase,
+        // el teléfono se entera EN VIVO y regresa al login.
+        FirebaseServicio.vigilarSesion(this);
+
         setContentView(R.layout.activity_main);
 
         txtSesion = findViewById(R.id.txtSesion);

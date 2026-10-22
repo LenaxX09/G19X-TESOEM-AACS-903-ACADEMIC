@@ -12,8 +12,8 @@ android {
         applicationId "com.cpp.captura"
         minSdk 24          // Android 7.0+ (cubre el perfil PyME/bodega del PRD)
         targetSdk 36
-        versionCode 28
-        versionName "0.18.0-v1" // S10.6: cuenta vencida → pago CERRADO; el proveedor reabre o agrega interés
+        versionCode 29
+        versionName "0.19.0-v1" // S10.7: sesión vigilada (borran la cuenta en Firebase → regresa al login)
     }
 
     buildTypes {

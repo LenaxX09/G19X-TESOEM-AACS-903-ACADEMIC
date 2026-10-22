@@ -39,8 +39,6 @@ public class CandadoActivity extends AppCompatActivity {
             finish();
             return;
         }
-
-        setContentView(R.layout.activity_candado);
         if (getSupportActionBar() != null) {
             getSupportActionBar().hide();
         }

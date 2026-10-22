@@ -184,5 +184,7 @@
 <string name="prov_interes_ok">Interés agregado y pago reabierto: la cuenta queda en $%1$s.</string>
 <string name="recordar_cerrada_titulo">%1$s venció: pago cerrado</string>
 <string name="recordar_cerrada_cuerpo">El límite (%2$s) pasó. Comunícate con tu proveedor %1$s para acordar: puede reabrirte el pago o agregar un interés.</string>
+ <!-- ══════════ Sprint 10.7: sesión vigilada (borran la cuenta → login) ══════════ -->
+ <string name="sesion_cuenta_borrada">Tu cuenta fue eliminada: sesión cerrada.</string>
 </resources>
 

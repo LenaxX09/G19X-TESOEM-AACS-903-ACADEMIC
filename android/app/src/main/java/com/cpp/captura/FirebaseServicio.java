@@ -2,10 +2,14 @@ package com.cpp.captura;
 
 import android.content.Context;
 import android.util.Log;
+import android.widget.Toast;
 
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseAuthInvalidUserException;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.messaging.FirebaseMessaging;
 
@@ -51,18 +55,14 @@ public final class FirebaseServicio {
         // clase utilitaria estática
     }
 
-    /** Auth anónima: habilitada en la consola (Authentication → Anonymous). */
+    /**
+     * S10.3/correcciones: la sesión ANÓNIMA de los sprints 6-9 se RETIRÓ —
+     * las reglas de Firestore/Storage solo aceptan usuarios con cuenta REAL
+     * (correo/contraseña). El método queda como no-op para no romper a los
+     * que lo llaman (LoginActivity).
+     */
     public static void init() {
-        try {
-            FirebaseAuth auth = FirebaseAuth.getInstance();
-            if (auth.getCurrentUser() == null) {
-                auth.signInAnonymously()
-                        .addOnFailureListener(e ->
-                                Log.w(TAG, "auth anónima falló: " + e.getMessage()));
-            }
-        } catch (Exception e) {
-            Log.w(TAG, "init: " + e.getMessage());
-        }
+        // sin sesión anónima: cada usuario entra con su cuenta de Firebase Auth
     }
 
     /** RF-F2: cada usuario que entra a la app queda registrado en Firestore. */
@@ -227,7 +227,17 @@ public final class FirebaseServicio {
         doc.put("empresa", empresa);
         doc.put("creado", FieldValue.serverTimestamp());
         FirebaseFirestore.getInstance().collection("usuarios").document(uid).set(doc)
-                .addOnSuccessListener(v -> ok.run())
+                .addOnSuccessListener(v -> {
+                    // REGLAS: además del perfil, el directorio público por
+                    // correo que consulta existeCorreo() (usuarios no se lista).
+                    Map<String, Object> dir = new HashMap<>();
+                    dir.put("uid", uid);
+                    dir.put("correo", correo);
+                    FirebaseFirestore.getInstance().collection("clientesPorCorreo")
+                            .document(slug(correo)).set(dir)
+                            .addOnSuccessListener(x -> ok.run())
+                            .addOnFailureListener(e -> err.accept(e.getMessage()));
+                })
                 .addOnFailureListener(e -> err.accept(e.getMessage()));
     }
 
@@ -240,15 +250,16 @@ public final class FirebaseServicio {
     }
 
     /**
-     * S10.1: ¿tiene ese correo una cuenta real en la app? Busca su perfil
-     * usuarios/{uid} (lo crean la semilla y el registro). Con esto el
-     * proveedor NO puede subir cuentas a un correo que no existe (typo).
+     * S10.1: ¿tiene ese correo una cuenta real en la app? Con las REGLAS de
+     * Firestore ya NO se puede listar la colección usuarios: se consulta el
+     * directorio público clientesPorCorreo/{slug} que se escribe al crear
+     * el perfil (ver crearPerfilCliente y semilla_firebase.php).
      */
     public static void existeCorreo(String correo, Consumer<Boolean> alResultado,
                                     Consumer<String> err) {
-        FirebaseFirestore.getInstance().collection("usuarios")
-                .whereEqualTo("correo", correo).limit(1).get()
-                .addOnSuccessListener(valor -> alResultado.accept(!valor.isEmpty()))
+        FirebaseFirestore.getInstance().collection("clientesPorCorreo")
+                .document(slug(correo)).get()
+                .addOnSuccessListener(d -> alResultado.accept(d.exists()))
                 .addOnFailureListener(e -> err.accept(e.getMessage()));
     }
 
@@ -260,6 +271,23 @@ public final class FirebaseServicio {
                 .addSnapshotListener((valor, error) -> {
                     if (error != null || valor == null) {
                         Log.w(TAG, "ordenes cliente: " + (error != null ? error.getMessage() : "sin datos"));
+                        return;
+                    }
+                    alLlegar.accept(aLista(valor));
+                });
+    }
+
+    /** S10 (proveedor): SOLO las cuentas de SU negocio, en tiempo real.
+     *  Con las REGLAS ya no se puede pedir la colección completa: la
+     *  consulta queda filtrada por proveedorUid (la regla la exige). */
+    public static void escucharOrdenesProveedor(String uid,
+                                                Consumer<List<QueryDocumentSnapshot>> alLlegar) {
+        FirebaseFirestore.getInstance().collection("ordenes")
+                .whereEqualTo("proveedorUid", uid)
+                .addSnapshotListener((valor, error) -> {
+                    if (error != null || valor == null) {
+                        Log.w(TAG, "ordenes proveedor: "
+                                + (error != null ? error.getMessage() : "sin datos"));
                         return;
                     }
                     alLlegar.accept(aLista(valor));
@@ -304,7 +332,12 @@ public final class FirebaseServicio {
             com.google.firebase.storage.StorageReference ref =
                     com.google.firebase.storage.FirebaseStorage.getInstance()
                             .getReference().child(ruta);
-            ref.putBytes(jpeg)
+            // REGLAS de Storage: el contentType explícito (image/jpg) es lo
+            // que valida la regla (putBytes sin metadata lo manda null).
+            com.google.firebase.storage.StorageMetadata meta =
+                    new com.google.firebase.storage.StorageMetadata.Builder()
+                            .setContentType("image/jpg").build();
+            ref.putBytes(jpeg, meta)
                     .addOnFailureListener(e -> err.accept(e.getMessage()))
                     .addOnSuccessListener(t -> ref.getDownloadUrl()
                             .addOnSuccessListener(u -> alUrl.accept(u.toString()))
@@ -317,9 +350,50 @@ public final class FirebaseServicio {
     /** S10: guarda la factura conciliada (pipeline corrido EN EL TELÉFONO). */
     public static void guardarFactura(Map<String, Object> factura,
                                       Consumer<String> alId, Consumer<String> err) {
-        FirebaseFirestore.getInstance().collection("facturas").add(factura)
-                .addOnSuccessListener(ref -> alId.accept(ref.getId()))
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        db.collection("facturas").add(factura)
+                .addOnSuccessListener(ref -> {
+                    // REGLAS: índice anti-duplicado (RF-L3) por folio y terna —
+                    // facturas ya NO se puede listar entre clientes.
+                    registrarLookups(db, ref.getId(), factura);
+                    alId.accept(ref.getId());
+                })
                 .addOnFailureListener(e -> err.accept(e.getMessage()));
+    }
+
+    /**
+     * REGLAS + RF-L3: deja constancia de la factura en facturasLookup
+     * (f_<folio> y t_<monto_fecha_slug>) para que el pre-check de
+     * duplicados funcione con lecturas PUNTUALES, sin listar facturas.
+     * Best-effort: si falla, la factura ya quedó guardada.
+     */
+    private static void registrarLookups(FirebaseFirestore db, String facturaId,
+                                         Map<String, Object> f) {
+        try {
+            String folio = (String) f.get("folio");
+            Object monto = f.get("monto");
+            String fecha = (String) f.get("fecha");
+            String slugProv = (String) f.get("proveedorSlug");
+            String dueno = (String) f.get("subidoPor");
+            if (folio != null && !folio.isEmpty()) {
+                escribirLookup(db, "f_" + slug(folio), facturaId, dueno);
+            }
+            if (fecha != null && slugProv != null && !slugProv.isEmpty() && monto != null) {
+                String terna = (String.valueOf(monto) + "_" + fecha + "_" + slugProv)
+                        .replaceAll("[^A-Za-z0-9_]", "");
+                escribirLookup(db, "t_" + terna, facturaId, dueno);
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "lookup duplicado: " + e.getMessage());
+        }
+    }
+
+    private static void escribirLookup(FirebaseFirestore db, String id,
+                                       String facturaId, String dueno) {
+        Map<String, Object> doc = new HashMap<>();
+        doc.put("facturaId", facturaId);
+        doc.put("dueno", dueno);
+        db.collection("facturasLookup").document(id).set(doc);
     }
 
     /** S10: facturas subidas por este cliente (admin: todas), en vivo. */
@@ -357,19 +431,122 @@ public final class FirebaseServicio {
                 .addOnFailureListener(e -> alPromedio.accept(0.0));
     }
 
+    // ========================================================================
+    // S10.7: vigilancia de la sesión — si BORRAN la cuenta en Firebase, el
+    // teléfono se entera EN VIVO y regresa al login (nada de seguir con
+    // una sesión fantasma aunque la app siga abierta).
+    // ========================================================================
+
+    /** Garantiza una sola vigilancia por proceso (la pide cualquier rol). */
+    private static boolean vigilando = false;
+
     /**
-     * S10: pre-check de duplicados (RF-L3): mismo folio, o la misma terna
-     * monto+fecha+proveedorSlug. Devuelve el id de la ORIGINAL o null.
+     * S10.7: la llaman las pantallas de rol (MainActivity/ProveedorActivity)
+     * al crearse. Vigila DOS cosas:
+     *   · usuarios/{uid}: si el perfil desaparece (la semilla y la consola
+     *     borran Auth + perfil), Firestore avisa AL INSTANTE → expulsión.
+     *   · Firebase Auth: si el usuario fue borrado, el SDK lo detecta al
+     *     refrescar el token y firma la salida → expulsión.
+     * Además, CADA llamada re-verifica contra el servidor (verificarSesion):
+     * así una cuenta borrada con la app cerrada tampoco vuelve a entrar.
+     * Las caídas de red NO expulsan (solo PERMISSION_DENIED o perfil fuera).
+     */
+    public static void vigilarSesion(Context c) {
+        final String uid = Sesion.uid(c);
+        if (uid.isEmpty()) {
+            return;
+        }
+        verificarSesion(c, null);      // re-verificación en cada entrada
+        if (vigilando) {
+            return;                    // los oyentes viven una vez por proceso
+        }
+        vigilando = true;
+        final Context app = c.getApplicationContext();
+
+        FirebaseFirestore.getInstance().collection("usuarios").document(uid)
+                .addSnapshotListener((doc, error) -> {
+                    if (error != null) {
+                        if (error.getCode() == FirebaseFirestoreException.Code.PERMISSION_DENIED) {
+                            expulsar(app);   // la cuenta ya no existe para el servidor
+                        }
+                        return;              // otra cosa (red): no expulsar
+                    }
+                    if (doc != null && !doc.exists()) {
+                        expulsar(app);       // borraron el perfil: sesión muerta
+                    }
+                });
+
+        FirebaseAuth.getInstance().addAuthStateListener(a -> {
+            if (a.getCurrentUser() == null && !Sesion.uid(app).isEmpty()) {
+                expulsar(app);
+            }
+        });
+    }
+
+    /** Cierra TODO y devuelve al login con aviso (borraron la cuenta). */
+    private static void expulsar(Context app) {
+        Toast.makeText(app, R.string.sesion_cuenta_borrada, Toast.LENGTH_LONG).show();
+        Sesion.salirAlLogin(app);
+    }
+
+    /**
+     * S10.7 (fix): verifica CONTRA EL SERVIDOR que la cuenta siga viva
+     * antes de dejar entrar — el SDK cachea al usuario y el token puede
+     * seguir «válido» un rato aunque la cuenta ya fue borrada.
+     *   1) reload() del usuario de Auth: si fue borrado/deshabilitado,
+     *      falla con FirebaseAuthInvalidUserException → expulsión.
+     *   2) usuarios/{uid} debe existir (perfil borrado = cuenta fuera).
+     * Las fallas de RED no expulsan ni bloquean la entrada (alContinuar).
+     */
+    public static void verificarSesion(Context c, Runnable alContinuar) {
+        final Context app = c.getApplicationContext();
+        FirebaseUser u = FirebaseAuth.getInstance().getCurrentUser();
+        if (u == null) {
+            if (!Sesion.uid(app).isEmpty()) {
+                expulsar(app);
+            }
+            return;
+        }
+        u.reload()
+                .addOnSuccessListener(x -> FirebaseFirestore.getInstance()
+                        .collection("usuarios").document(u.getUid()).get()
+                        .addOnSuccessListener(d -> {
+                            if (!d.exists()) {
+                                expulsar(app);            // perfil borrado
+                            } else if (alContinuar != null) {
+                                alContinuar.run();
+                            }
+                        })
+                        .addOnFailureListener(e -> {
+                            // sin red no podemos saber: no bloquear la entrada
+                            if (alContinuar != null) {
+                                alContinuar.run();
+                            }
+                        }))
+                .addOnFailureListener(e -> {
+                    if (e instanceof FirebaseAuthInvalidUserException) {
+                        expulsar(app);                    // cuenta borrada/deshabilitada
+                    } else if (alContinuar != null) {
+                        alContinuar.run();                // fallo de red: seguir
+                    }
+                });
+    }
+
+    /**
+     * S10 + REGLAS: pre-check de duplicados (RF-L3) con lecturas PUNTUALES
+     * al índice facturasLookup (facturas ya no se puede listar): mismo
+     * folio (f_<folio>) o la misma terna monto+fecha+proveedorSlug
+     * (t_<monto_fecha_slug>). Devuelve el id de la ORIGINAL o null.
      */
     public static void buscarDuplicado(String folio, double monto, String fecha,
                                        String proveedorSlug,
                                        Consumer<String> alOriginal, Consumer<String> err) {
         FirebaseFirestore db = FirebaseFirestore.getInstance();
         if (folio != null && !folio.isEmpty()) {
-            db.collection("facturas").whereEqualTo("folio", folio).limit(1).get()
-                    .addOnSuccessListener(valor -> {
-                        for (QueryDocumentSnapshot d : valor) {
-                            alOriginal.accept(d.getId());
+            db.collection("facturasLookup").document("f_" + slug(folio)).get()
+                    .addOnSuccessListener(d -> {
+                        if (d.exists()) {
+                            alOriginal.accept(d.getString("facturaId"));
                             return;
                         }
                         duplicadoPorTerna(db, monto, fecha, proveedorSlug, alOriginal, err);
@@ -388,18 +565,11 @@ public final class FirebaseServicio {
             alOriginal.accept(null);
             return;
         }
-        db.collection("facturas")
-                .whereEqualTo("monto", monto)
-                .whereEqualTo("fecha", fecha)
-                .whereEqualTo("proveedorSlug", proveedorSlug)
-                .limit(1).get()
-                .addOnSuccessListener(valor -> {
-                    for (QueryDocumentSnapshot d : valor) {
-                        alOriginal.accept(d.getId());
-                        return;
-                    }
-                    alOriginal.accept(null);
-                })
+        String id = "t_" + (String.valueOf(monto) + "_" + fecha + "_" + proveedorSlug)
+                .replaceAll("[^A-Za-z0-9_]", "");
+        db.collection("facturasLookup").document(id).get()
+                .addOnSuccessListener(d -> alOriginal.accept(
+                        d.exists() ? d.getString("facturaId") : null))
                 .addOnFailureListener(e -> err.accept(e.getMessage()));
     }
 }

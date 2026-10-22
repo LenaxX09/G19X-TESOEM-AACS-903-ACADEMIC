@@ -61,6 +61,10 @@ public class ProveedorActivity extends AppCompatActivity {
             return;
         }
 
+        // S10.7: vigilancia de sesión — si BORRAN esta cuenta en Firebase,
+        // el teléfono se entera EN VIVO y regresa al login.
+        FirebaseServicio.vigilarSesion(this);
+
         setContentView(R.layout.activity_proveedor);
 
         ActionBar barraApp = getSupportActionBar();
@@ -282,19 +286,22 @@ public class ProveedorActivity extends AppCompatActivity {
                                 Toast.LENGTH_LONG).show();
                         return;
                     }
+                    // La lambda anidada del listener exige efectivamente final
+                    // (interes se reasignó en el catch): copia ya validada.
+                    final double interesFinal = interes;
                     double montoActual = d.getDouble("monto") == null
                             ? 0 : d.getDouble("monto");
                     double interesPrevio = d.getDouble("interes") == null
                             ? 0 : d.getDouble("interes");
                     Map<String, Object> cambios = new HashMap<>();
-                    cambios.put("monto", montoActual + interes);
-                    cambios.put("interes", interesPrevio + interes);
+                    cambios.put("monto", montoActual + interesFinal);
+                    cambios.put("interes", interesPrevio + interesFinal);
                     cambios.put("reabierta", true);
                     d.getReference().update(cambios)
                             .addOnSuccessListener(x -> Toast.makeText(this,
                                     getString(R.string.prov_interes_ok,
                                             String.format(Locale.US, "%.2f",
-                                                    montoActual + interes)),
+                                                    montoActual + interesFinal)),
                                     Toast.LENGTH_LONG).show())
                             .addOnFailureListener(e -> Toast.makeText(this,
                                     "Error al agregar el interés: " + e.getMessage(),
