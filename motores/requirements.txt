@@ -1,0 +1,7 @@
+# Dependencias Python del pipeline SERVIDOR (api/procesar.php → motores/)
+# Instalar:  pip install -r motores/requirements.txt
+# El binario de Tesseract-OCR se instala aparte (ver INSTALACION.md §3);
+# el modelo "spa" se agrega con su instalador (tedata).
+pytesseract>=0.3.10
+Pillow>=10.0.0
+

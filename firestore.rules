@@ -1,0 +1,113 @@
+rules_version = '2';
+
+// firestore.rules — CPP v1 (correcciones 22/10/2026)
+//
+// Publicar: consola Firebase → Firestore Database → Reglas → pegar este
+// archivo → Publicar (o `firebase deploy --only firestore:rules`).
+//
+// Qué protegen (pedidos en correcciones.txt):
+//   · El ROL de usuarios/{uid} es INMUTABLE para el cliente (nadie se
+//     auto-asciende a proveedor cambiando su documento).
+//   · Nadie LISTA la colección `usuarios`: existeCorreo() consulta el
+//     directorio público puntual clientesPorCorreo/{slug}.
+//   · Facturas y órdenes AJENAS no se leen: las consultas de la app van
+//     filtradas (facturas.subidoPor / ordenes.clienteCorreo|proveedorUid)
+//     y aquí se exige ese filtro.
+//   · El cliente solo puede tocar de una orden suya los campos de pago
+//     (estado/pagadaEn/comprobanteUrl); el resto es del proveedor dueño.
+//
+// La semilla y los scripts de api/ usan la CUENTA DE SERVICIO (Admin),
+// que NO pasa por estas reglas.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Funciones auxiliares ────────────────────────────────────────────────
+    function autenticado() {
+      return request.auth != null
+          && request.auth.token.firebase.sign_in_provider == 'password';
+    }
+    function miCorreo() {
+      return request.auth.token.email;
+    }
+    function soyProveedorDe(data) {
+      return data.proveedorUid == request.auth.uid;
+    }
+    function soyClienteDe(data) {
+      return data.clienteCorreo == miCorreo();
+    }
+
+    // ── usuarios/{uid}: perfil propio · ROL inmutable ───────────────────────
+    match /usuarios/{uid} {
+      allow get: if autenticado() && request.auth.uid == uid;
+      allow create: if autenticado() && request.auth.uid == uid
+          && request.resource.data.correo == miCorreo()
+          && request.resource.data.rol in ['cliente', 'proveedor'];
+      // El rol y el correo NO se tocan después de crear (auto-ascenso fuera).
+      allow update: if autenticado() && request.auth.uid == uid
+          && request.resource.data.rol == resource.data.rol
+          && request.resource.data.correo == resource.data.correo;
+      allow list: if false;   // nunca listar (existeCorreo usa el directorio)
+      allow delete: if false; // borrar cuentas: solo consola/semilla
+    }
+
+    // ── clientesPorCorreo/{slug}: directorio público PUNTUAL ────────────────
+    // Lo escribe la app al registrarse un cliente (y la semilla para el
+    // demo). El proveedor lo consulta 1-a-1 antes de subirle una cuenta.
+    match /clientesPorCorreo/{slug} {
+      allow get: if autenticado();
+      allow create: if autenticado()
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.correo == miCorreo();
+      allow list, update, delete: if false;
+    }
+
+    // ── ordenes: cuentas que el proveedor le sube a un cliente ──────────────
+    match /ordenes/{id} {
+      // Solo el cliente destinatario o el proveedor dueño (las consultas
+      // de la app ya llevan el whereEqualTo correspondiente).
+      allow read: if autenticado() && (soyClienteDe(resource.data)
+          || soyProveedorDe(resource.data));
+      allow create: if autenticado() && soyProveedorDe(request.resource.data)
+          && request.resource.data.clienteCorreo is string
+          && request.resource.data.estado == 'pendiente';
+      allow update: if autenticado()
+          // El proveedor dueño administra su cuenta (reabrir, interés…)
+          || soyProveedorDe(resource.data)
+          // El cliente SOLO marca/desmarca el pago de SU cuenta
+          || (soyClienteDe(resource.data)
+              && request.resource.data.diff(resource.data).affectedKeys()
+                   .hasOnly(['estado', 'pagadaEn', 'comprobanteUrl']));
+      allow delete: if autenticado() && soyProveedorDe(resource.data);
+    }
+
+    // ── facturas: cada cliente ve SOLO las suyas ────────────────────────────
+    match /facturas/{id} {
+      allow read: if autenticado() && resource.data.subidoPor == miCorreo();
+      allow create: if autenticado()
+          && request.resource.data.subidoPor == miCorreo();
+      allow update, delete: if false;   // el veredicto no se edita
+    }
+
+    // ── facturasLookup/{id}: pre-check de duplicados (RF-L3) ────────────────
+    // Lecturas PUNTUALES por id (f_<folio> / t_<monto_fecha_slug>); nunca
+    // se lista.
+    match /facturasLookup/{id} {
+      allow get: if autenticado();
+      allow create: if autenticado()
+          && request.resource.data.dueno == miCorreo();
+      allow list, update, delete: if false;
+    }
+
+    // ── Colecciones del Sprint 6 ya sin uso en la app S10 ──────────────────
+    // (`clientes`, `proveedores`, `notificaciones` las escribía el PHP con
+    // la cuenta de servicio; la app no las toca → cerradas del todo).
+    match /clientes/{doc}       { allow read, write: if false; }
+    match /proveedores/{doc}    { allow read, write: if false; }
+    match /notificaciones/{doc} { allow read, write: if false; }
+
+    // ── Todo lo demás: cerrado ──────────────────────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

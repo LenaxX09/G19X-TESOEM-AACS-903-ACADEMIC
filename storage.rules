@@ -1,0 +1,46 @@
+rules_version = '2';
+
+// storage.rules — CPP v1 (correcciones 22/10/2026)
+//
+// Publicar: consola Firebase → Storage → Reglas → pegar este archivo →
+// Publicar (o `firebase deploy --only storage`).
+//
+// Rutas que usa la app (FirebaseServicio):
+//   · facturas/<timestamp>.jpg      → foto de la factura conciliada
+//   · comprobantes/<ordenId>.jpg    → comprobante de pago del cliente
+//
+// Solo usuarios con cuenta REAL (correo/contraseña), solo imágenes JPEG
+// (la app manda contentType "image/jpg" explícito) y de hasta 8 MB.
+// Nadie borra ni sobreescribe desde la app: se crea y se lee.
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function autenticado() {
+      return request.auth != null
+          && request.auth.token.firebase.sign_in_provider == 'password';
+    }
+    function esJpegChico() {
+      return request.resource != null
+          && request.resource.size > 0
+          && request.resource.size < 8 * 1024 * 1024
+          && request.resource.contentType.matches('image/jpe?g');
+    }
+
+    match /facturas/{archivo} {
+      allow read: if autenticado();
+      allow create, update: if autenticado() && esJpegChico();
+      allow delete: if false;
+    }
+
+    match /comprobantes/{archivo} {
+      allow read: if autenticado();
+      allow create, update: if autenticado() && esJpegChico();
+      allow delete: if false;
+    }
+
+    // Todo lo demás: cerrado.
+    match /{todos=**} {
+      allow read, write: if false;
+    }
+  }
+}
