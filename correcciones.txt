@@ -1,0 +1,15 @@
+Lo que va bien
+firestore.rules está bien pensado: usuarios/{uid} no deja cambiar rol ni correo después de crearse, allow list: if false obliga a usar clientesPorCorreo puntual, facturas no se edita (el veredicto queda fijo) y el comodín final /{document=**} cierra todo lo que no nombraste.
+En ordenes, la regla del cliente usa diff(...).affectedKeys().hasOnly(['estado', 'pagadaEn', 'comprobanteUrl']), así que el cliente sólo puede tocar los campos del pago. Es la forma correcta de hacerlo.
+storage.rules exige cuenta real (sign_in_provider == 'password'), sólo JPEG y un tamaño máximo de 8 MB.
+motores/requirements.txt ya declara pytesseract y Pillow y explica que Tesseract se instala aparte. Ese pendiente venía desde el 19-oct.
+Empezaste a ordenar la raíz con herramientas/ y sacaste el respaldo .sql del árbol.
+
+
+Lo que sigue
+Corrige los paréntesis de allow update en ordenes (firestore.rules:73-79). Hoy dice autenticado() || soyProveedorDe(...) || (...), y con eso cualquier usuario con sesión puede modificar cualquier orden. Debe quedar autenticado() && (soyProveedorDe(resource.data) || (soyClienteDe(resource.data) && ...hasOnly(...))). Después publica las reglas en la consola.
+Haz que el proveedor pida sólo sus órdenes: cambia ProveedorActivity.java:103 a escucharOrdenesProveedor(uid, …). Las reglas de Firestore no filtran resultados: rechazan la consulta completa. Con tus reglas nuevas, escucharOrdenesTodas va a fallar y la lista del proveedor saldría vacía. Luego borra escucharOrdenesTodas y la opción todas de escucharFacturas.
+Revisa las otras dos consultas que tus reglas niegan. historialPromedio (FirebaseServicio.java:416, la llama MainActivity.java:386) busca facturas por proveedorSlug, pero la regla sólo deja leer las propias (subidoPor). Como el error se traga (alPromedio.accept(0.0)), el riesgo se calcularía siempre sin historial. registrarProveedor (PushServicio.java:60) escribe en proveedores, que cerraste. Decide para cada una: o cambias la consulta, o abres una regla puntual.
+Escribe en el readme.md la arquitectura que de verdad tienes (Android + Firebase con Motores.java en el teléfono, y dónde quedan api/procesar.php y motores/ en la demo). Agrega un apartado de Firebase en INSTALACION.md (crear el proyecto, activar correo/contraseña, publicar firestore.rules y storage.rules) y un firebase.json que apunte a las dos reglas.
+Termina la limpieza: agrega .log, api/firebase-service-account.json y database/backup_.sql al .gitignore y borra los 31 android/b*.log. Borra también repara_strings.ps1 y s10_strings_frag.xml de la raíz, que quedaron duplicados de los de herramientas/. Saca la clave demo de test_s10.ps1 y api/semilla_firebase.php (variable de entorno o parámetro).
+Documenta S10.4 a S10.7 en SPRINT10_v1.md: recordatorios, candado, interés, vigilancia de sesión y las colecciones clientesPorCorreo y facturasLookup. En los commits, di qué cambiaste; por ejemplo, «reglas de Firestore/Storage y requirements de motores».

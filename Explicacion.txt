@@ -1,6 +1,6 @@
 ﻿================================================================================
   EXPLICACIÓN DEL PROYECTO CPP — Todo lo construido, explicado paso a paso
-  Última actualización: 05/10/2026 · Editor: Cline (sesión 10: regresión §9.2 + 0.7.2-ui en móvil)
+  Última actualización: 17/10/2026 · Editor: Cline (sesión 16: Sprint 9 «Inteligencia del tablero» — duplicados, OCR completo, filtros y alertas de vencimiento; C9 14/14 + fix S8.3 del pago con comprobante)
 ================================================================================
 
 ██████ INSTRUCCIÓN PARA CLINE (cómo mantener este archivo) ████████████████████
@@ -770,7 +770,585 @@ nuevos). APK verificado: BUILD SUCCESSFUL (assembleDebug), versionCode
 8 / versionName "0.7.0-ui". Commit a cargo del usuario.
 
 
+═══════════════════════════════════════════════════════════════════════════════
+ PARTE 11 · SPRINT 5 "ACCESO Y ROLES" — LOGIN, TOKENS Y CRUD (09/10/2026)
+═══════════════════════════════════════════════════════════════════════════════
+
+11.1 POR QUÉ HACÍA FALTA
+───────────────────────
+Hasta la 0.7.2-ui, CUALQUIERA que supiera la IP del servidor podía
+enviar facturas y verlas: la app no sabía QUIÉN entraba. El PRD lo tenía
+reservado para la v1.0 (RF-M1 login, RF-B6 roles, RF-B4 CRUD completo)
+y este sprint lo entrega: ahora se inicia sesión, cada rol ve lo suyo
+(capturista envía, revisor consulta, admin administra) y el admin crea
+usuarios y órdenes desde el móvil, sin abrir phpMyAdmin.
+
+11.2 CÓMO FUNCIONA UN LOGIN CON TOKEN (la idea en 6 pasos)
+──────────────────────────────────────────────────────────
+ 1. La app manda usuario+contraseña a POST /api/sesion.php (por HTTPS
+    iría cifrado; aquí es red local de demo).
+ 2. PHP busca el usuario en la tabla `usuarios` y verifica la clave.
+ 3. Si está bien, genera un TOKEN: 64 caracteres hex aleatorios
+    (random_bytes de PHP: impredecible). Es como una llave de hotel.
+ 4. Guarda la llave en la tabla nueva `sesiones` con fecha de expiración
+    (8 h, configurable en config.php: SESION_TTL_HORAS).
+ 5. Devuelve el token a la app, que lo guarda en SharedPreferences
+    (clase Sesion) y lo manda en la cabecera "X-CPP-Token" de TODAS
+    las peticiones siguientes.
+ 6. Cada endpoint protegido llama a requerirAutenticacion() (¿la llave
+    existe y no expiró?) o requerirRol([...]) (¿quién entra puede?).
+    Sin llave → 401 NO_AUTENTICADO; con llave pero rol insuficiente →
+    403 ROL_NO_PERMITIDO. La app, al ver 401, borra la sesión y regresa
+    al login automáticamente.
+
+11.3 LAS DOS GENERACIONES DE CONTRASEÑAS (migración sin dolor)
+──────────────────────────────────────────────────────────────
+El seed del MVP guardaba la clave como SHA-256 en hex (CHAR 64). La v1.0
+usa bcrypt (password_hash de PHP), que es MÁS seguro (lento a propósito
+y con "sal" incorporada) pero produce hashes de ~60 caracteres → la
+columna pasó a VARCHAR(255) (migrar_v1.sql sube el esquema sin borrar
+datos). Para no obligar a cambiar claves, sesion.php acepta AMBOS
+formatos: los 3 usuarios semilla siguen entrando con demo1234 y los
+usuarios que cree el admin ya nacen con bcrypt.
+
+11.4 EL CRUD Y SUS REGLAS DE NEGOCIO (api/usuarios.php y ordenes.php)
+─────────────────────────────────────────────────────────────────────
+ · CREAR usuario: nombre + usuario único (409 USUARIO_DUPLICADO si ya
+   existe) + clave de 6+ caracteres + rol válido. Nunca se devuelve el
+   hash en las respuestas.
+ · EDITAR: nombre, rol, clave (vacío = no tocarla) y activo. Baja LÓGICA
+   (activo=0): el historial no se pierde; no hay DELETE físico.
+ · Regla ULTIMO_ADMIN: si al editar te fueras a quedar sin ningún admin
+   activo, la API responde 409 y no aplica el cambio (evita el clásico
+   "me encerré fuera del sistema").
+ · Órdenes: crear/editar código (único), proveedor, monto>0, fecha real
+   (checkdate) y estado abierta/cerrada. «Cerrar» es su baja lógica:
+   las facturas existentes la referencian por FK y no se rompe nada.
+ · Solo el admin llega a estos POST; los demás roles reciben 403.
+
+11.5 LA APP 0.8.0-v1 (versionCode 11)
+─────────────────────────────────────
+ · LoginActivity (nueva pantalla de ENTRADA): servidor + usuario +
+   clave, con el mismo estilo visual (banner, tarjeta, botón acento).
+   Si ya hay sesión guardada, salta directo a capturar.
+ · Clase Sesion: la "memoria" de la sesión (prefs): servidor, token,
+   nombre y rol. Da 3 servicios: cabeceras() para Volley, sinSesion()
+   para detectar el 401 y salirAlLogin() para volver al login.
+ · MainActivity: muestra "👤 nombre (rol) · servidor" bajo el banner;
+   botones «⚙️ Administración» (solo se ve si eres admin) y «🚪 Cerrar
+   sesión». El revisor puede fotografiar pero «Enviar» queda bloqueado
+   con un mensaje que explica por qué (la API lo respalda con 403).
+ · AdminActivity: un Spinner elige Usuarios u Órdenes; la lista se
+   carga de la API y al tocar una fila se abre un DIÁLOGO con el
+   formulario (dialog_usuario.xml / dialog_orden.xml) para crear o
+   editar — cero dependencias nuevas, como siempre.
+
+11.6 CÓMO SE VERIFICÓ (checkpoint C5, 15/15 OK)
+───────────────────────────────────────────────
+Guion re-ejecutable: powershell -File C:\CPP\test_c5.ps1. Prueba logins
+de los 3 roles, clave mala (401), llamadas sin token (401), capturista
+al CRUD (403), revisor enviando (403), crear usuario + duplicado (409),
+crear orden, login del usuario NUEVO (bcrypt funcionando), protección
+del último admin (409) y logout con token muerto (401). Además REPITE el
+trío del guion §9.2 PERO YA AUTENTICADO y salió EXACTO igual (27.3 /
+53.0 MONTO_EXCEDE / PROVEEDOR_NO_COINCIDE): la seguridad no rompió nada
+del pipeline. El APK compiló BUILD SUCCESSFUL y el backend se desplegó
+con desplegar.ps1 tras aplicar migrar_v1.sql. Falta verlo en el móvil
+físico (le toca al usuario).
+
+11.7 DEUDA HONESTA (para v1.1) Y LO QUE SIGUE
+─────────────────────────────────────────────
+El token vive en SharedPreferences SIN cifrar (lo correcto sería
+EncryptedSharedPreferences, que exige dependencia nueva: la regla del
+proyecto es no agregarlas), y existe el atajo ?token= para pruebas que
+habría que quitar en producción. Sprint 6 (siguiente): duplicados
+(RF-L3), OCR persistido completo (RF-D5), filtros del tablero (RF-M6)
+y alertas de vencimiento (RF-M7). La retro H4 sigue pendiente.
+
+11.8 MODO OSCURO COMPLETO + HOTFIX DE LAS CABECERAS (14/10/2026, 0.8.2-v1)
+────────────────────────────────────────────────────────────────────────
+El Motorola del usuario ya estaba en modo oscuro, así que se auditó toda
+la app contra la decisión de diseño de la 0.6.0-ui: de noche el FONDO se
+oscurece pero las TARJETAS pastel se quedan claras (son "tarjetas
+destacadas"). Eso obliga a una regla simple que faltaba aplicar en las
+pantallas nuevas del Sprint 5:
+
+ · Texto SOBRE tarjeta clara → color FIJO oscuro (nuevos recursos
+   texto_sobre_tarjeta #212121 y hint_sobre_tarjeta #8A8A8A), porque el
+   color del TEMA se aclara de noche y quedaría claro-sobre-claro
+   (ilegible).
+ · Texto SOBRE el fondo de pantalla → color del tema (texto_normal),
+   que de noche se aclara solo.
+
+Aplicado a: los 3 campos del login, las filas de administración, las
+tarjetas del listado (fila_factura, que además ahora declara
+cardBackgroundColor blanco EXPLÍCITO porque el CardView se oscurecía
+solo) y el spinner de órdenes (layout propio fila_spinner). Además el
+panel del login pinta con TINTE (setBackgroundTintList) en vez de
+setColor de fondo, para no perder las esquinas redondeadas.
+
+Y EL BONUS: al verificar en un emulador con modo noche forzado, salió
+un error java.lang.UnsupportedOperationException: resulta que
+super.getHeaders() de Volley devuelve un mapa INMUTABLE y el putAll de
+la cabecera X-CPP-Token reventaba… ¡TODAS las peticiones autenticadas
+de la app fallaban desde la 0.8.0! (En el checkpoint C5 no se notó
+porque se probó por HTTP directo, sin pasar por Volley). Fix: copiar a
+un HashMap antes de añadir la cabecera (7 puntos). Lección: el
+checkpoint por HTTP valida la API; la app también hay que probarla
+corriendo, y un emulador headless + análisis de píxeles de las
+capturas alcanza para automatizarlo.
+
+═══════════════════════════════════════════════════════════════════════════════
+ PARTE 12 · SPRINT 6 "FIREBASE" — EL PROVEEDOR SE ENTERA SOLO (15/10/2026)
+═══════════════════════════════════════════════════════════════════════════════
+
+12.1 LA IDEA NUEVA
+──────────────────
+Hasta el Sprint 5, cuando un capturista subía una factura, solo se
+enteraba quien abriera la app a revisar. Pero hay un tercero interesado:
+el PROVEEDOR, que quiere saber «¿ya recibieron mi factura?». El problema:
+el proveedor NO tiene (ni debe necesitar) una cuenta del sistema. La
+solución elegida: FIREBASE (los servidores de Google) como «radar y
+avisos» — el proveedor toca «🏬 Soy proveedor» en el login, elige su
+nombre de una lista y su teléfono queda suscrito a los avisos de sus
+facturas. (Este sprint es alcance NUEVO, RF-F1..F4; el «S6 inteligencia»
+planeado pasó a S7.)
+
+12.2 FIREBASE NO REEMPLAZA NADA (decisión clave)
+───────────────────────────────────────────────
+MySQL+PHP+Python+C+Prolog siguen siendo el CEREBRO (guardan y deciden).
+Firebase solo hace dos cosas que MySQL no sabe hacer bien:
+  · FIRESTORE: base de datos de Google que AVISA al instante cuando algo
+    cambia (un «oyente» en la app se dispara solo, sin consultar cada
+    rato). Aquí se escriben los documentos de `notificaciones` y también
+    `clientes` (quién entra a la app) y `proveedores` (qué teléfono
+    escucha a qué proveedor).
+  · FCM (Firebase Cloud Messaging): envía el PUSH, la notificación que
+    aparece aunque la app esté CERRADA (la clásica bajadita de la barra
+    superior). Se envía a un TEMA por proveedor, no a un teléfono fijo:
+    cualquier teléfono suscrito al tema lo recibe.
+
+12.3 EL CIRCUITO COMPLETO DE UN AVISO
+─────────────────────────────────────
+  1. El capturista sube la factura (igual que siempre).
+  2. facturas.php la guarda en MySQL (esto NUNCA cambia) y luego llama a
+     fb_notificar_factura() — BEST-EFFORT: si Firebase falla, la factura
+     ya está a salvo y el error solo queda en el log del servidor.
+  3. PHP escribe un documento en Firestore `notificaciones` → si el
+     proveedor tiene la app ABIERTA, el oyente de ProveedorActivity lo
+     muestra AL INSTANTE (sin botón de actualizar).
+  4. PHP además envía el push FCM al tema proveedor_<slug> → si la app
+     está CERRADA, Android lo muestra solo; al tocarlo se abre el buzón.
+
+12.4 EL SLUG: QUE PHP Y JAVA DIGAN LO MISMO
+───────────────────────────────────────────
+El tema FCM y el documento deben coincidir aunque el nombre venga con
+acentos y espacios («Ferretería El Tornillo»). Ambos lados normalizan el
+nombre EXACTAMENTE IGUAL a un «slug»: sin acentos, minúsculas, solo
+letras/números → «ferreteriaeltornillo». fb_slug() (PHP) y slug() (Java)
+son espejos: si alguien cambia uno, HAY que cambiar el otro.
+
+12.5 SEGURIDAD Y SECRETOS
+─────────────────────────
+  · Para escribir en Firebase, PHP se autentica como «cuenta de servicio»
+    (un robot con llave privada). La llave vive en
+    api/firebase-service-account.json — es un SECRETO que permite enviar
+    push a nombre del proyecto, así que .gitignore la EXCLUYE del repo
+    (quien clone el repo debe conseguirla aparte; sin ella todo sigue
+    funcionando, solo que sin avisos). El JWT se firma con openssl (que
+    PHP ya trae) y el token de acceso se CACHEA ~50 min: cero
+    dependencias PHP nuevas.
+  · La app usa AUTH ANÓNIMA de Firebase: las reglas de Firestore exigen
+    «app legítima» sin pedirle cuenta Google a nadie.
+  · proveedores.php es PÚBLICO a propósito: solo expone NOMBRES de
+    proveedores (los que ya están en órdenes de compra), nada de montos
+    ni folios. En producción se endurecería (p. ej. código por proveedor).
+
+12.6 LA EXCEPCIÓN A LA REGLA DE NO-DEPENDENCIAS
+───────────────────────────────────────────────
+El proyecto se enorgullecía de no agregar librerías… pero Firebase en
+Android no se puede «escribir a mano»: se aprobó (usuario) agregar SOLO
+firebase-bom 33.1.2 + firestore + messaging + auth y el plugin
+google-services 4.4.2, que inyecta google-services.json al build (ese
+archivo SÍ va en git: solo identifica el proyecto, no es secreto).
+
+12.7 CÓMO QUEDÓ Y QUÉ FALTA
+──────────────────────────
+Compila: BUILD SUCCESSFUL en 37 s (b6.log) con la app 0.9.0-v1 (vc 14).
+Y el 15/10 por la tarde se VERIFICÓ DE PUNTA A PUNTA en el emulador API
+36: la lista pública de proveedores carga en el diálogo · al subir una
+factura el PHP crea el documento en Firestore (comprobado consultando
+Firestore por REST con el mismo token del servidor) · el buzón del
+proveedor arranca con el histórico y, con la pantalla abierta, la factura
+nueva APARECIÓ SOLA a los ~5 s (¡sin botón de actualizar!) · y con la app
+en segundo plano llegó el push del sistema con el texto exacto: «Factura
+registrada — Se subió la factura de Papelería Central (orden OC-001,
+factura Nº 27) para conciliación.»
+
+Un detalle aprendido: si la app se mata con «am force-stop» (estado
+DETENIDO de Android), el sistema NO entrega el push — es una limitación
+de Android, no del proyecto; cerrando con HOME o deslizando de recientes
+sí llega (así se probó).
+
+Y esa misma noche se repitió EN EL MÓVIL FÍSICO (motorola edge 50
+fusion, Android 16, actualizado a 0.9.0-v1 por USB): sin Wi-Fi, con el
+truco «adb reverse tcp:8080 tcp:80» el localhost:8080 del teléfono es
+el Apache del PC (campo servidor: 127.0.0.1:8080). Ahí se vio: el
+diálogo de proveedores cargando por el cable, el buzón con su
+histórico, la factura #28 apareciendo SOLA con la pantalla abierta, el
+push de la #29 con la app en segundo plano y el login del capturista.
+Se guardaron 6 capturas paso a paso en el Escritorio, carpeta
+«Prueba_S6_Motorola».
+
+FALTA: solo commitear lo pendiente (S5+S6+S7: 28 modificados + 5
+nuevos; el usuario ya commiteó los 25 NUEVOS del S5/S6 como 67d8238).
+
+
+═══════════════════════════════════════════════════════════════════════════════
+ PARTE 13 · SPRINT 7 "CUENTAS DE PROVEEDOR" — EL PROVEEDOR CON CUENTA PROPIA
+═══════════════════════════════════════════════════════════════════════════════
+
+13.1 LA IDEA
+────────────
+En el Sprint 6 el proveedor ya recibía avisos, pero «de oyente»: entraba
+sin cuenta y miraba su buzón. Ahora pidió el usuario que tuviera SU
+PROPIA CUENTA: se registra él mismo, dice CÓMO SE LLAMA SU NEGOCIO y
+desde su perfil MANDA SUS FACTURAS. Nace el 4.º rol: «proveedor».
+
+13.2 EL NEGOCIO ES LA LLAVE
+───────────────────────────
+La tabla usuarios ganó una columna «negocio» que debe calzar con el
+«proveedor» de las órdenes de compra (p. ej. «Oficinas del Norte»). Con
+ese calce el servidor filtra TODO lo que ese usuario ve y hace:
+  · ordenes.php  → solo le muestra LAS ÓRDENES DE SU NEGOCIO;
+  · facturas.php → puede ENVIAR, pero solo contra esas órdenes (una
+    ajena responde 403 ORDEN_DE_OTRO_PROVEEDOR);
+  · el listado   → solo las facturas de su negocio.
+Capturista y admin siguen igual: ellos facturan en nombre de quien sea.
+
+13.3 REGISTRO SIN NECESITAR AL ADMIN
+────────────────────────────────────
+registro_proveedor.php es PÚBLICO (decisión documentada, como
+proveedores.php): cualquiera crea una cuenta proveedor, que es el rol de
+MÍNIMOS (no lista usuarios, no crea órdenes, no ve facturas ajenas).
+Pide usuario (3-50, minúsculas), contraseña (≥6) y su negocio (3-100);
+guarda con bcrypt y además DEVUELVE EL TOKEN: la app entra directo sin
+volver a loguearse. En producción se endurecería (correo o un código
+entregado por el comprador que registró la orden).
+
+13.4 EN LA APP (0.10.0-v1, vc 15)
+─────────────────────────────────
+El login gana «🆕 Crear cuenta de proveedor» (diálogo con los 3 datos).
+Al entrar, el proveedor cae en su perfil: el buzón del S6 + «📤 Enviar
+una factura» + «🚪 Cerrar sesión». Enviar abre la MISMA pantalla de
+captura del capturista — pero con su token el servidor solo le da SUS
+órdenes, así que no hizo falta una pantalla nueva. El admin también crea
+proveedores desde su CRUD (rol + negocio). «🏬 Soy proveedor» (S6) sigue
+existiendo: es el modo rápido SIN cuenta, solo para mirar avisos.
+
+13.5 CÓMO SE VERIFICÓ
+─────────────────────
+Checkpoint C7 por HTTP (test_s7.ps1): 15/15 — registro, duplicados,
+validaciones, login con negocio, órdenes/facturas filtradas, envío
+permitido SOLO en lo suyo, revisor bloqueado, CRUD solo admin… Y demo
+completa en el emulador (5 capturas en Escritorio\Prueba_S7_Cuentas):
+registro desde la UI → perfil → solo SU orden → factura subida con su
+cuenta → aviso EN VIVO en el buzón. Instalada también en el Motorola.
+
+13.6 EL DETALLE DE LA TILDE (hallazgo de la prueba guiada)
+─────────────────────────────────────────────────────────
+En la prueba el proveedor se registró como «Papeleria Central» (SIN
+tilde) y al enviar contra OC-001 («Papelería Central», CON tilde) el
+servidor contestó 403: la comparación de negocio era de texto EXACTO.
+El fix: comparar por SLUG — la misma normalización de Firebase (sin
+acentos, minúsculas, solo letras/números) — en el envío, en el detalle
+y en los dos listados. Ahora «Ferreteria» == «Ferretería» y ningún
+proveedor queda bloqueado por cómo tecleó su nombre. Tras el fix el
+checkpoint C7 se re-corrió completo: 15/15, y la factura del teléfono
+entró redonda: «✅ APROBADA · riesgo 27.3 % · pipeline 11.07 s».
+
+
+═══════════════════════════════════════════════════════════════════════════════
+ PARTE 14 · SPRINT 8 "CUENTAS POR PAGAR" — EL DINERO DEL CLIENTE (16/10/2026)
+═══════════════════════════════════════════════════════════════════════════════
+
+14.1 EL MODELO COMPLETO, POR FIN CLARO
+──────────────────────────────────────
+Con este sprint el reparto de papeles quedó redondo:
+  · El PROVEEDOR (fuera): recibe AVISOS push de que subieron su factura
+    (S6) y puede tener cuenta para mandarlas él mismo (S7).
+  · El CLIENTE (la oficina con la app: capturista/admin/revisor): SUBE las
+    facturas que le llegan y ahora además administra el DINERO: qué cuentas
+    tiene PENDIENTES POR PAGAR y cuáles ya PAGÓ.
+
+14.2 QUÉ SE LE AGREGÓ A LA BASE DE DATOS
+───────────────────────────────────────
+`facturas` ganó dos columnas: `pagada` (0/1) y `pagada_en` (cuándo). Así el
+pago es un ESTADO aparte del veredicto: una factura puede estar «Aprobada»
+y sin pagar (lista para pagar), o «Con Discrepancia» pero ya pagada (porque
+el conflicto se resolvió a mano). La «Pendiente» —aún sin veredicto del
+pipeline— no se puede pagar: primero debe pasar por OCR→riesgo→Prolog.
+
+14.3 EL APARTADO EN LA APP (0.11.0-v1)
+──────────────────────────────────────
+Botón nuevo «💰 Cuentas por pagar» en la pantalla de captura (al proveedor
+se le OCULTA: él no paga). Adentro:
+  · Pestañas: «⏳ POR PAGAR (n)» y «✅ PAGADAS (n)» con contadores vivos.
+  · Tocar cualquier factura abre su FOTO EN GRANDE (la imagen original de
+    uploads/, traída con Volley ImageRequest) más su ficha: orden, provee-
+    dor que leyó el OCR, monto, folio y fecha de pago.
+  · Desde la foto se paga: «💰 Marcar como pagada» (o «↩️ Devolver» si te
+    equivocaste). Solo capturista/admin — la API lo respalda con 403.
+  · En PAGADAS, chips para revisar CLASIFICADAS: Todas · ✅ Aprobadas ·
+    ❌ No coinciden · ⚠️ Discrepancia (esto último pedido tal cual por el
+    usuario: revisar las fotos de lo pagado por tipo de veredicto).
+
+14.4 UNA REGLA QUE CAMBIÓ A MEDIAS (y por qué)
+─────────────────────────────────────────────
+Primero se programó «solo se pagan Aprobadas». Al probarlo saltó la
+contradicción: si nunca se pagan discrepancias, la pestaña de pagadas
+jamás tendría nada que clasificar (que era justo el requisito). En la vida
+real una discrepancia se resuelve por fuera y LUEGO se paga. Regla final:
+se paga todo lo que TENGA veredicto; la «Pendiente» queda fuera.
+
+14.5 CÓMO SE VERIFICÓ
+─────────────────────
+Checkpoint C8 por HTTP (test_s8.ps1): 12/12 — consulta por rol, pagar y
+despagar, doble pago rechazado, Pendiente rechazada, discrepancia pagable,
+filtro ?pagada. Y demo completa en el emulador con 6 capturas (Escritorio\
+Prueba_S8_Pagos): el pago hecho DESDE el teléfono movió la factura de
+«POR PAGAR (16)» a «PAGADAS (5)» en vivo. Instalada también en el
+Motorola. Detallito de entorno: OPcache de PHP sirvió una versión vieja
+de pagos.php tras un redespliegue — si tras desplegar ves comportamiento
+viejo, reinicia Apache (o toca el .php).
+
+14.6 ¿QUIÉN ES EL CLIENTE? (y el «Crear cuenta» genérico)
+────────────────────────────────────────────────────────
+Pregunta del usuario: si la cuenta puede ser de «cliente», ¿quién es el
+cliente: el admin, el capturista o el revisor? Respuesta: el cliente es
+LA EMPRESA QUE PAGA, y sus tres roles internos son su PERSONAL:
+  📷 capturista — sube las facturas que recibe la empresa;
+  🔍 revisor — consulta y audita (solo lectura);
+  👑 admin — el jefe: administra usuarios y órdenes, y también paga.
+Por eso el botón se volvió «🆕 Crear cuenta» con elección de tipo:
+  · 🏬 PROVEEDOR → registro público (rol de mínimos: solo ve SU negocio);
+  · 🏢 CLIENTE → la app EXPLICA los tres roles y aclara que esas cuentas
+    las crea un administrador (⚙️ Administración → Usuarios). ¿Por qué no
+    autoregistro también para el cliente? Porque cualquiera podría
+    auto-darse acceso a TODAS las finanzas de la empresa: el capturista,
+    revisor y admin ven todo; el proveedor solo lo suyo. El registro
+    público solo puede dar el rol más pequeño.
+
+14.7 CADA CLIENTE VE SOLO SUS CUENTAS (S8.2)
+────────────────────────────────────────────
+Refinamiento del usuario: «el cliente no debe ver toda la actividad de las
+empresas: solo SUS cuentas — las que le faltan por pagar y las que ya
+pagó — para ponerse al corriente; cada cliente puede tener múltiples
+cuentas». Solución: cada factura recuerda QUIÉN la subió (columna
+subida_por). Así:
+  · 💰 Cuentas por pagar muestra ÚNICAMENTE lo que el usuario que entró
+    subió: sus pendientes y sus pagadas (nadie paga la cuenta de otro:
+    la API contesta 403 FACTURA_DE_OTRO_CLIENTE).
+  · 📋 Ver facturas: capturista y revisor también ven solo lo suyo; el
+    ADMIN conserva la vista completa (alguien tiene que gestionar el
+    sistema: órdenes, usuarios, todo).
+  · El proveedor sigue en su mundo: sus avisos y su buzón (S6/S7).
+La prueba lo dejó claro: el capturista (que subió las facturas de la
+demo) ve «POR PAGAR (14) / PAGADAS (7)»; el revisor (que nunca subió
+nada) ve «0/0 — ¡Al día! 🎉». Misma pantalla, datos distintos: cada
+quien lo suyo.
+
+═══════════════════════════════════════════════════════════════════════════════
+ PARTE 15 · SPRINT 9 "INTELIGENCIA DEL TABLERO" (17/10/2026)
+═══════════════════════════════════════════════════════════════════════════════
+
+15.1 LA IDEA
+────────────
+Cuatro requisitos "de inteligencia" que el PRD dejó para la v1.0: detectar
+facturas DUPLICADAS (RF-L3), guardar TODO lo que lee el OCR (RF-D5),
+poder FILTRAR el listado (RF-M6) y avisar cuándo una cuenta por pagar
+está por VENCER (RF-M7). Con esto el Incremento 1 queda a 8 de 9 (solo
+falta la cola offline, RF-M8).
+
+15.2 DUPLICADOS: PHP BUSCA, PROLOG DECIDE (RF-L3)
+──────────────────────────────────────────────────
+"¿Esta factura ya me la habían mandado?" no puede responderla Prolog
+solo: Prolog únicamente ve lo que le pasan. El trabajo se reparte:
+  · procesar.php (PRE-CHECK): antes de calcular el riesgo busca en MySQL
+    otra factura con el MISMO FOLIO o con la misma TERNA monto+fecha+
+    proveedor (el proveedor se compara por SLUG — la normalización de
+    Firebase — para que «Papeleria» == «Papelería»).
+  · regla.pl (REGLA 0): recibe un nuevo 10.º argumento si|no; si es "si"
+    responde DISCREPANCIA:FACTURA_DUPLICADA ANTES que cualquier otra regla
+    (un duplicado no se aprueba aunque todo lo demás calce). El contrato
+    pasó de 9 a 10 argumentos; llamarlo con 9 ahora da ARGUMENTOS_INVALIDOS.
+La respuesta trae duplicada_de=<id de la original> y el listado muestra su
+consejo 💡 («revisa la original para no pagarla dos veces»). Nota de
+operación: la detección es GLOBAL, así que la regresión del trío §9.2
+exige base limpia (por eso el checkpoint respalda con mysqldump y trunca
+facturas antes de correr).
+
+15.3 EL OCR YA NO TIRA NADA (RF-D5)
+────────────────────────────────────
+Antes solo se guardaban los 4 campos extraídos. Ahora procesar_factura.py
+añade "texto" (el OCR crudo) a su JSON — contrato ADITIVO: un consumidor
+viejo que no lo mire sigue funcionando. La tabla facturas gana la columna
+texto_ocr MEDIUMTEXT (migrar_v1.sql §7) y el DETALLE (GET facturas.php?
+id=N) lo expone: sirve para auditar QUÉ leyó el OCR cuando un veredicto
+se discute. El listado no lo arrastra (pesaría de más).
+
+15.4 LOS CHIPS POR FIN FILTRAN (RF-M6)
+───────────────────────────────────────
+Los chips ✅/⚠️/⏳ del listado eran un resumen bonito; ahora son BOTONES:
+un tap deja en pantalla solo ese estado (el chip activo se pinta relleno,
+con texto blanco) y otro tap sobre el mismo chip lo quita. Los conteos
+siguen siendo del TOTAL (el filtro no engaña) y una línea explica
+«🔎 Filtro: Con Discrepancia · 3 de 12 facturas». El filtrado es LOCAL:
+la API ya sabía ?estado= desde el Sprint 1.
+
+15.5 CUÁNDO VENCE UNA CUENTA (RF-M7)
+─────────────────────────────────────
+¿De dónde sale la "fecha límite" que el PRD menciona sin definirla?
+Decisión documentada: fecha del documento de la factura (o la de subida
+si el OCR no la leyó) + 30 días (PAGO_DIAS_LIMITE en config.php). La
+calcula el SERVIDOR — pagos.php añade fecha_limite/dias_restantes/
+vence_pronto a cada fila — para que la regla viva en un solo lado; la
+app solo colorea: en ROJO «⏰ Vence en N día(s)» o «🚨 VENCIDA hace N»
+cuando quedan 3 días o menos (ALERTA_VENCE_EN_DIAS), y el diálogo de
+pago muestra «📅 Límite de pago». Detalle de demo: la factura de prueba
+quedó con 3 días justos → sale roja al instante.
+
+15.6 EL FIX QUE NADIE VIO LLEGAR (S8.3 en la app)
+──────────────────────────────────────────────────
+Al auditar el repo saltó una INCONSISTENCIA: pagos.php ya no aceptaba
+"pagar" seco (el S8.3 exige "comprobar" CON foto del comprobante), pero
+la app 0.12 seguía mandando "pagar" → el botón de pago del móvil estaba
+ROTO desde el 16/10 (esa sesión dejó BD+API listos y la app a medias,
+sin documentar). Arreglo: el botón ahora es «📷 Adjuntar comprobante y
+pagar» → abre la GALERÍA (ACTION_GET_CONTENT, sin permisos) → comprime
+igual que una factura (≤1600 px, JPEG 85, Base64) → POST comprobar con
+imagen_base64. El servidor guarda la foto como evidencia_*.jpg y solo
+entonces marca pagada: sin evidencia no hay pago. De paso, en POR PAGAR
+una «Con Discrepancia» ya no dice «✅ Aprobada»: muestra su motivo real.
+
+AJUSTE S9.1 (mismo día, a pedido del usuario): en POR PAGAR el diálogo
+NO muestra NINGUNA foto — solo los datos de la cuenta y la instrucción
+«📎 para pasarla a PAGADAS adjunta la foto de tu comprobante». La lógica
+ya era esa en el servidor; lo que pasaba es que la app enseñaba primero
+la foto de la FACTURA, que confunde (no es lo que prueba el pago). Ahora
+la única foto del flujo es la del COMPROBANTE que sube el cliente, y la
+foto de la factura se revisa en PAGADAS (el requisito original del S8:
+clasificar lo pagado por veredicto). Flujo final: pendiente (solo datos)
+→ «📷 Adjuntar comprobante y pagar» → galería → el servidor valida → la
+cuenta aparece en PAGADAS. App 0.13.1-v1 (vc 20).
+
+15.7 CÓMO SE VERIFICÓ (checkpoint C9, 14/14)
+─────────────────────────────────────────────
+test_s9.ps1 NUEVO (ASCII puro, re-ejecutable): factura con folio ya
+registrado → FACTURA_DUPLICADA con duplicada_de · el detalle trae
+texto_ocr (233 caracteres) · por_pagar trae fecha_limite/dias/
+vence_pronto · comprobar SIN foto → 400 · CON foto → PAGADA con
+evidencia · doble pago → 409 · despagar → OK · regla.pl por CLI (si /
+no / contrato viejo) · el OCR devuelve "texto". Antes: REGRESIÓN C5
+15/15 con el trío §9.2 EXACTO sobre BD limpia. Curiosidad honesta: la
+primera corrida dio B=RIESGO_ALTO por un bug de aridad introducido al
+reescribir la cláusula (factura/3 vs factura/4) — el checkpoint existía
+justo para cazar eso. APK 0.13.0-v1 (vc 19): BUILD SUCCESSFUL (b11.log,
+31 s). Quedó pendiente a mano: instalarla en el Motorola y dar una
+vuelta visual.
+
+
 ══════════════════════════════════════════════════════════════════════════════
+═══════════════════════════════════════════════════════════════════════════════
+ PARTE 16 · SPRINT 10 "SIN SERVIDOR" — LA APP HABLA DIRECTO CON FIREBASE (19-20/10/2026)
+═══════════════════════════════════════════════════════════════════════════════
+
+16.1 ¿QUÉ SE PIDIÓ Y QUÉ SIGNIFICA?
+───────────────────────────────────
+Dos pedidos del usuario cambiaron la arquitectura de un plumazo:
+  1) «Que ya no necesitemos Laragon para las pruebas»: el «servidor»
+     (Apache+MySQL+PHP) existía SOLO para la demo local. Firebase
+     (gratis en su capa Spark) lo reemplaza por servicios en la nube.
+  2) «Que las órdenes no necesiten una IP; que las suba el proveedor
+     para notificar a los clientes lo que deben»: antes el cliente
+     tecleaba la IP del PC con Laragon para alcanzar la API. Ahora el
+     PROVEEDOR sube la cuenta («lo que te deben») a Firestore indicando
+     el CORREO del cliente, y el teléfono del cliente la recibe SOLO
+     (oyente en tiempo real). Nadie teclea ninguna IP.
+
+16.2 LAS PIEZAS DE FIREBASE QUE USAMOS
+──────────────────────────────────────
+  · AUTH (Email/Password): el correo ES el usuario. Login con
+    signInWithEmailAndPassword; el google-services.json (commiteado)
+    identifica el proyecto cpp-facturas. Sin token propio ni IP.
+  · FIRESTORE (base de datos en la nube): colecciones —
+    usuarios/{uid} (perfil: rol, negocio) · ordenes (las cuentas que
+    sube el proveedor: clienteCorreo, monto, fechaLimite, estado) ·
+    facturas (los veredictos del pipeline) · notificaciones y
+    proveedores (las del S6). Los oyentes (addSnapshotListener)
+    repintan la pantalla solos cuando algo cambia.
+  · STORAGE: las fotos — facturas/<timestamp>.jpg y el comprobante
+    de pago comprobantes/<ordenId>.jpg. Pagar = adjuntar la foto:
+    sin evidencia no hay pago (igual que S8.3/S9.1).
+  · ADMIN por REST: la clave de servicio (SECRETO, fuera de git)
+    permite a los scripts PHP de CONSOLA crear usuarios y sembrar
+    datos sin Laragon (semilla_firebase.php).
+
+16.3 ¿Y EL PIPELINE? SE PORTÓ AL TELÉFONO (Motores.java)
+────────────────────────────────────────────────────────
+Firebase no puede ejecutar Python/C/Prolog. Solución: portar los 3
+motores a Java DENTRO de la app, con resultados equivalentes:
+  · OCR ......... ML Kit de Google lee el texto EN EL DISPOSITIVO
+                  (modelo latino, sin internet) y extraerCampos()
+                  aplica las MISMAS regex del spike de Python.
+  · RIESGO ...... clasificadorRiesgo() replica la fórmula del C
+                  (base 10 + 0.75×alza / 0.25×baja, tope [0,100]).
+  · CONCILIACIÓN . conciliar() replica regla.pl cláusula por cláusula
+                  (0 duplicado → 1 monto → 2 riesgo → 3 proveedor
+                  tolerante → 4 fecha [−15,+90] días julianos). El
+                  pre-check de duplicados consulta Firestore (antes
+                  MySQL). El HISTÓRICO para el riesgo también sale de
+                  Firestore (promedio de las últimas facturas).
+Los originales (motores/*.py/.c/.pl) quedan como REFERENCIA académica
+y para la demo con Laragon.
+
+16.4 PROBAR SIN LARAGON (verificado en vivo el 20/10)
+─────────────────────────────────────────────────────
+Solo se necesita php.exe como intérprete (ni Apache ni MySQL):
+  php C:\CPP\api\habilitar_email_auth.php  ← UNA vez: activa
+      Email/Password. FIX 20/10: la API v1 de config YA NO EXISTE
+      (404 de Google); se usa la v2 (PATCH .../v2/projects/{p}/config).
+      Sin esto la app NO podía entrar.
+  php C:\CPP\api\semilla_firebase.php      ← re-ejecutable: 4 usuarios
+      demo (clave demo, fuera del repo) + perfiles + 3 cuentas para
+      capturista@cpp.demo (una vence en 3 días ⏰ y una vencida 🚨).
+  powershell -File C:\CPP\test_s10.ps1     ← checkpoint C10 (7
+      pruebas, incluye un login REAL por REST). Resultado: 7/7 OK.
+En el móvil: entrar con capturista@cpp.demo / la clave demo → ver las
+cuentas → pagar con comprobante; con proveedor@cpp.demo → «➕ Subir
+cuenta». Guía paso a paso: SPRINT10_v1.md.
+
+16.5 LO QUE SE FUE Y LO QUE VIENE
+────────────────────────────────
+SE FUE de la app: el campo «Usuario» del login, la IP del servidor,
+Sesion.servidor()/cabeceras(), el Volley de las peticiones (solo queda
+para BAJAR la imagen del comprobante) y AdminActivity (su CRUD era PHP
+puro; vuelve en el S11 migrado a Firestore). Los test_c5/s7/s8/s9.ps1
+siguen sirviendo para la demo histórica con Laragon.
+VIENE: S11 (CRUD de administración en Firestore), RF-M8 (cola offline,
+único RF pendiente del Incremento 1) y endurecer las reglas de
+seguridad de Firestore/Storage antes de producción (deuda v1.1).
+
+16.6 POR QUÉ ESTE CAMBIO SOLO FUE POSIBLE AHORA
+───────────────────────────────────────────────
+En el MVP los motores EXIGÍAN un servidor (ejecutar procesos Python/C/
+Prolog); Firebase no puede ejecutar procesos. Recién en el S10, con los
+motores portados al teléfono (ML Kit + Java), el servidor dejó de ser
+necesario y la app pudo hablar directo con la nube. El historial S1-S9
+no se pierde: documenta CÓMO se construyó el pipeline que ahora corre
+en el móvil, y sigue siendo ejecutable con Laragon para la demo
+académica de la escuela.
+
  HISTORIAL DE EXPLICACIONES POR SESIÓN (agregar una entrada por sesión)
 ══════════════════════════════════════════════════════════════════════════════
 
@@ -849,8 +1427,128 @@ nuevos). APK verificado: BUILD SUCCESSFUL (assembleDebug), versionCode
      quedó verificada de punta a punta. Sin cambios de código. Próximo:
      commitear docs, retro H4 y arrancar la v1.0.
 
+  SESIÓN 11 — 09/10/2026 (Sprint 5 v1.0: acceso y roles — checkpoint C5)
+     Primer sprint del Incremento 1: RF-M1 login, RF-B6 roles y RF-B4
+     completo. BD: migrar_v1.sql (tabla `sesiones`, password_hash a
+     VARCHAR 255) + seed v1.0. API: sesion.php/autenticar.php/usuarios.php
+     nuevos y ordenes/facturas/procesar protegidos por token X-CPP-Token
+     (8 h) con 401/403 por rol; bcrypt para usuarios nuevos y SHA-256
+     legacy aceptado. App 0.8.0-v1 (vc 11): LoginActivity de entrada,
+     clase Sesion, botones Administración/Cerrar sesión, revisor solo
+     lectura y AdminActivity con CRUD en diálogos. Verificado: php -l OK,
+     BUILD SUCCESSFUL y C5 = 15/15 con test_c5.ps1 (incluye la regresión
+     §9.2 YA autenticada, trío exacto). Pendiente: verlo en el móvil
+     físico y commitear (usuario); luego Sprint 6 y la retro H4.
+     Explicado en: PARTE 11.
+  SESIÓN 12 — 14/10/2026 (modo oscuro completo + hotfix de cabeceras)
+     A petición del usuario (su Motorola ya usa modo oscuro): colores
+     fijos texto_sobre_tarjeta/hint_sobre_tarjeta para login, filas de
+     administración y tarjetas del listado (cardBackgroundColor blanco
+     explícito), fila_spinner nuevo, tintes en el panel del login y
+     ajustes de txtSesion/placeholder. De paso el emulador API 36 con
+     noche forzada destapó un bug de la 0.8.0: super.getHeaders() de
+     Volley es inmutable → UnsupportedOperationException mataba TODAS
+     las peticiones autenticadas; fix con HashMap copia en 7 puntos
+     (0.8.2-v1, vc 13). Verificado por análisis de píxeles: login
+     (tarjeta blanca + fondo #121212), captura (spinner claro con
+     texto oscuro, píldoras nocturnas #2C3352, órdenes cargando) y
+     listado (tarjetas 73% blancas). Pendiente: instalar en el Motorola
+     al reconectarlo. Explicado en: PARTE 11 (11.8).
+
+  SESIÓN 13 — 15/10/2026 (auditoría: commit del usuario + Sprint 6 Firebase)
+     Se leyeron completos Bitacora y Explicacion y se verificó git, como
+     manda el protocolo de la bitácora. Hallazgos: (1) el USUARIO había
+     commiteado 67d8238 «test de los usuarios y primer vistazo a firebase»
+     (25 archivos NUEVOS: todo lo nuevo del S5 + lo nuevo del S6 Firebase +
+     logs de build); (2) el repo contenía un SPRINT 6 «Firebase» (RF-F1..F4)
+     completo en código pero ausente de la bitácora — el usuario confirmó
+     su autoría y pidió registrarlo. Esta sesión NO tocó código: auditó el
+     trabajo (api/firebase.php, api/proveedores.php, FirebaseServicio,
+     PushServicio, ProveedorActivity, build vc 14 0.9.0-v1), lo asentó en
+     la Bitacora (entrada 15/10; Secciones 1/2/4/7/9) y lo explica aquí.
+     Después, en la misma sesión, se VERIFICÓ el Sprint 6 de punta a
+     punta en el emulador API 36: proveedores en vivo, documento en
+     Firestore al subir, buzón con históricos, actualización EN VIVO a
+     los ~5 s y push en segundo plano con el texto exacto (detalle en la
+     Bitacora, entrada 15/10). Nota aprendida: tras «force-stop» Android
+     no entrega FCM (limitación del SO, no del proyecto).
+     Cierre de sesión: la prueba se REPITIÓ en el Motorola físico
+     (buzón en vivo #28, push #29, login capturista; 6 capturas en el
+     Escritorio/Prueba_S6_Motorola) con conexión por adb reverse.
+     Pendiente: commitear lo pendiente (S5+S6+S7). Explicado en:
+     PARTE 12.
+
+  SESIÓN 14 — 15/10/2026 (Sprint 7 «Cuentas de proveedor», RF-F5..F7)
+     Pedido del usuario: cuentas propias para proveedores con su negocio
+     y envío de facturas desde ellas. Construido completo en la sesión:
+     BD (rol 'proveedor' + columna negocio, migración aplicada),
+     registro_proveedor.php público con sesión inmediata, filtros por
+     negocio en ordenes/facturas (403 ORDEN_DE_OTRO_PROVEEDOR), app
+     0.10.0-v1 (crear cuenta, perfil exclusivo con envío y logout real,
+     admin con campo negocio). Verificado: checkpoint C7 15/15 por HTTP
+     (test_s7.ps1) y demo completa en emulador (registro por UI →
+     perfil → solo SU orden → factura propia → aviso en vivo);
+     instalada en el Motorola. Detalle: Bitacora, entrada 15/10 pm.
+     Cierre extra: prueba GUIADA de lo nuevo (8 capturas, Escritorio\
+     Prueba_S7_Nuevo) que destapó y arregló la comparación EXACTA de
+     negocio (ahora por slug: «Papeleria» == «Papelería»; C7 re-run
+     15/15). Explicado en: PARTE 13 (13.6).
+
+  SESIÓN 15 — 16/10/2026 (Sprint 8 «Cuentas por pagar», RF-P1..P3)
+     Pedido del usuario: apartado del CLIENTE con cuentas pendientes por
+     pagar y pagadas; en las pagadas, revisar cada FOTO clasificada
+     (aprobadas / no coinciden / discrepancia). Construido completo: BD
+     (facturas.pagada + pagada_en), api/pagos.php (GET por_pagar/pagadas
+     con foto · POST pagar/despagar solo capturista/admin; regla ajustada
+     a mitad de sesión: también se pagan discrepancias resueltas), app
+     0.11.0-v1 (PagosActivity con pestañas, chips, foto en diálogo y pago
+     desde el teléfono; botón oculto al proveedor). Verificado: C8 12/12
+     por HTTP y demo en emulador (6 capturas en Escritorio\Prueba_S8_
+     Pagos: pago 16→15/4→5 en vivo). Instalada en el Motorola. Detalle:
+     Bitacora, entrada «15/10 noche». Explicado en: PARTE 14.
+     Cierre del ajuste: «Crear cuenta» genérico con tipo proveedor/cliente
+     (0.11.1-v1, vc 17) — quién es el cliente y por qué su cuenta la crea
+     el admin, en PARTE 14 (14.6). Cierre final del día: S8.2 «cada
+     cliente ve solo sus cuentas» (0.12.0-v1, vc 18; subida_por + filtros
+     + 403 FACTURA_DE_OTRO_CLIENTE; C8 13/13; capturas 09/10) — PARTE 14.7.
+
+  SESIÓN 16 — 17/10/2026 (Sprint 9 «Inteligencia del tablero» + fix S8.3)
+     Registrado el commit del usuario 0e30646 (pendientes S5..S8; la sesión
+     del 16/10 había quedado a medias: pagos.php ya exigía «comprobar» CON
+     foto pero la app seguía mandando «pagar» → el pago móvil estaba ROTO).
+     S9 completo: duplicados RF-L3 (pre-check PHP por folio o monto+fecha+
+     proveedor por slug → regla 0 de regla.pl con 10.º argumento si|no →
+     DISCREPANCIA:FACTURA_DUPLICADA con duplicada_de), RF-D5 completo
+     (facturas.texto_ocr MEDIUMTEXT; el OCR devuelve «texto» — contrato
+     aditivo), RF-M6 (chips del listado clicables: filtran y se quitan) y
+     RF-M7 (pagos.php calcula fecha_limite/dias_restantes/vence_pronto con
+     fecha del documento +30 días; la app pinta en rojo lo que vence en
+     ≤3 días). FIX S8.3 en PagosActivity: «📷 Adjuntar comprobante y pagar»
+     → galería → ≤1600 px JPEG 85 → POST comprobar con imagen_base64.
+     Verificado: php -l, motores por CLI, migración §7, despliegue,
+     regresión C5 15/15 con trío §9.2 exacto (BD respaldada y limpia) y
+     C9 14/14 (test_s9.ps1 nuevo). APK 0.13.0-v1 (vc 19): BUILD
+     SUCCESSFUL (b11.log, 31 s). Ajuste S9.1 al cierre: POR PAGAR sin
+     ninguna foto (se paga adjuntando el comprobante) → 0.13.1-v1 (vc 20,
+     b12.log). Explicado en: PARTE 15.
+
+  SESIÓN 17 — 19-20/10/2026 (Sprint 10 «Sin servidor» + verificación C10)
+     El 19/10 se codificó el S10 completo y el usuario lo commiteó como
+     5974142 «login sin laragon»: app 0.14.0-v1 (vc 21) con Firebase
+     Auth/Firestore/Storage y el pipeline (ML Kit OCR + riesgo +
+     conciliación) corriendo EN EL TELÉFONO; el PROVEEDOR sube las
+     cuentas a `ordenes` con el correo del cliente y este las ve EN
+     VIVO sin teclear IP. El 20/10 se completó lo que la sesión previa
+     dejó a medias al agotarse los tokens: FIX crítico de
+     habilitar_email_auth.php (la API v1 de config ya no existe → v2;
+     Email/Password quedó HABILITADO y verificado con un login REAL),
+     semilla demo corrida por CLI sin Laragon (4 usuarios con la
+     clave demo —hoy fuera del repo— + 3 cuentas OC-101/102/103), test_s10.ps1 nuevo
+     (checkpoint C10: 7/7), limpieza de la era IP/servidor en la app
+     (campo usuario muerto del login + 6 strings), SPRINT10_v1.md y
+     esta documentación. Explicado en: PARTE 16.
 
 ══════════════════════════════ FIN DE LA EXPLICACIÓN ══════════════════════════
   Archivos hermanos: Bitacora.txt (estado/avances) · INSTALACION.md (S1)
-  · SPRINT2_ANDROID.md (S2) · SPRINT4_DEMO.md (S4) · MVP_CPP.md (plan
-  completo) · PRD_CPP.md (requisitos)
+  · SPRINT2_ANDROID.md (S2) · SPRINT4_DEMO.md (S4) · SPRINT5_v1.md (S5)
+  · SPRINT9_v1.md (S9) · SPRINT10_v1.md (S10) · MVP_CPP.md (plan completo) · PRD_CPP.md (requisitos)
