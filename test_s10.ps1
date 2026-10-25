@@ -4,23 +4,30 @@
 #   1) php.exe en el PATH (o el interprete de Laragon: C:\laragon\bin\php\*\php.exe
 #      ... sin arrancar Laragon: solo se presta el .exe)
 #   2) api\firebase-service-account.json (SECRETO, fuera de git)
+#   3) la CLAVE de las cuentas demo (fuera del repo, correcciones 22/10):
+#      -Clave <clave>  o  la variable de entorno CPP_DEMO_CLAVE
 # Verifica por REST contra el proyecto Firebase (cpp-facturas) que la app S10
 # tiene todo lo que necesita:
 #   T1 Auth    : proveedor Email/Password HABILITADO (habilitar_email_auth.php)
-#   T2 Auth    : el usuario demo capturista@cpp.demo existe (semilla)
-#   T3 Firestore: su perfil usuarios/{uid} con rol capturista
+#   T2 Auth    : el usuario demo cliente@cpp.demo existe (semilla)
+#   T3 Firestore: su perfil usuarios/{uid} con rol cliente
 #   T4 Firestore: perfil del proveedor (rol + negocio) y su cuenta en Auth
-#   T5 Firestore: 3 cuentas (coleccion `ordenes`) para capturista@cpp.demo,
+#   T5 Firestore: 3 cuentas (coleccion `ordenes`) para cliente@cpp.demo,
 #                todas pendientes (OC-101/102/103) - subidas por el proveedor
 #   T6 Datos M7: 1 cuenta VENCIDA y 1 que vence en <=3 dias (alertas rojas)
 # USO:
 #   powershell -File C:\CPP\test_s10.ps1             # solo verifica (lectura)
 #   powershell -File C:\CPP\test_s10.ps1 -Semilla    # re-siembra demo antes
+#   (en ambos casos: -Clave '...' o $env:CPP_DEMO_CLAVE = '...')
 # Regla del proyecto: ASCII puro.
 # -----------------------------------------------------------------------------
-param([switch]$Semilla)
+param([switch]$Semilla, [string]$Clave)
 
 $apiDir = 'C:\CPP\api'
+
+# ---------- clave demo (correcciones 22/10): -Clave o CPP_DEMO_CLAVE ----------
+$claveDemo = $Clave
+if (-not $claveDemo) { $claveDemo = $env:CPP_DEMO_CLAVE }
 
 # ---------- php.exe: PATH o Laragon (solo el interprete, sin servicios) -------
 $php = $null
@@ -43,8 +50,12 @@ if (-not (Test-Path (Join-Path $apiDir 'firebase-service-account.json'))) {
 
 # ---------- (opcional) re-sembrar los datos demo (re-ejecutable) ---------------
 if ($Semilla) {
+    if (-not $claveDemo) {
+        Write-Host '[FAIL] -Semilla necesita la clave demo: -Clave <clave> o $env:CPP_DEMO_CLAVE.'
+        exit 1
+    }
     Write-Host '--- php api\semilla_firebase.php ---'
-    & $php (Join-Path $apiDir 'semilla_firebase.php')
+    & $php (Join-Path $apiDir 'semilla_firebase.php') $claveDemo
     if ($LASTEXITCODE -ne 0) { Write-Host '[FAIL] La semilla fallo.'; exit 1 }
     Write-Host ''
 }
@@ -78,8 +89,12 @@ try {
     if (-not $on) {
         Paso 'T1 Email/Password habilitado + login demo' $false `
             ("signIn.email.enabled=" + $cfg.signIn.email.enabled + " => corre php C:\CPP\api\habilitar_email_auth.php")
+    } elseif (-not $claveDemo) {
+        # El login real necesita la clave demo: fuera del repo (correcciones 22/10).
+        Paso 'T1 Email/Password habilitado + login demo' $false `
+            'signIn.email OK, pero falta la clave demo: -Clave <clave> o $env:CPP_DEMO_CLAVE'
     } else {
-        $body = @{ email = 'capturista@cpp.demo'; password = 'cppdemo123'; returnSecureToken = $true } | ConvertTo-Json -Compress
+        $body = @{ email = 'cliente@cpp.demo'; password = $claveDemo; returnSecureToken = $true } | ConvertTo-Json -Compress
         $r = Invoke-RestMethod -Method Post `
             -Uri ("https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={0}" -f $cfg.client.apiKey) `
             -ContentType 'application/json' -Body $body -TimeoutSec 20
@@ -99,9 +114,9 @@ function Lookup-Uid([string]$correo) {
     return $r.users[0].localId
 }
 $uidCap = $null; $uidProv = $null
-try { $uidCap  = Lookup-Uid 'capturista@cpp.demo' } catch { }
+try { $uidCap  = Lookup-Uid 'cliente@cpp.demo' } catch { }
 try { $uidProv = Lookup-Uid 'proveedor@cpp.demo'  } catch { }
-Paso 'T2 Auth capturista@cpp.demo' ($uidCap -ne $null) ("uid=" + $uidCap)
+Paso 'T2 Auth cliente@cpp.demo' ($uidCap -ne $null) ("uid=" + $uidCap)
 Paso 'T4a Auth proveedor@cpp.demo' ($uidProv -ne $null) ("uid=" + $uidProv)
 
 # ---------- T3/T4b: perfiles de Firestore (usuarios/{uid}) ---------------------
@@ -112,9 +127,9 @@ function Perfil([string]$uid) {
 if ($uidCap) {
     try {
         $p = Perfil $uidCap
-        Paso 'T3 perfil rol=capturista' ($p.fields.rol.stringValue -eq 'capturista') ("rol=" + $p.fields.rol.stringValue)
-    } catch { Paso 'T3 perfil rol=capturista' $false $_.Exception.Message }
-} else { Paso 'T3 perfil rol=capturista' $false 'sin uid (fallo T2)' }
+        Paso 'T3 perfil rol=cliente' ($p.fields.rol.stringValue -eq 'cliente') ("rol=" + $p.fields.rol.stringValue + " empresa=" + [string]$p.fields.empresa.stringValue)
+    } catch { Paso 'T3 perfil rol=cliente' $false $_.Exception.Message }
+} else { Paso 'T3 perfil rol=cliente' $false 'sin uid (fallo T2)' }
 
 if ($uidProv) {
     try {
@@ -132,7 +147,7 @@ $q = @{
         where = @{ fieldFilter = @{
             field = @{ fieldPath = 'clienteCorreo' }
             op    = 'EQUAL'
-            value = @{ stringValue = 'capturista@cpp.demo' } } }
+            value = @{ stringValue = 'cliente@cpp.demo' } } }
     }
 } | ConvertTo-Json -Depth 8 -Compress
 
@@ -165,7 +180,7 @@ if ($filas.Count -gt 0) {
 Write-Host ''
 if ($okCount -eq $total -and $total -eq 7) {
     Write-Host 'C10: 7/7 OK - Firebase queda listo para probar la app SIN Laragon.'
-    Write-Host '     Entra con capturista@cpp.demo / cppdemo123 (o proveedor@cpp.demo).'
+    Write-Host '     Entra con cliente@cpp.demo / la clave que configuraste (CPP_DEMO_CLAVE).'
     exit 0
 } else {
     Write-Host ("C10: " + $okCount + "/" + $total + " - si faltan datos corre: powershell -File C:\CPP\test_s10.ps1 -Semilla")

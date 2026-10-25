@@ -6,7 +6,10 @@ CONTRATO (MVP §6.4, fijado por contract-first ANTES de programar):
     CLI   : python procesar_factura.py <ruta_imagen>
     STDOUT: UNA línea JSON:
             {"proveedor": "...", "fecha": "YYYY-MM-DD",
-             "monto": 4850.0, "folio": "F-1001"}
+             "monto": 4850.0, "folio": "F-1001", "texto": "<OCR crudo>"}
+            (el campo "texto" llega en el Sprint 9, RF-D5 completo: guardar
+             TODO lo que leyó el OCR, no solo los 4 campos; es ADITIVO, un
+             consumidor antiguo que no lo mire sigue funcionando igual)
     ERRORES: imprime {"error": "..."} y sale con código 1. La factura NO se
             pierde: queda "Pendiente" en MySQL y PHP la reintentará (RNF-5).
 
@@ -101,7 +104,11 @@ def main(argv):
     except Exception as e:
         print(json.dumps({"error": "fallo OCR: %r" % e}))
         return 1
-    print(json.dumps(extraer_campos(texto), ensure_ascii=False))
+    # S9 (RF-D5 completo): además de los 4 campos viaja el TEXTO CRUDO del
+    # OCR (contrato v1.0 ADITIVO: quien no lo use lo ignora sin romperse).
+    salida = extraer_campos(texto)
+    salida["texto"] = (texto or "").strip()
+    print(json.dumps(salida, ensure_ascii=False))
     return 0
 
 

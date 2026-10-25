@@ -19,15 +19,16 @@ import com.google.firebase.auth.FirebaseAuthUserCollisionException;
 import com.google.firebase.auth.FirebaseUser;
 
 /**
- * LoginActivity â€” Sprint 10 Â«Sin servidorÂ»: la sesiÃ³n vive en FIREBASE AUTH.
+ * LoginActivity — Sprint 10 «Sin servidor»: la sesión vive en FIREBASE AUTH.
  *
- * Se entra con CORREO y contraseÃ±a (nada de IP del servidor: google-services
+ * Se entra con CORREO y contraseña (nada de IP del servidor: google-services
  * apunta solo al proyecto cpp-facturas). Tras autenticar, se lee el perfil
  * usuarios/{uid} de Firestore y la app enruta: proveedor a su perfil y
  * cliente (la EMPRESA) a captura/pagos. S10.3: los roles admin/capturista/
- * revisor se unificaron en el rol unico "cliente" (UN correo por empresa).
+ * revisor se unificaron en el rol único "cliente" (UN correo por empresa).
  *
- * Cuentas demo (clave cppdemo123, creadas por api/semilla_firebase.php):
+ * Cuentas demo (creadas por api/semilla_firebase.php; entra con la clave
+ * que configuraste en la variable de entorno CPP_DEMO_CLAVE):
  *   cliente@cpp.demo · proveedor@cpp.demo
  */
 public class LoginActivity extends AppCompatActivity {
@@ -47,7 +48,7 @@ public class LoginActivity extends AppCompatActivity {
         FirebaseServicio.init();
         auth = FirebaseAuth.getInstance();
 
-        // SesiÃ³n vigente (Auth + perfil cacheado) â†’ S10.5: primero el
+        // Sesión vigente (Auth + perfil cacheado) → S10.5: primero el
         // CANDADO obligatorio (huella o contraseña), nunca directo adentro.
         if (Sesion.activa(this)) {
             Candado.bloquear();   // app recién abierta: volver a bloquear
@@ -124,7 +125,7 @@ public class LoginActivity extends AppCompatActivity {
             @Override
             public void error(String mensaje) {
                 barra.setVisibility(View.GONE);
-                auth.signOut();   // cuenta sin perfil: no dejar media sesiÃ³n
+                auth.signOut();   // cuenta sin perfil: no dejar media sesión
                 pintar(R.color.rojo_error,
                         getString(R.string.login_error, mensaje));
             }

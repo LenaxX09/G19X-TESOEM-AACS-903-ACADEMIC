@@ -2,15 +2,22 @@
 /**
  * semilla_firebase.php — Sprint 10 «Sin servidor» (S10).
  *
- * USO (CLI, sin Apache y sin MySQL):
- *   php semilla_firebase.php
+ * USO (CLI, sin Apache y sin MySQL) — la clave demo NUNCA vive en el
+ * código (correcciones 22/10): viene de la variable de entorno
+ * CPP_DEMO_CLAVE o del primer parámetro:
+ *   $env:CPP_DEMO_CLAVE='tu-clave' ; php semilla_firebase.php
+ *   php semilla_firebase.php 'tu-clave'
  *
  * Prepara el proyecto Firebase para las pruebas de la app:
- *   1) AUTH: crea los usuarios demo (admin / capturista / revisor /
- *      proveedor, clave cppdemo123). Si ya existen, reusa su uid.
- *   2) FIRESTORE `usuarios/{uid}`: perfil de cada uno (rol, negocio).
+ *   1) AUTH: crea los usuarios demo (cliente / proveedor, con la clave
+ *      que configuraste). Si ya existen, reusa su uid. Los roles viejos
+ *      admin/capturista/revisor SE BORRAN (S10.3: unificados en cliente).
+ *   2) FIRESTORE `usuarios/{uid}`: perfil de cada uno (rol, empresa) y,
+ *      para el cliente, su entrada en el directorio público
+ *      `clientesPorCorreo/{slug}` (las REGLAS no dejan listar `usuarios`
+ *      y existeCorreo() consulta ese directorio).
  *   3) FIRESTORE `ordenes`: borra las cuentas demo anteriores y sube 3
- *      cuentas que el proveedor le "cobra" a capturista@cpp.demo
+ *      cuentas que el proveedor le "cobra" a cliente@cpp.demo
  *      (una vence en 3 días y una VENCIDA: para ver las alertas M7).
  *
  * Requiere api/firebase-service-account.json (secreto, fuera de git).
@@ -20,7 +27,20 @@
 define('FIREBASE_SA', __DIR__ . '/firebase-service-account.json');
 require __DIR__ . '/firebase.php';
 
-const DEMO_CLAVE = 'cppdemo123';
+/**
+ * Clave de las cuentas demo (correcciones 22/10): FUERA del código y del
+ * repo — variable de entorno CPP_DEMO_CLAVE o parámetro CLI. Si falta o
+ * es corta, se detiene explicando cómo pasarla (nada de clave por
+ * defecto conocida por todos).
+ */
+$DEMO_CLAVE = (string)(getenv('CPP_DEMO_CLAVE') ?: ($argv[1] ?? ''));
+if (strlen($DEMO_CLAVE) < 6) {
+    fwrite(STDERR,
+        "Falta la clave demo (no se escribe en el codigo ni en el repo).\n" .
+        "  PowerShell : \$env:CPP_DEMO_CLAVE = 'tu-clave-demo'\n" .
+        "  o parametro: php semilla_firebase.php 'tu-clave-demo'\n");
+    exit(1);
+}
 
 /** Llamada REST genérica con Bearer (POST/PATCH/DELETE). */
 function sf_http(string $metodo, string $url, array $payload = []): array
@@ -47,11 +67,11 @@ function sf_http(string $metodo, string $url, array $payload = []): array
 }
 
 /** Crea el usuario en Auth si falta (o reusa el uid y resetea la clave demo). */
-function sf_uid(string $correo, string $nombre): string
+function sf_uid(string $correo, string $nombre, string $clave): string
 {
     $base = 'https://identitytoolkit.googleapis.com/v1/projects/' . fb_proyecto();
     $r = sf_http('POST', "$base/accounts",
-        ['email' => $correo, 'password' => DEMO_CLAVE,
+        ['email' => $correo, 'password' => $clave,
          'displayName' => $nombre, 'emailVerified' => true]);
     if (!empty($r['datos']['localId'])) {
         echo "  + Auth creado: $correo\n";
@@ -65,13 +85,14 @@ function sf_uid(string $correo, string $nombre): string
         exit(1);
     }
     sf_http('POST', "$base/accounts:update",
-        ['localId' => $uid, 'password' => DEMO_CLAVE]);
+        ['localId' => $uid, 'password' => $clave]);
     echo "  = Auth ya existía: $correo (clave reseteada a la demo)\n";
     return $uid;
 }
 
-/** PATCH upsert del documento con id fijo (usuarios/{uid}). */
-function sf_perfil(string $uid, array $campos): void
+/** PATCH upsert de un documento por RUTA completa (usuarios/{uid},
+ *  clientesPorCorreo/{slug}, …) con campos string + creado. */
+function sf_perfil(string $ruta, array $campos): void
 {
     $fields = [];
     foreach ($campos as $k => $v) {
@@ -79,7 +100,29 @@ function sf_perfil(string $uid, array $campos): void
     }
     $fields['creado'] = ['timestampValue' => gmdate('Y-m-d\TH:i:s\Z')];
     sf_http('PATCH', 'https://firestore.googleapis.com/v1/projects/' . fb_proyecto()
-        . '/databases/(default)/documents/usuarios/' . $uid, ['fields' => $fields]);
+        . '/databases/(default)/documents/' . $ruta, ['fields' => $fields]);
+}
+
+/**
+ * S10.3: los roles admin/capturista/revisor SE UNIFICARON en «cliente».
+ * Borra de Auth y Firestore los usuarios demo de esos roles viejos para
+ * que el proyecto quede solo con cliente@ y proveedor@ (UN correo por
+ * empresa cliente). Best-effort: si ya no existen, no imprime nada.
+ */
+function sf_limpiar_roles_viejos(): void
+{
+    $base = 'https://identitytoolkit.googleapis.com/v1/projects/' . fb_proyecto();
+    foreach (['admin@cpp.demo', 'capturista@cpp.demo', 'revisor@cpp.demo'] as $correo) {
+        $l = sf_http('POST', "$base/accounts:lookup", ['email' => [$correo]]);
+        $uid = (string)($l['datos']['users'][0]['localId'] ?? '');
+        if ($uid === '') {
+            continue;
+        }
+        sf_http('POST', "$base/accounts:delete", ['localId' => $uid]);
+        sf_http('DELETE', 'https://firestore.googleapis.com/v1/projects/' . fb_proyecto()
+            . '/databases/(default)/documents/usuarios/' . $uid);
+        echo "  - rol viejo borrado: $correo\n";
+    }
 }
 
 /** Borra las cuentas demo anteriores de `ordenes` (re-ejecutable). */
@@ -110,25 +153,35 @@ function sf_limpiar_ordenes(string $cliente): void
 
 // ── 1) usuarios + perfiles ─────────────────────────────────────────────────
 echo "Proyecto: " . fb_proyecto() . "\n1) Usuarios Auth + perfiles Firestore\n";
+// S10.3: roles unificados — SOLO cliente (la EMPRESA, UN correo) y proveedor.
 $usuarios = [
-    ['correo' => 'admin@cpp.demo',       'nombre' => 'Administrador Demo',      'rol' => 'admin'],
-    ['correo' => 'capturista@cpp.demo',  'nombre' => 'Capturista Demo',         'rol' => 'capturista'],
-    ['correo' => 'revisor@cpp.demo',     'nombre' => 'Revisor Demo',            'rol' => 'revisor'],
-    ['correo' => 'proveedor@cpp.demo',   'nombre' => 'Ferretería El Tornillo',  'rol' => 'proveedor',
+    ['correo' => 'cliente@cpp.demo',   'nombre' => 'Cliente Demo',           'rol' => 'cliente',
+     'empresa' => 'Bodega El Surtidor'],
+    ['correo' => 'proveedor@cpp.demo', 'nombre' => 'Ferretería El Tornillo', 'rol' => 'proveedor',
      'negocio' => 'Ferretería El Tornillo'],
 ];
 $uids = [];
 foreach ($usuarios as $u) {
-    $uid = sf_uid($u['correo'], $u['nombre']);
+    $uid = sf_uid($u['correo'], $u['nombre'], $DEMO_CLAVE);
     $uids[$u['correo']] = $uid;
-    sf_perfil($uid, ['nombre' => $u['nombre'], 'correo' => $u['correo'],
-                     'rol'    => $u['rol'], 'negocio' => $u['negocio'] ?? '']);
-    echo "  · perfil usuarios/$uid → rol {$u['rol']}\n";
+    $empresa = $u['empresa'] ?? $u['negocio'] ?? '';
+    sf_perfil('usuarios/' . $uid,
+        ['nombre' => $u['nombre'], 'correo' => $u['correo'],
+         'rol'    => $u['rol'], 'negocio' => $empresa, 'empresa' => $empresa]);
+    echo "  · perfil usuarios/$uid → rol {$u['rol']} ($empresa)\n";
+    // REGLAS + existeCorreo(): los clientes también quedan en el directorio
+    // público clientesPorCorreo/{slug} (usuarios ya no se puede listar).
+    if ($u['rol'] === 'cliente') {
+        sf_perfil('clientesPorCorreo/' . fb_slug($u['correo']),
+            ['uid' => $uid, 'correo' => $u['correo']]);
+        echo '  · directorio clientesPorCorreo/' . fb_slug($u['correo']) . "\n";
+    }
 }
+sf_limpiar_roles_viejos();   // S10.3: los 3 roles viejos ya no existen
 
 // ── 2) cuentas demo (ordenes) ──────────────────────────────────────────────
-echo "2) Cuentas que el proveedor le sube a capturista@cpp.demo\n";
-$cliente = 'capturista@cpp.demo';
+echo "2) Cuentas que el proveedor le sube a cliente@cpp.demo (la empresa)\n";
+$cliente = 'cliente@cpp.demo';
 sf_limpiar_ordenes($cliente);
 $hoy = time();
 $cuentas = [
@@ -151,5 +204,5 @@ foreach ($cuentas as $c) {
        . '  límite ' . gmdate('Y-m-d', $hoy + $c['dias'] * 86400) . "\n";
 }
 
-echo "\nLISTO. Entra a la app con capturista@cpp.demo / " . DEMO_CLAVE
-   . " (o proveedor@cpp.demo para subir cuentas).\n";
+echo "\nLISTO. Entra a la app con cliente@cpp.demo / la clave que configuraste\n"
+   . "(CPP_DEMO_CLAVE) — o con proveedor@cpp.demo para subir cuentas.\n";

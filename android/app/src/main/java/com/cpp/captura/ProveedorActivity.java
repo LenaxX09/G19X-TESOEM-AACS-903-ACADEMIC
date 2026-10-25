@@ -99,14 +99,16 @@ public class ProveedorActivity extends AppCompatActivity {
         }
 
         // Las cuentas de ESTE proveedor, EN TIEMPO REAL (se re-pintan solas
-        // cuando el cliente paga). Sin orderBy (sin índice compuesto): Java ordena.
-        FirebaseServicio.escucharOrdenesTodas(lista -> runOnUiThread(() -> {
-            String uid = Sesion.uid(ProveedorActivity.this);
+        // cuando el cliente paga). Sin orderBy (sin índice compuesto): Java
+        // ordena. REGLAS: la consulta va FILTRADA por proveedorUid porque la
+        // regla lo exige — Firestore no filtra resultados por sí solo (una
+        // consulta a la colección completa se rechaza entera). Por eso ya no
+        // existe escucharOrdenesTodas (correcciones 24/10).
+        FirebaseServicio.escucharOrdenesProveedor(Sesion.uid(this),
+                lista -> runOnUiThread(() -> {
             cuentas.clear();
             for (QueryDocumentSnapshot d : lista) {
-                if (uid.equals(d.getString("proveedorUid"))) {
-                    cuentas.add(d);
-                }
+                cuentas.add(d);
             }
             Collections.sort(cuentas, (a, b) -> Long.compare(creado(b), creado(a)));
             adaptador.notifyDataSetChanged();
@@ -114,6 +116,20 @@ public class ProveedorActivity extends AppCompatActivity {
                     ? getString(R.string.proveedor_sin_cuentas)
                     : getString(R.string.proveedor_cuentas, cuentas.size()));
         }));
+    }
+
+    /**
+     * S10.5 (fix 22/10): al VOLVER del segundo plano con la sesión
+     * abierta, App ya re-bloqueó el candado — esta pantalla no se
+     * muestra hasta verificar la huella/PIN otra vez.
+     */
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (Candado.requiereCandado(this)) {
+            startActivity(new Intent(this, CandadoActivity.class));
+            finish();
+        }
     }
 
     private long creado(QueryDocumentSnapshot d) {

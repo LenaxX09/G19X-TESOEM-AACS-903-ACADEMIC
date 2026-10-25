@@ -4,11 +4,13 @@
    CONTRATO (MVP §6.4, fijado por contract-first ANTES de programar):
      CLI   : swipl regla.pl <id_orden> <folio> <monto> <fecha_factura>
                          <proveedor_factura> <riesgo> <monto_autorizado>
-                         <proveedor_orden> <fecha_orden>
+                         <proveedor_orden> <fecha_orden> <duplicado>
              (id_orden solo para rastreabilidad; el veredicto no lo usa)
      STDOUT: UNA línea ->  APROBADA   ó   DISCREPANCIA:<motivo>
 
    REGLAS, en orden de revisión (la primera que falla define el motivo):
+      0) duplicado = si (pre-check PHP, RF-L3)     -> FACTURA_DUPLICADA
+
      1) monto_factura =< monto_autorizado        ó MONTO_EXCEDE_ORDEN
      2) riesgo < 40 (UMBRAL_RIESGO de config)    ó RIESGO_ALTO
      3) proveedor factura ~= proveedor orden     ó PROVEEDOR_NO_COINCIDE
@@ -26,12 +28,12 @@ main :-
     current_prolog_flag(argv, ArgvRaw),
     exclude(es_script, ArgvRaw,
             [_IdOrden, Folio, MontoS, FechaF, ProvF,
-             RiesgoS, AuthS, ProvO, FechaO]),
+             RiesgoS, AuthS, ProvO, FechaO, Dup]),
     !,
     atom_number(MontoS, Monto),
     atom_number(RiesgoS, Riesgo),
     atom_number(AuthS, Auth),
-    (   conciliar(factura(Folio, Monto, FechaF, ProvF),
+    (   conciliar(Dup, factura(Folio, Monto, FechaF, ProvF),
                   orden(Auth, ProvO, FechaO), Riesgo, Veredicto)
     ->  true
     ;   Veredicto = 'DISCREPANCIA:ERROR_CONCILIACION'
@@ -44,19 +46,25 @@ main :-
    se descarta cualquier argumento que termine en ".pl". */
 es_script(S) :- sub_atom(S, _, 3, 0, '.pl').
 
-/* ---- Reglas de conciliación (orden = prioridad) ------------------------- */
-conciliar(factura(_, Monto, _, _), orden(Auth, _, _), _,
+/* ---- Reglas de conciliación (orden = prioridad) --------------------------
+   Regla 0 (S9, RF-L3): el pre-check de PHP ya buscó en MySQL otra factura
+   con el MISMO folio o la misma terna monto+fecha+proveedor; si la halló,
+   esta es un duplicado y NO puede aprobarse aunque todo lo demás calce.  */
+conciliar(Dup, _, _, _, 'DISCREPANCIA:FACTURA_DUPLICADA') :-
+    Dup == si, !.
+
+conciliar(_, factura(_, Monto, _, _), orden(Auth, _, _), _,
           'DISCREPANCIA:MONTO_EXCEDE_ORDEN') :-
     Monto > Auth, !.
-conciliar(_, _, Riesgo, 'DISCREPANCIA:RIESGO_ALTO') :-
+conciliar(_, _, _, Riesgo, 'DISCREPANCIA:RIESGO_ALTO') :-
     umbral_riesgo(U), Riesgo >= U, !.
-conciliar(factura(_, _, _, ProvF), orden(_, ProvO, _),
+conciliar(_, factura(_, _, _, ProvF), orden(_, ProvO, _),
           _, 'DISCREPANCIA:PROVEEDOR_NO_COINCIDE') :-
     \+ proveedor_coincide(ProvF, ProvO), !.
-conciliar(factura(_, _, FechaF, _), orden(_, _, FechaO), _,
+conciliar(_, factura(_, _, FechaF, _), orden(_, _, FechaO), _,
           'DISCREPANCIA:FECHA_FUERA_DE_RANGO') :-
     \+ fecha_en_rango(FechaF, FechaO), !.
-conciliar(_, _, _, 'APROBADA').
+conciliar(_, _, _, _, 'APROBADA').
 
 /* ---- Proveedores: comparación tolerante ----------------------------------
    El OCR lee "PAPELERÍA CENTRAL, S.A. DE C.V." y la BD guarda

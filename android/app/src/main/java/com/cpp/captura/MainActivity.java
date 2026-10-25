@@ -170,6 +170,20 @@ public class MainActivity extends AppCompatActivity {
         cargarOrdenes();
     }
 
+    /**
+     * S10.5 (fix 22/10): al VOLVER del segundo plano con la sesión
+     * abierta, App ya re-bloqueó el candado — esta pantalla no se
+     * muestra hasta verificar la huella/PIN otra vez.
+     */
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (Candado.requiereCandado(this)) {
+            startActivity(new Intent(this, CandadoActivity.class));
+            finish();
+        }
+    }
+
     // ========================================================================
     // Cuentas del cliente (Firestore, en vivo) — las sube el PROVEEDOR
     // ========================================================================
@@ -383,7 +397,7 @@ public class MainActivity extends AppCompatActivity {
         final Orden orden = ordenes.get(ordenPos);
         final String slug = FirebaseServicio.slug(orden.negocio);
 
-        FirebaseServicio.historialPromedio(slug, promedio -> runOnUiThread(() -> {
+        FirebaseServicio.historialPromedio(Sesion.correo(this), slug, promedio -> runOnUiThread(() -> {
             final double riesgo = Motores.clasificadorRiesgo(c.monto, promedio);
             FirebaseServicio.buscarDuplicado(c.folio, c.monto, c.fecha, slug,
                     originalId -> runOnUiThread(() ->

@@ -39,6 +39,11 @@ public class CandadoActivity extends AppCompatActivity {
             finish();
             return;
         }
+        // FIX 23/10 (crash al reabrir con sesión): FALTABA inflar el layout,
+        // así que findViewById devolvía null y la app se cerraba al entrar
+        // aquí (NullPointerException en txtCandadoCorreo).
+        setContentView(R.layout.activity_candado);
+
         if (getSupportActionBar() != null) {
             getSupportActionBar().hide();
         }
@@ -52,6 +57,17 @@ public class CandadoActivity extends AppCompatActivity {
             Sesion.salirAlLogin(CandadoActivity.this);
         });
 
+        pedirVerificacion();
+    }
+
+    /**
+     * Volver del segundo plano con la app re-bloqueada (App/Candado, fix
+     * 22/10): se vuelve a pedir la verificación sin esperar a que el
+     * usuario toque «Volver a intentar».
+     */
+    @Override
+    protected void onRestart() {
+        super.onRestart();
         pedirVerificacion();
     }
 

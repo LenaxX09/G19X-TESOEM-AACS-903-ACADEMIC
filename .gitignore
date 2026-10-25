@@ -2,8 +2,24 @@
 uploads/*
 !uploads/.gitignore
 
+# Sprint 6 Firebase: la CLAVE DE SERVICIO es un SECRETO (permite enviar
+# push a nombre del proyecto). NUNCA al repo. El google-services.json de
+# la app Android sí se commitea (solo identifica el proyecto).
+api/firebase-service-account*.json
+*.private-key.json
+
+# Logs (correcciones 22/10): los builds dejaban android/b*.log sueltos
+# en el repo (llegaron a ser 31) — ningún .log se versiona.
+*.log
+
+# Respaldos LOCALES de MySQL (datos, no esquema): jamás al repo
+database/backup_*.sql
+
 # IDEs y sistema operativo
 .vscode/
 .idea/
 Thumbs.db
 .DS_Store
+
+# Archivos de bloqueo de Office (Word abierto: ~$documento.docx)
+~$*

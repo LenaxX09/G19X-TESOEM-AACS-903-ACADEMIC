@@ -11,12 +11,9 @@ import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
-import com.google.firebase.messaging.FirebaseMessaging;
 
 import java.text.Normalizer;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -24,28 +21,32 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 /**
- * FirebaseServicio — Sprint 6 "Firebase" (RF-F1..F4).
+ * FirebaseServicio — Sprint 10 «Sin servidor»: TODO el backend de la app.
  *
- * Firebase NO reemplaza al pipeline: MySQL/PHP siguen siendo el cerebro.
- * Aquí vive solo la capa de "radar y avisos":
+ * Firebase Auth da la identidad (correo/contraseña) y aquí vive el resto:
  *
- *   init()                → auth anónima (las reglas de Firestore exigen
- *                           "app legítima"; no pedimos cuentas Google).
- *   registrarCliente()    → cada usuario que inicia sesión queda en la
- *                           colección `clientes` (RF-F1/F2).
- *   registrarProveedor()  → el teléfono queda asociado al proveedor en
- *                           `proveedores` y suscrito al tema FCM
- *                           proveedor_<slug> (RF-F3).
- *   escuchar()            → oyente EN TIEMPO REAL de `notificaciones`
- *                           (app abierta; con la app cerrada llega el
- *                           push que envía el PHP — PushServicio).
+ *   cargarPerfil()/crearPerfil*() → perfiles `usuarios/{uid}` (rol y
+ *                           negocio) + directorio público
+ *                           `clientesPorCorreo` (existeCorreo).
+ *   guardarOrden()/escucharOrdenes*() → cuentas que el proveedor le
+ *                           sube al cliente (colección `ordenes`).
+ *   guardarFactura()/escucharFacturas()/historialPromedio() → facturas
+ *                           conciliadas, SIEMPRE filtradas por subidoPor
+ *                           (las reglas no dejan leer las ajenas) + el
+ *                           índice anti-duplicados `facturasLookup`.
+ *   subirFotoFactura()/subirComprobante() → imágenes en Storage.
+ *   vigilarSesion()/verificarSesion() → S10.7: sesión vigilada.
  *
  * El slug normaliza el nombre del proveedor IGUAL que fb_slug() de PHP
  * (sin acentos, minúsculas, solo letras/números): "Ferretería El Tornillo"
- * → "ferreteriaeltornillo". Con ese slug coinciden tema FCM + documento.
+ * → "ferreteriaeltornillo".
  *
- * Todo es BEST-EFFORT: si Firebase falla, la app sigue funcionando igual
- * (solo quedará el aviso en el log).
+ * Correcciones 24/10: el bloque del Sprint 6 (registrarCliente /
+ * registrarProveedor / escuchar — escribía en `clientes`, `proveedores` y
+ * `notificaciones`, colecciones que las reglas de Firestore CIERRAN) se
+ * RETIRÓ: el proveedor vive de `ordenes` en tiempo real y los avisos S10
+ * son locales (RecordatorioWorker); el push FCM queda solo para la demo
+ * académica con Laragon (camino servidor).
  */
 public final class FirebaseServicio {
 
@@ -65,25 +66,6 @@ public final class FirebaseServicio {
         // sin sesión anónima: cada usuario entra con su cuenta de Firebase Auth
     }
 
-    /** RF-F2: cada usuario que entra a la app queda registrado en Firestore. */
-    public static void registrarCliente(int id, String nombre, String usuario, String rol) {
-        try {
-            Map<String, Object> doc = new HashMap<>();
-            doc.put("usuario_id", id);
-            doc.put("nombre", nombre);
-            doc.put("usuario", usuario);
-            doc.put("rol", rol);
-            doc.put("ultimo_login", FieldValue.serverTimestamp());
-            FirebaseFirestore.getInstance().collection("clientes")
-                    .document(usuario)          // un doc por usuario; reentrar actualiza
-                    .set(doc)
-                    .addOnFailureListener(e ->
-                            Log.w(TAG, "clientes: " + e.getMessage()));
-        } catch (Exception e) {
-            Log.w(TAG, "registrarCliente: " + e.getMessage());
-        }
-    }
-
     /** Normaliza el nombre del proveedor → slug (espejo de fb_slug en PHP). */
     public static String slug(String proveedor) {
         String s = Normalizer.normalize(proveedor == null ? "" : proveedor,
@@ -91,85 +73,16 @@ public final class FirebaseServicio {
         return s.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", "");
     }
 
-    /** RF-F3: asocia ESTE teléfono al proveedor (doc + tema FCM). */
-    public static void registrarProveedor(Context c, String proveedor) {
-        final String s = slug(proveedor);
-        try {
-            FirebaseMessaging.getInstance().getToken()
-                    .addOnSuccessListener(token -> {
-                        Map<String, Object> doc = new HashMap<>();
-                        doc.put("nombre", proveedor);
-                        doc.put("slug", s);
-                        doc.put("token", token);
-                        doc.put("actualizado", FieldValue.serverTimestamp());
-                        FirebaseFirestore.getInstance().collection("proveedores")
-                                .document(s).set(doc)
-                                .addOnFailureListener(e ->
-                                        Log.w(TAG, "proveedores: " + e.getMessage()));
-                    });
-            FirebaseMessaging.getInstance().subscribeToTopic("proveedor_" + s);
-            c.getSharedPreferences("cpp_sesion", Context.MODE_PRIVATE).edit()
-                    .putString("proveedor", proveedor).apply();
-        } catch (Exception e) {
-            Log.w(TAG, "registrarProveedor: " + e.getMessage());
-        }
-    }
+    // (correcciones 24/10) Aquí vivían registrarProveedor() y
+    // proveedorGuardado() del Sprint 6: escribían/leían `proveedores` y
+    // suscribían el tema FCM proveedor_<slug>. Se retiraron — las reglas
+    // cierran esa colección y la app S10 no usa push de servidor (el
+    // buzón del proveedor es el oyente de `ordenes` en tiempo real).
 
-    /** Proveedor asociado a este teléfono (vacío si nunca se registró). */
-    public static String proveedorGuardado(Context c) {
-        return c.getSharedPreferences("cpp_sesion", Context.MODE_PRIVATE)
-                .getString("proveedor", "");
-    }
-
-    /** Notificación tal como la escribe el PHP en Firestore. */
-    public static class Noti {
-        public final String titulo;
-        public final String detalle;
-        public final String fecha;
-
-        Noti(String titulo, String detalle, String fecha) {
-            this.titulo = titulo;
-            this.detalle = detalle;
-            this.fecha = fecha;
-        }
-    }
-
-    /**
-     * RF-F4: oyente en TIEMPO REAL de las notificaciones del proveedor.
-     * Sin orderBy en la consulta (evita pedir índice compuesto en la
-     * consola): se ordena en Java por fecha descendente.
-     */
-    public static void escuchar(String proveedor, Consumer<List<Noti>> alLlegar) {
-        try {
-            FirebaseFirestore.getInstance().collection("notificaciones")
-                    .whereEqualTo("slug", slug(proveedor))
-                    .limit(25)
-                    .addSnapshotListener((valor, error) -> {
-                        if (error != null || valor == null) {
-                            Log.w(TAG, "listener: " + (error != null ? error.getMessage() : "sin datos"));
-                            return;
-                        }
-                        List<Noti> lista = new ArrayList<>();
-                        for (QueryDocumentSnapshot d : valor) {
-                            Long fid = d.getLong("factura_id");
-                            String orden = d.getString("orden");
-                            String monto = d.getString("monto");
-                            Date creado = d.getDate("creado");
-                            lista.add(new Noti(
-                                    "Factura #" + (fid == null ? "?" : fid)
-                                            + (orden == null ? "" : " · " + orden),
-                                    "Registrada para conciliación"
-                                            + (monto != null && !monto.isEmpty() ? " · " + monto : ""),
-                                    creado == null ? "" : new SimpleDateFormat(
-                                            "dd/MM/yy HH:mm", Locale.getDefault()).format(creado)));
-                        }
-                        lista.sort((a, b) -> b.fecha.compareTo(a.fecha));
-                        alLlegar.accept(lista);
-                    });
-        } catch (Exception e) {
-            Log.w(TAG, "escuchar: " + e.getMessage());
-        }
-    }
+    // (correcciones 24/10) Aquí vivían la clase Noti y escuchar() del
+    // Sprint 6: leían `notificaciones` (push del PHP del camino
+    // servidor). Colección CERRADA por las reglas y sin llamantes en la
+    // app S10 — retiradas.
 
     // ========================================================================
     // Sprint 10 «Sin servidor»: Firestore + Storage como backend COMPLETO
@@ -294,18 +207,6 @@ public final class FirebaseServicio {
                 });
     }
 
-    /** S10 (admin): TODAS las cuentas, en tiempo real. */
-    public static void escucharOrdenesTodas(Consumer<List<QueryDocumentSnapshot>> alLlegar) {
-        FirebaseFirestore.getInstance().collection("ordenes")
-                .addSnapshotListener((valor, error) -> {
-                    if (error != null || valor == null) {
-                        Log.w(TAG, "ordenes todas: " + (error != null ? error.getMessage() : "sin datos"));
-                        return;
-                    }
-                    alLlegar.accept(aLista(valor));
-                });
-    }
-
     private static List<QueryDocumentSnapshot> aLista(com.google.firebase.firestore.QuerySnapshot valor) {
         List<QueryDocumentSnapshot> lista = new ArrayList<>();
         for (QueryDocumentSnapshot d : valor) {
@@ -396,26 +297,37 @@ public final class FirebaseServicio {
         db.collection("facturasLookup").document(id).set(doc);
     }
 
-    /** S10: facturas subidas por este cliente (admin: todas), en vivo. */
-    public static void escucharFacturas(String correo, boolean todas,
+    /**
+     * S10: facturas subidas por ESTE cliente, en vivo. Siempre filtrada
+     * por subidoPor (correcciones 24/10): las reglas no dejan leer
+     * facturas ajenas y Firestore no filtra resultados por sí solo — una
+     * consulta sin el where se rechaza completa.
+     */
+    public static void escucharFacturas(String correo,
                                         Consumer<List<QueryDocumentSnapshot>> alLlegar) {
-        com.google.firebase.firestore.Query q = FirebaseFirestore.getInstance().collection("facturas");
-        if (!todas) {
-            q = q.whereEqualTo("subidoPor", correo);
-        }
-        q.addSnapshotListener((valor, error) -> {
-            if (error != null || valor == null) {
-                Log.w(TAG, "facturas: " + (error != null ? error.getMessage() : "sin datos"));
-                return;
-            }
-            alLlegar.accept(aLista(valor));
-        });
+        FirebaseFirestore.getInstance().collection("facturas")
+                .whereEqualTo("subidoPor", correo)
+                .addSnapshotListener((valor, error) -> {
+                    if (error != null || valor == null) {
+                        Log.w(TAG, "facturas: " + (error != null ? error.getMessage() : "sin datos"));
+                        return;
+                    }
+                    alLlegar.accept(aLista(valor));
+                });
     }
 
-    /** S10: promedio histórico del proveedor (alimenta el riesgo); 0 si no hay. */
-    public static void historialPromedio(String proveedorSlug, Consumer<Double> alPromedio) {
+    /**
+     * S10 + REGLAS (fix 22/10): promedio histórico del proveedor SOBRE
+     * LAS FACTURAS DE ESTE CLIENTE — las reglas de Firestore no dejan
+     * leer facturas ajenas, así que la consulta se filtra por subidoPor
+     * (dueño) además de por proveedorSlug. 0 si no hay historial.
+     */
+    public static void historialPromedio(String correo, String proveedorSlug,
+                                         Consumer<Double> alPromedio) {
         FirebaseFirestore.getInstance().collection("facturas")
-                .whereEqualTo("proveedorSlug", proveedorSlug).limit(50).get()
+                .whereEqualTo("subidoPor", correo)
+                .whereEqualTo("proveedorSlug", proveedorSlug)
+                .limit(50).get()
                 .addOnSuccessListener(valor -> {
                     double suma = 0;
                     int n = 0;

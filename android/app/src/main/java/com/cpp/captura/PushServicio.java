@@ -12,8 +12,15 @@ import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 
 /**
- * PushServicio — Sprint 6: recibe los push FCM que envía api/facturas.php
- * cuando un capturista sube una factura.
+ * PushServicio — receptor FCM (queda del Sprint 6 para el camino servidor:
+ * api/facturas.php sigue mandando push al tema proveedor_<slug> cuando se
+ * sube una factura por la API de Laragon).
+ *
+ * La app S10 «Sin servidor» NO usa push: sus avisos son locales
+ * (RecordatorioWorker) y el buzón del proveedor es el oyente de `ordenes`
+ * en tiempo real. onNewToken ya no re-registra nada (correcciones 24/10):
+ * el bloque S6 que escribía en `proveedores` se retiró porque las reglas
+ * de Firestore cierran esa colección.
  *
  * Con la app en PRIMER plano, FCM no muestra nada solo: aquí se construye
  * la notificación del sistema (canal propio, prioridad alta). Con la app
@@ -50,14 +57,5 @@ public class PushServicio extends FirebaseMessagingService {
                 .setContentIntent(pi);
 
         nm.notify((int) System.currentTimeMillis(), builder.build());
-    }
-
-    /** Si Google renueva el token del teléfono, se re-registra el proveedor. */
-    @Override
-    public void onNewToken(String token) {
-        String proveedor = FirebaseServicio.proveedorGuardado(this);
-        if (!proveedor.isEmpty()) {
-            FirebaseServicio.registrarProveedor(this, proveedor);
-        }
     }
 }

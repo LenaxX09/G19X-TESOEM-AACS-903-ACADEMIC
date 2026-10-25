@@ -7,13 +7,13 @@ import android.content.SharedPreferences;
 import com.google.firebase.auth.FirebaseAuth;
 
 /**
- * Sesion â€” Sprint 10 Â«Sin servidorÂ»: la sesiÃ³n vive en FIREBASE AUTH.
+ * Sesion — Sprint 10 «Sin servidor»: la sesión vive en FIREBASE AUTH.
  *
- * Antes (S5-S9) la app guardaba servidor + token X-CPP-Token y cada peticiÃ³n
+ * Antes (S5-S9) la app guardaba servidor + token X-CPP-Token y cada petición
  * iba al PHP de Laragon. Ahora:
- *   Â· La identidad la maneja FirebaseAuth (correo/contraseÃ±a); no hay IP que
+ *   · La identidad la maneja FirebaseAuth (correo/contraseña); no hay IP que
  *     teclear ni token propio: google-services.json apunta al proyecto.
- *   Â· AquÃ­ solo se cachea el PERFIL (usuarios/{uid} de Firestore): nombre,
+ *   · Aquí solo se cachea el PERFIL (usuarios/{uid} de Firestore): nombre,
  *     correo, rol y negocio, para enrutar la app igual que antes.
  *
  * S10.3: los roles admin/capturista/revisor SE UNIFICARON en «cliente»:
@@ -31,14 +31,14 @@ public final class Sesion {
     private static final String K_NEGOCIO = "negocio";   // proveedor: su negocio · cliente: su empresa
 
     private Sesion() {
-        // clase utilitaria estÃ¡tica: no se instancia
+        // clase utilitaria estática: no se instancia
     }
 
     private static SharedPreferences prefs(Context c) {
         return c.getApplicationContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE);
     }
 
-    /** Cachea el perfil leÃ­do de Firestore usuarios/{uid} tras el login. */
+    /** Cachea el perfil leído de Firestore usuarios/{uid} tras el login. */
     public static void guardar(Context c, String uid, String nombre, String correo,
                                String rol, String negocio) {
         prefs(c).edit()
@@ -70,7 +70,7 @@ public final class Sesion {
         return prefs(c).getString(K_NEGOCIO, "");
     }
 
-    /** Â¿Hay perfil cacheado Y sesiÃ³n vigente en Firebase Auth? */
+    /** ¿Hay perfil cacheado Y sesión vigente en Firebase Auth? */
     public static boolean activa(Context c) {
         if (prefs(c).getString(K_UID, "").isEmpty()) {
             return false;
@@ -101,7 +101,7 @@ public final class Sesion {
         try {
             FirebaseAuth.getInstance().signOut();
         } catch (Exception ignored) {
-            // sin FirebaseApp (p. ej. pruebas de instrumentaciÃ³n): seguir
+            // sin FirebaseApp (p. ej. pruebas de instrumentación): seguir
         }
         cerrar(c);
         Intent i = new Intent(c, LoginActivity.class);

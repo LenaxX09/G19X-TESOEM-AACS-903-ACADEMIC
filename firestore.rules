@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// firestore.rules — CPP v1 (correcciones 22/10/2026)
+// firestore.rules — CPP v1 (correcciones 22/10/2026 · fix update 24/10/2026)
 //
 // Publicar: consola Firebase → Firestore Database → Reglas → pegar este
 // archivo → Publicar (o `firebase deploy --only firestore:rules`).
@@ -15,6 +15,8 @@ rules_version = '2';
 //     y aquí se exige ese filtro.
 //   · El cliente solo puede tocar de una orden suya los campos de pago
 //     (estado/pagadaEn/comprobanteUrl); el resto es del proveedor dueño.
+//     (fix 24/10: el update decía autenticado() || … y el || suelto
+//     dejaba a CUALQUIER usuario con sesión modificar CUALQUIER orden).
 //
 // La semilla y los scripts de api/ usan la CUENTA DE SERVICIO (Admin),
 // que NO pasa por estas reglas.
@@ -71,12 +73,14 @@ service cloud.firestore {
           && request.resource.data.clienteCorreo is string
           && request.resource.data.estado == 'pendiente';
       allow update: if autenticado()
-          // El proveedor dueño administra su cuenta (reabrir, interés…)
-          || soyProveedorDe(resource.data)
-          // El cliente SOLO marca/desmarca el pago de SU cuenta
-          || (soyClienteDe(resource.data)
-              && request.resource.data.diff(resource.data).affectedKeys()
-                   .hasOnly(['estado', 'pagadaEn', 'comprobanteUrl']));
+          && (
+              // El proveedor dueño administra su cuenta (reabrir, interés…)
+              soyProveedorDe(resource.data)
+              // El cliente SOLO marca/desmarca el pago de SU cuenta
+              || (soyClienteDe(resource.data)
+                  && request.resource.data.diff(resource.data).affectedKeys()
+                       .hasOnly(['estado', 'pagadaEn', 'comprobanteUrl']))
+          );
       allow delete: if autenticado() && soyProveedorDe(resource.data);
     }
 

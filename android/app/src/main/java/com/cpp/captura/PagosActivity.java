@@ -75,6 +75,20 @@ public class PagosActivity extends AppCompatActivity {
     private Button btnTabPagadas;
     private RequestQueue cola;   // solo para bajar el comprobante (imagen https)
 
+    /**
+     * S10.5 (fix 22/10): al VOLVER del segundo plano con la sesión
+     * abierta, App ya re-bloqueó el candado — esta pantalla no se
+     * muestra hasta verificar la huella/PIN otra vez.
+     */
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (Candado.requiereCandado(this)) {
+            startActivity(new Intent(this, CandadoActivity.class));
+            finish();
+        }
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

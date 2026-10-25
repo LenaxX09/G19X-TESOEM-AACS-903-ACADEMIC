@@ -77,6 +77,20 @@ public class ListadoActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * S10.5 (fix 22/10): al VOLVER del segundo plano con la sesión
+     * abierta, App ya re-bloqueó el candado — esta pantalla no se
+     * muestra hasta verificar la huella/PIN otra vez.
+     */
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (Candado.requiereCandado(this)) {
+            startActivity(new Intent(this, CandadoActivity.class));
+            finish();
+        }
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -121,7 +135,7 @@ public class ListadoActivity extends AppCompatActivity {
         txtEstado.setTextColor(ContextCompat.getColor(this, R.color.texto_normal));
         txtEstado.setText(R.string.pagos_cargando);
 
-        FirebaseServicio.escucharFacturas(Sesion.correo(this), false,
+        FirebaseServicio.escucharFacturas(Sesion.correo(this),
                 lista -> runOnUiThread(() -> {
                     barra.setVisibility(View.GONE);
                     todas.clear();
