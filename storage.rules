@@ -1,13 +1,23 @@
 rules_version = '2';
 
-// storage.rules — CPP v1 (correcciones 22/10/2026)
+// storage.rules — CPP v1 (correcciones 22/10/2026 · comprobantes 29/10/2026)
 //
-// Publicar: consola Firebase → Storage → Reglas → pegar este archivo →
-// Publicar (o `firebase deploy --only storage`).
+// ⚠ ESTADO (decisión 29/10/2026): DISEÑADO y VERSIONADO pero NO PUBLICADO
+//   en cpp-facturas. Firebase exige el plan Blaze (tarjeta de crédito)
+//   para activar Storage en proyectos creados después de Oct/2024 y este
+//   es un proyecto académico sin medio económico para contratarlo: se
+//   omite por DECISIÓN documentada, no por olvido (INSTALACION.md §8.4,
+//   docs/Bitacora.txt entrada 11). La app funciona igual; solo las
+//   imágenes pierden esta capa extra de protección.
+//   Publicar cuando Storage esté activo: consola Firebase → Storage →
+//   Reglas → pegar este archivo → Publicar (o `firebase deploy --only
+//   storage`).
 //
 // Rutas que usa la app (FirebaseServicio):
-//   · facturas/<timestamp>.jpg      → foto de la factura conciliada
-//   · comprobantes/<ordenId>.jpg    → comprobante de pago del cliente
+//   · facturas/<timestamp>.jpg                → foto de la factura conciliada
+//   · comprobantes/<ordenId>/<timestamp>.jpg  → comprobante de pago (UNO
+//     NUEVO por pago desde el 29/10: nombre único → nadie reemplaza el
+//     comprobante de otra persona; el update está CERRADO).
 //
 // Solo usuarios con cuenta REAL (correo/contraseña), solo imágenes JPEG
 // (la app manda contentType "image/jpg" explícito) y de hasta 8 MB.
@@ -28,14 +38,22 @@ service firebase.storage {
 
     match /facturas/{archivo} {
       allow read: if autenticado();
-      allow create, update: if autenticado() && esJpegChico();
-      allow delete: if false;
+      allow create: if autenticado() && esJpegChico();
+      allow update, delete: if false; // nombre único por subida: no hace falta tocar
     }
 
+    // Comprobantes: carpeta por orden + nombre único por pago (correcciones
+    // 29/10). create sí, update NO: el comprobante queda INMUTABLE.
+    match /comprobantes/{ordenId}/{archivo} {
+      allow read: if autenticado();
+      allow create: if autenticado() && esJpegChico();
+      allow update, delete: if false;
+    }
+
+    // Legado (comprobantes/<ordenId>.jpg de versiones anteriores): solo leer.
     match /comprobantes/{archivo} {
       allow read: if autenticado();
-      allow create, update: if autenticado() && esJpegChico();
-      allow delete: if false;
+      allow write: if false;
     }
 
     // Todo lo demás: cerrado.

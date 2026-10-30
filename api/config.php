@@ -40,13 +40,19 @@ define('ALERTA_VENCE_EN_DIAS', 3);
 define('FIREBASE_SA', __DIR__ . '/firebase-service-account.json');
 
 // --- Motores externos (se consumen en el Sprint 4, RF-B3) ---
-// Rutas REALES verificadas el 30/09/2026 en este equipo (Sprint 3, spike OCR):
-//   Python 3.12.10 (winget) · SWI-Prolog (C:\Program Files\swipl) · GCC MinGW.
+// Correcciones 29/10: rutas PORTABLES — cada binario se lee de una variable
+// de entorno con un valor por omisión tomado del PATH, para que el repo
+// funcione en cualquier equipo (antes apuntaban a carpetas de usuario):
+//   CPP_PYTHON_BIN  → p. ej. C:\Python312\python.exe   (omisión: python)
+//   CPP_SWIPL_BIN   → p. ej. C:\Program Files\swipl\bin\swipl.exe (omisión: swipl)
+//   CPP_GCC_BIN     → p. ej. C:\MinGW\bin\gcc.exe      (omisión: gcc)
+// Si un binario no está en el PATH de la máquina, define su variable
+// (setx CPP_PYTHON_BIN "ruta\al\python.exe") y listo — nada que editar aquí.
 // NOTA S4: al usarlas en shell_exec, envolver SIEMPRE entre comillas dobles
 // porque contienen espacios, además de escapeshellarg para los argumentos.
-define('PYTHON_BIN', 'C:/Users/acaba/AppData/Local/Programs/Python/Python312/python.exe');
-define('SWIPL_BIN', 'C:/Program Files/swipl/bin/swipl.exe');
-define('GCC_BIN', 'C:/MinGW/bin/gcc.exe'); // para compilar clasificador_riesgo.c en S3
+define('PYTHON_BIN', getenv('CPP_PYTHON_BIN') ?: 'python');
+define('SWIPL_BIN', getenv('CPP_SWIPL_BIN') ?: 'swipl');
+define('GCC_BIN', getenv('CPP_GCC_BIN') ?: 'gcc'); // compila clasificador_riesgo.c
 define('RUTA_MOTOR_OCR', __DIR__ . '/../motores/procesar_factura.py');
 define('RUTA_BIN_RIESGO', __DIR__ . '/../motores/clasificador_riesgo.exe');
 define('RUTA_REGLA_PROLOG', __DIR__ . '/../motores/regla.pl');

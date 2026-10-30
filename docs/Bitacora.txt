@@ -1,6 +1,6 @@
 ﻿================================================================================
   BITACORA DEL PROYECTO CPP — Plataforma Inteligente de Cuentas por Pagar
-  Última actualización: 24/10/2026 · Editor: Cline (correcciones de la 2ª revisión: fix del update de ordenes en firestore.rules + rulesets subidos por API · bloque S6 retirado de la app · firebase.json + publicar_reglas.php · SPRINT10 con clientesPorCorreo/facturasLookup · documentación formal: Arquitectura/Manual_Tecnico/Manual_Usuario/Reporte_QA)
+  Última actualización: 29/10/2026 · Editor: Cline (3ª revisión correcciones2.docx: comprobantes inmutables + duplicados POR DUEÑO + rutas portables + MVP §14 + DEMO.md + docs/ y pruebas/)
 ================================================================================
 
 ██████ INSTRUCCIÓN PARA CLINE (LEER PRIMERO EN CADA SESIÓN) ██████████████████
@@ -25,273 +25,111 @@
 
 ────────────────────────────────────────────────────────────────────────────────
 SECCIÓN 1 · RESUMEN DEL ESTADO ACTUAL (30 segundos)
-────────────────────────────────────────────────────────────────────────────────
+───────────────────────────────────────────────────────────────────────────────
 
   Proyecto   : Sistema móvil para capturar facturas, extraer datos por OCR,
                calcular riesgo y conciliar contra órdenes de compra.
-  Avance     : MVP 100% (S1-S4) CERRADO y commiteado. v1.0 INICIADA:
-                Sprint 5 «Acceso y roles» COMPLETO — checkpoint C5 15/15
-                (login de 3 roles, 401/403 por rol, CRUD, regresión §9.2
-                AUTENTICADA: A ✅ 27.3 · B ⚠️ 53.0 MONTO_EXCEDE · C ⚠️
-                PROVEEDOR_NO_COINCIDE). 4 de 9 RF del Incremento 1 listos.
-  Nuevo 09/10: SPRINT 5 (RF-M1 login · RF-B6 roles · RF-B4 CRUD):
-                api/sesion.php (login/logout/quién-soy con token X-CPP-Token
-                de 8 h), api/autenticar.php (401/403), api/usuarios.php y
-                POST de ordenes.php (CRUD solo admin, bcrypt, ULTIMO_ADMIN),
-                facturas/procesar ya exigen sesión; BD: tabla `sesiones` +
-                password_hash VARCHAR(255) (migrar_v1.sql o seed v1.0);
-                app 0.8.0-v1 (vc 11): LoginActivity de entrada, clase Sesion,
-                token en TODAS las peticiones, 401→login, revisor no puede
-                enviar, AdminActivity (CRUD en diálogos) y cerrar sesión.
-  Nuevo 14/10: MODO OSCURO adaptado (0.8.1) + HOTFIX crítico (0.8.2-v1,
-                vc 13): colores fijos texto_sobre_tarjeta/hint_sobre_tarjeta
-                para todo texto sobre tarjetas claras (login, fila_admin,
-                fila_factura con cardBackgroundColor blanco explícito,
-                fila_spinner nuevo para el spinner de órdenes), txtSesion
-                adaptable, tintes en vez de setBackgroundColor (login);
-                HOTFIX: super.getHeaders() de Volley devuelve mapa INMUTABLE
-                → UnsupportedOperationException rompía TODAS las peticiones
-                autenticadas (7 puntos en 3 Activities, ahora HashMap copia).
-                Detectado con emulador API 36 headless + análisis de píxeles.
-   Nuevo 15/10: SPRINT 6 «FIREBASE» (RF-F1..F4, alcance NUEVO; el «S6
-                 inteligencia» planeado pasa a S7): avisos al proveedor SIN
-                 cuenta — botón «🏬 Soy proveedor» en el login → buzón en
-                 TIEMPO REAL (oyente Firestore en ProveedorActivity) + push
-                 FCM con la app cerrada (PushServicio; tema proveedor_<slug>).
-                 App 0.9.0-v1 (vc 14) con FirebaseServicio (auth anónima,
-                 registrarCliente/registrarProveedor/escuchar); api/firebase.php
-                 (JWT RS256 firmado con openssl desde cuenta de servicio SECRETA
-                 fuera de git → OAuth2 cacheado ~50 min → Firestore REST + FCM
-                 v1; cero dependencias PHP), api/proveedores.php (endpoint
-                 público: nombres+slug) y facturas.php notifica tras guardar
-                 (best-effort). EXCEPCIÓN aprobada por el usuario a la regla de
-                 no-dependencias: firebase-bom 33.1.2 + firestore/messaging/auth
-                 + plugin google-services 4.4.2. El usuario commiteó lo NUEVO
-                 (67d8238); 17 archivos modificados siguen PENDIENTES. Solo
-                 BUILD OK verificado (b6.log, 37 s); el flujo real de aviso
-                 quedó VERIFICADO esa misma tarde/noche (ver «Probado»).
-   Nuevo 15/10pm: SPRINT 7 «CUENTAS DE PROVEEDOR» (RF-F5..F7): los provee-
-                 dores YA tienen cuenta propia. BD: rol 'proveedor' en el
-                 ENUM + columna negocio (migrar_v1.sql §3, ya aplicada; seed
-                 con proveedor/demo1234 → Papelería Central). API: registro_
-                 proveedor.php PÚBLICO (crea cuenta con su negocio + sesión
-                 inmediata) · sesion/autenticar viajan con negocio · ordenes
-                 GET y facturas GET FILTRAN por su negocio · facturas POST
-                 acepta proveedor SOLO en órdenes de su negocio (403 ORDEN_DE_
-                 OTRO_PROVEEDOR) · CRUD admin crea proveedores con negocio.
-                 App 0.10.0-v1 (vc 15): «🆕 Crear cuenta de proveedor» en el
-                 login (diálogo usuario/clave/negocio → entra directo a su
-                 perfil), Sesion guarda negocio, ruta por rol (proveedor →
-                 ProveedorActivity con «📤 Enviar una factura» → MainActivity
-                 con SOLO sus órdenes, y «🚪 Cerrar sesión» real), AdminActivity
-                 gestiona rol + negocio. C7 por HTTP 15/15 (test_s7.ps1) y
-                 demo completa en emulador (5 capturas en Escritorio/
-                 Prueba_S7_Cuentas). Instalada también en el Motorola.
-   Nuevo S8    : SPRINT 8 «CUENTAS POR PAGAR» (RF-P1..P3) — modelo aclarado
-                 por el usuario: el CLIENTE sube facturas y administra su
-                 dinero; al PROVEEDOR le llegan los avisos (S6/S7). BD:
-                 facturas.pagada + pagada_en (migrar_v1.sql §4, aplicada).
-                 API: pagos.php NUEVO (GET por_pagar/pagadas con ruta_imagen
-                 · POST pagar/despagar solo capturista/admin · regla: solo
-                 facturas CON veredicto, la «Pendiente» se rechaza) y
-                 facturas.php gana ?pagada=0|1 + ruta_imagen en el listado.
-                 App 0.11.0-v1 (vc 16): botón «💰 Cuentas por pagar» (oculto
-                 al proveedor) → PagosActivity con pestañas ⏳ POR PAGAR /
-                 ✅ PAGADAS, chips de clasificación en Pagadas (Todas/
-                 Aprobadas/No coinciden/Discrepancia), diálogo con la FOTO
-                 de cada factura (Volley ImageRequest) y pagar/despagar.
-                 Ajuste de regla durante la prueba: también se pagan Con
-                 Discrepancia (resueltas a mano) para que las pagadas puedan
-                 clasificarse como pide el usuario. C8 12/12 (test_s8.ps1).
-    Nuevo 17/10: SPRINT 9 «INTELIGENCIA DEL TABLERO» (RF-L3 · RF-D5 · RF-M6
-                  · RF-M7) + FIX S8.3 de la app. DUPLICADOS: pre-check PHP
-                  en procesar.php (mismo folio, o monto+fecha+proveedor
-                  comparando por slug) que alimenta la REGLA 0 de regla.pl
-                  (nuevo 10.º argumento si|no) → DISCREPANCIA:FACTURA_
-                  DUPLICADA y la respuesta trae duplicada_de=<id original>.
-                  RF-D5 COMPLETO: el OCR devuelve también su TEXTO crudo
-                  (contrato aditivo) y facturas gana texto_ocr MEDIUMTEXT
-                  (migrar_v1.sql §7, ya aplicada; visible en el detalle).
-                  RF-M6: los chips del listado FILTRAN (tap = filtrar, tap
-                  de nuevo = quitar; chip activo sólido, conteo del total).
-                  RF-M7: pagos.php calcula fecha_limite/dias_restantes/
-                  vence_pronto (fecha del documento + PAGO_DIAS_LIMITE=30
-                  días de config.php) y la app pinta en ROJO lo que vence
-                  en ≤ ALERTA_VENCE_EN_DIAS=3 (⏰ vence / 🚨 vencida).
-                  FIX S8.3: la app 0.12 mandaba accion «pagar», que pagos.php
-                  ya no acepta (S8.3 exige «comprobar» CON foto) → pagar en
-                  el móvil estaba ROTO; PagosActivity ahora abre la galería,
-                  comprime (≤1600 px, JPEG 85, Base64) y envía imagen_base64.
-                  App 0.13.0-v1 (vc 19) + AJUSTE S9.1 a pedido del usuario:
-                  en POR PAGAR NO se muestra ninguna foto — el cliente
-                  adjunta su comprobante y, si el servidor valida todo, la
-                  cuenta pasa sola a PAGADAS; sin evidencia no puede
-                  marcarla (la foto de factura solo se revisa en PAGADAS)
-                  → 0.13.1-v1 (vc 20). C9 14/14 (test_s9.ps1 NUEVO) y
-                  REGRESIÓN C5 15/15 con trío §9.2 EXACTO tras limpiar la BD
-                  (respaldo previo en database/backup_facturas_preS9_
-                  20261017.sql; la detección de duplicados es global, así
-                  que el trío exige BD limpia — documentado en test_s9).
+  Avance     : MVP (S1-S4) 100% CERRADO · v1.0 con 8/9 RF (solo falta RF-M8
+               cola offline) · 10 sprints completos (S1-S10) · 10/10
+               checkpoints superados · cronograma de Progreso.docx 10/10.
 
-   Nuevo 19-20/10: SPRINT 10 «SIN SERVIDOR» (aclarado por el usuario: probar
-                  SIN Laragon y que las órdenes no necesiten IP — las sube el
-                  PROVEEDOR): la app habla DIRECTO con Firebase (proyecto
-                  cpp-facturas). Auth correo/contraseña (LoginActivity, sin
-                  campo usuario ni IP; clave demo fuera del repo) + Firestore
-                  usuarios/{uid} (perfil) · `ordenes` = cuentas que sube el
-                  proveedor con ProveedorActivity («➕ Subir cuenta»:
-                  clienteCorreo+monto+fechaLimite; el cliente las ve AL
-                  INSTANTE con oyente) · `facturas` (veredictos) + Storage
-                  (fotos y comprobantes; el pago pasa por adjuntar la foto).
-                  Los 3 motores se PORTAN AL TELÉFONO (Motores.java: ML Kit
-                  OCR + riesgo del C + réplica de regla.pl con pre-check de
-                  duplicados). AdminActivity FUERA hasta el S11. Scripts CLI
-                  php sin Apache/MySQL: habilitar_email_auth.php (FIX 20/10:
-                  endpoint v1 muerto → API v2) y semilla_firebase.php
-                  (usuarios+perfiles+3 cuentas demo). Checkpoint C10 7/7
-                  (test_s10.ps1 NUEVO, incluye login REAL por REST). App
-                  0.14.0-v1 (vc 21). Guía: SPRINT10_v1.md.
+  Arquitectura de entrega (decisión 22/10 del usuario; ver
+  docs/Arquitectura.md y MVP_CPP.md §14):
+    · CAMINO PRINCIPAL (producción, SIN servidor): app 0.19.0-v1 (vc 29)
+      hablando DIRECTO con Firebase (Auth/Firestore/Storage) y el pipeline
+      EN EL TELÉFONO (Motores.java: ML Kit OCR + fórmula del C + reglas
+      0-5 del Prolog + duplicados facturasLookup POR DUEÑO desde el
+      29/10). El PROVEEDOR sube las cuentas (ordenes) por correo del
+      cliente; el cliente las ve EN VIVO, paga CON comprobante (INMUTABLE
+      desde el 29/10: comprobantes/<ordenId>/<timestamp>.jpg, create-only)
+      y hay recordatorios, candado biométrico, interés y sesión vigilada.
+    · CAMINO SERVIDOR (demo académica S1-S9): Laragon + MySQL + PHP +
+      Python + C + Prolog; checkpoints re-ejecutables en pruebas\
+      (C5 15/15 · C7 15/15 · C8 12/12 · C9 14/14 · C10 7/7). Guion de los
+      DOS caminos con la misma factura y el mismo veredicto: docs/DEMO.md.
 
-   Nuevo 22/10: CORRECCIONES de la revisión + FIX del candado (bug del
-                   usuario):
-                   · CANDADO: con la sesión abierta y la app al fondo se
-                   entraba SIN huella (el flag «desbloqueada» quedaba true
-                   todo lo que viviera el proceso y solo se revisaba en
-                   onCreate). Ahora App cuenta las pantallas vivas: al
-                   quedarse en 0 (app a segundo plano) re-bloquea (retardo
-                   1 s para no molestar en rotaciones/transiciones), las
-                   4 pantallas internas revisan Candado.requiereCandado
-                   TAMBIÉN en onResume y CandadoActivity vuelve a pedir la
-                   verificación al regresar (onRestart).
-                   · REGLAS: firestore.rules + storage.rules NUEVOS en la
-                   raíz (rol de usuarios/{uid} inmutable, sin listar
-                   usuarios — existeCorreo() usa clientesPorCorreo, que
-                   ahora también escribe la semilla; facturas/órdenes
-                   ajenas ilegibles; Storage solo JPEG autenticado —
-                   reglas de Storage OPCIONALES si Firebase pide
-                   Blaze/tarjeta para abrir esa sección). La
-                   app se alineó: el proveedor escucha ordenes FILTRADAS
-                   por proveedorUid e historialPromedio() filtra por
-                   subidoPor (reglas compatibles).
-                   · CLAVE demo FUERA del código y docs (semilla:
-                   variable CPP_DEMO_CLAVE o parámetro; test_s10: -Clave
-                   o env; SPRINT10/Bitacora/Explicacion dicen «la clave
-                   que configuraste»). Falta MANUAL: rotarla en la consola.
-                   · REPO: .gitignore (*.log, database/backup_*.sql) +
-                   31 android/b*.log borrados + backup fuera del índice +
-                   repara_strings.ps1 y s10_strings_frag.xml → herramientas/.
-                   · UTF-8 reparado en LoginActivity.java y Sesion.java
-                   (comentarios con doble encode).
-                   · README: sección «Arquitectura de entrega» con
-                   diagrama (camino principal teléfono+Firebase vs camino
-                   servidor Laragon Python→C→Prolog, Motores.java = modo
-                   sin conexión); INSTALACION.md §8-§9 (Firebase +
-                   motores/requirements.txt). APK recompilado OK.
+  Nuevo 29/10 (3ª revisión externa, correcciones2.docx — 6 puntos, TODOS
+               atendidos en esta sesión):
+    1) REGLAS + COMPROBANTES: storage.rules deja los comprobantes en
+       create-only dentro de comprobantes/<ordenId>/ (nadie reemplaza el
+       comprobante ajeno; la app sube un archivo NUEVO por pago) y
+       firestore.rules exige que el proveedor NO cambie proveedorUid/
+       clienteCorreo de una orden y que el cliente solo ponga estado en
+       pagada|pendiente. Rulesets NUEVOS subidos por API (firestore
+       6919cb3d · storage 9e8a2bda), pero el release EN VIVO sigue siendo
+       el VIEJO 4d2fad49 (pre-fix): activarlo es PASO DEL PROPIETARIO
+       (IAM → rol «Firebase Rules Admin» → re-correr herramientas\
+       publicar_reglas.php, o pegar en consola). Riesgo conocido
+       declarado en readme.md y Reporte_QA.md §7.
+    2) DUPLICADOS POR DUEÑO: llaves f_<dueño>_<proveedor>_<folio> y
+       t_<dueño>_<monto>_<fecha>_<proveedor> construidas SIEMPRE con
+       FirebaseServicio.llaveFolio()/llaveTerna(); MainActivity pasa
+       Sesion.correo; reglas: lookup legible SOLO por su dueño (get
+       permitido con resource==null para que «no hay duplicado» no llegue
+       como PERMISSION_DENIED). El folio repetido de OTRA empresa ya no
+       marca duplicado.
+    3) RUTAS PORTABLES (cero rutas de equipo): api/config.php lee
+       CPP_PYTHON_BIN/CPP_SWIPL_BIN/CPP_GCC_BIN (omisión python/swipl/gcc
+       del PATH; setx persistidas en este equipo) · .ps1 con $PSScriptRoot
+       · .cmd con %~dp0 · desplegar.ps1 con $PSScriptRoot + CPP_WWW ·
+       documentos con rutas relativas · INSTALACION.md §1 sin columna
+       «Estado en tu equipo» · git grep de C:\CPP y C:/Users en
+       *.ps1/*.php/*.cmd = 0 resultados.
+    4) MVP_CPP.md §14 «Estado de la v1 (29-oct)» NUEVO (función por
+       función: camino, archivo, estado; por qué cambió la arquitectura;
+       pendientes declarados) + ESTA Sección 1 reescrita con el estado
+       real (la anterior seguía resumiendo el Sprint 5).
+    5) docs/DEMO.md NUEVO: guion corto de los dos caminos con la MISMA
+       factura y el MISMO veredicto, comandos exactos (arrancar Laragon,
+       recompilar C si hace falta, peticiones y respuestas esperadas) +
+       test_s9.ps1 RE-CORRIDO contra el código actual: 14/14 OK (29/10,
+       commit base 66de852 + cambios del día; Apache+MySQL arrancados a
+       mano, desplegar.ps1 portable corrido).
+    6) RAÍZ ORDENADA: git mv de TODA la documentación a docs\ (Bitacora y
+       Explicacion incluidas; Progreso.docx a docs\ y .ui.txt a
+       herramientas\) y de test_*.ps1 a pruebas\ (con $PSScriptRoot
+       subiendo un nivel); enlaces corregidos (readme, INSTALACION,
+       Manual_Tecnico §3 con el mapa nuevo, Reporte_QA §10, SPRINT*) y
+       readme.md con sección «Uso de IA» (qué herramienta, para qué
+       partes, qué decidió el autor).
 
-   Nuevo 24/10: CORRECCIONES de la 2ª revisión (correcciones.txt):
-                    · REGLAS (el hueso gordo): el allow update de ordenes
-                    decía autenticado() || proveedor || (cliente && …) —
-                    el || suelto dejaba a CUALQUIER usuario con sesión
-                    editar CUALQUIER orden. Corregido a autenticado() &&
-                    (proveedor dueño || (cliente && hasOnly(estado,
-                    pagadaEn, comprobanteUrl))).
-                    · PUBLICACIÓN por API: herramientas/publicar_reglas.php
-                    NUEVO + firebase.json (para `firebase deploy`). El
-                    script firma un JWT AUTO-FIRMADO aud=firebaserules
-                    (hallazgo: el token endpoint de Google devuelve un
-                    id_token inútil cuando el scope firebase.rules va en
-                    la lista; los 3 scopes de fb_token() siguen OK → la
-                    semilla y test_s10 NO están afectadas). Ejecutado
-                    24/10: rulesets de firestore.rules (con el fix,
-                    verificado idéntico al archivo local) y storage.rules
-                    SUBIDOS; el paso final (apuntar el release
-                    cloud.firestore) dio 403 IAM — el SA no tiene
-                    firebaserules.releases.update. PENDIENTE del usuario:
-                    (a) rol «Firebase Rules Admin» al SA en la consola IAM
-                    y re-correr el script, o (b) pegar firestore.rules en
-                    la consola Firebase. Hasta entonces la regla EN VIVO
-                    sigue siendo la del paréntesis roto (ruleset 4d2fad49,
-                    subido 23/10 01:44).
-                    · CONSULTAS que las reglas niegan (decisión: cambiar
-                    código, NO abrir reglas): historialPromedio ya filtraba
-                    por subidoPor (fix 22/10, verificado); el bloque S6
-                    muerto se RETIRÓ de FirebaseServicio (registrarCliente
-                    /registrarProveedor/escuchar/Noti/proveedorGuardado:
-                    escribían en clientes/proveedores/notificaciones,
-                    cerradas) y PushServicio.onNewToken ya no re-registra
-                    nada. escucharOrdenesTodas BORRADA y escucharFacturas
-                    perdió el parámetro «todas» (ListadoActivity ajustado;
-                    el proveedor ya escuchaba filtrado desde el 22/10).
-                    · DOCS: SPRINT10_v1.md §4 documenta las colecciones
-                    clientesPorCorreo y facturasLookup + contratos que
-                    cambiaron (§4) y reglas tachadas (§5); INSTALACION.md
-                    §8.4 con las dos formas nuevas de publicar (script php
-                    con su prerrequisito de rol y firebase deploy).
-                    Limpieza de la 1ª revisión verificada YA hecha (22/10):
-                    .gitignore, 31 logs fuera, herramientas/, clave demo
-                    fuera del código.
-                    · DOC FORMAL: Arquitectura.md, Manual_Tecnico.md,
-                    Manual_Usuario.md y Reporte_QA.md NUEVOS (entregables
-                    3/6/7/8 del cronograma de Progreso.docx).
-
-  Funciona YA: MODO SIN SERVIDOR (S10, el actual): login Firebase → cuentas
-                del proveedor EN VIVO → foto/galería → pipeline EN EL TELÉFONO
-                (ML Kit→riesgo→conciliación) → Firestore+Storage → pago con
-                comprobante. Todo con datos móviles, sin Laragon y sin IP.
-                (El modo Laragon de S1-S9 sigue disponible para la demo
-                académica: ver Sección 4.)
-  UI 01/10 pm: (histórico) 0.7.2-ui: paneles pastel, chips ✅/⚠️/⏳, banner,
-                píldoras, consejos 💡 — TODO conservado en 0.8.0-v1, que
-                añade login/botones con el mismo estilo. APK vc 11.
-  Probado    : 09/10 — C5 por HTTP 15/15 OK (test_c5.ps1; BUILD SUCCESSFUL
-                 assembleDebug; mysqld+httpd de Laragon arrancados a mano;
-                 migración aplicada; desplegar.ps1 corrido). 14/10 — app
-                 0.8.2-v1 verificada EN EMULADOR API 36 con MODO OSCURO
-                 forzado (login/captura/listado por análisis de píxeles:
-                 tarjetas claras + fondo #121212 + píldoras nocturnas
-                 #2C3352 + órdenes y facturas cargando tras el hotfix).
-                 PENDIENTE: instalar en el Motorola (se desconectó el USB)
-                 y recorrer login+trío+CRUD ahí. 15/10 — S6 Firebase: APK
-                 0.9.0-v1 BUILD SUCCESSFUL (37 s, b6.log) y dump de UI del
-                 login (.ui.txt, botón «🏬 SOY PROVEEDOR» visible); el flujo
-                 factura→aviso→buzón/push VERIFICADO 15/10 pm en emulador API
-                 36 Y EN EL MOTOROLA edge 50 fusion (Android 16, actualizado a
-                 0.9.0-v1 por USB): buzón histórico, #28 en vivo, push #29 y
-                 login capturista. Evidencia: 6 capturas en el Escritorio
-                 (Prueba_S6_Motorola). Detalle: entrada 15/10, Sección 3.
-                 20/10 — C10 7/7 SIN Laragon (solo php.exe CLI + cuenta de
-                 servicio): Email/Password habilitado por API v2 y verificado
-                 con login REAL (signInWithPassword) · 4 usuarios demo con
-                 perfiles · 3 cuentas OC-101/102/103 (1 vencida + 1 por
-                 vencer, M7) · php -l OK. APK 0.14.0-v1 recompilado tras la
-                 limpieza (b14.log). PENDIENTE: vuelta completa en el
-                 Motorola (proveedor↔cliente).
-  Siguiente  : 0) PUBLICAR el fix de firestore.rules (la regla EN VIVO
-                  sigue con el || roto): consola IAM → rol «Firebase
-                  Rules Admin» a la cuenta de servicio → php
-                  herramientas\publicar_reglas.php (o pegar el archivo en
-                  la consola Firebase). 1) Probar el flujo S10 en el
-                  Motorola (ideal 2 sesiones: proveedor sube cuenta ↔
-                  cliente la ve/paga) — SPRINT10_v1.md §3. 2) S11: CRUD
-                  de administración migrado a Firestore (AdminActivity).
-                  3) Retro H4 sigue pendiente (SPRINT4_DEMO.md §3).
-                  4) Cerrar v1.0: solo falta RF-M8 (cola offline).
-                  5) Deuda v1.1: verificación de correo al registrarse
-                  (las reglas ya están).
-  Git        : e2c9b3e «correcciones de plataforma» (USUARIO, 23/10):
-                  firestore/storage.rules + herramientas/ + requirements.
-                  PENDIENTE ahora (commits a cargo del usuario): TODO el
-                  árbol sin commitear = S10.4-S10.7 de la app
-                  (recordatorios, candado, interés, sesión vigilada;
-                  0.19.0-v1 vc 29) + correcciones 22/10 (app alineada a
-                  las reglas, clave demo fuera, limpieza de logs y
-                  scripts) + correcciones 24/10 (fix de reglas,
-                  publicar_reglas.php + firebase.json, bloque S6 fuera,
-                  docs SPRINT10/INSTALACION/Bitacora). La revisión pide
-                  commits que digan QUÉ cambió; sugerido: «S10.4-S10.7
-                  (recordatorios, candado, interés, sesión vigilada) +
-                  reglas Firestore/Storage corregidas» (o dos commits:
-                  uno de la app y otro de reglas/seguridad).
+  Funciona YA: MODO SIN SERVIDOR (S10): login Firebase → cuentas del
+               proveedor EN VIVO → foto/galería → pipeline EN EL TELÉFONO
+               → Firestore+Storage → pago con comprobante. Todo con datos
+               móviles, sin Laragon y sin IP. (El camino Laragon S1-S9
+               sigue disponible para la demo académica: Sección 4.)
+  Probado    : 29/10 — APK BUILD SUCCESSFUL (42 s) tras los cambios de
+               duplicados/comprobante (b29.log) · php -l OK (config) ·
+               C9 RE-CORRIDO 14/14 con pruebas\test_s9.ps1 (portable) ·
+               publicar_reglas.php subió los 2 rulesets nuevos (release
+               sigue pendiente del propietario). PENDIENTE en el teléfono
+               físico: duplicados con 2 cuentas de cliente + vuelta
+               proveedor↔cliente CON LAS REGLAS ACTIVAS.
+  Siguiente  : 0) PROPIETARIO (una vez): consola GCP → IAM → rol «Firebase
+               Rules Admin» a firebase-adminsdk-fbsvc@cpp-facturas.iam.
+               gserviceaccount.com → php herramientas\publicar_reglas.php
+               (o pegar firestore.rules/storage.rules en la consola) →
+               re-probar en el teléfono (proveedor ve sus cuentas,
+               cliente paga/desmarca; si sale PERMISSION_DENIED revisar
+               la regla, no abrirla). 1) RF-M8 cola offline (cierra v1.0).
+               2) Retro H4 con usuarios ajenos (pendiente desde S4).
+               3) Deuda v1.1: verificación de correo al registrarse;
+               conectar «Enviar factura» también al camino servidor
+               (Volley ya está; DEMO.md lo documenta).
+  Git        : 66de852 «Docs: cierre del cronograma de Progreso.docx»
+               (USUARIO, 24/10) es el ÚLTIMO commit. SIN COMMITEAR (los
+               commits los hace el usuario): TODO el árbol de esta sesión
+               29/10 — firestore/storage.rules, FirebaseServicio +
+               MainActivity, api/config.php, desplegar.ps1, .cmd,
+               pruebas\test_*.ps1, herramientas\repara_strings.ps1,
+               git mv a docs\ y pruebas\, MVP_CPP.md §14, docs\DEMO.md,
+               readme (riesgo + Uso de IA), INSTALACION, Manual_Tecnico,
+               Reporte_QA §7-§10, SPRINT10 §4, y ESTA bitácora.
+               Mensaje sugerido: «Correcciones 3ª revisión: comprobantes
+               inmutables, duplicados por dueño, rutas portables, docs/ y
+               pruebas/». correcciones2.docx (documento del revisor) queda SIN
+               trackear y correcciones.txt se RESTAURÓ a petición del
+               usuario (fuera de este commit; conserva la 2ª revisión).
 
 
 ────────────────────────────────────────────────────────────────────────────────
@@ -1150,6 +988,85 @@ SECCIÓN 3 · HISTORIAL DE AVANCES (cronológico)
       técnico) · capacitación ✔ (hoy, Acta_Capacitacion.md) ·
       informe final ✔ (hoy, Informe_Final.md): cronograma 10/10.
 
+  ▸ 29/10/2026 — CORRECCIONES DE LA 3ª REVISIÓN (correcciones2.docx, 6 puntos)
+    - Contexto: el revisor externo devolvió 6 puntos («lo que sigue»); esta
+      sesión los atendió TODOS. Fuente leída desde el .docx (estaba abierto
+      en Word; se copió a temporal para extraerlo).
+    - 1) REGLAS + COMPROBANTES: storage.rules — comprobantes pasan a
+      create-only en comprobantes/{ordenId}/{archivo} (match de 2 niveles;
+      el de 1 nivel queda read-only como LEGADO) y facturas también
+      create-only (nombre único por subida) · subirComprobante() ahora
+      sube comprobantes/<ordenId>/<timestamp>.jpg (un archivo NUEVO por
+      pago) · firestore.rules — el update de ordenes exige al proveedor
+      NO tocar proveedorUid/clienteCorreo y limita al cliente a
+      estado in ['pagada','pendiente'] (además del hasOnly existente).
+      PUBLICACIÓN INTENTADA con herramientas/publicar_reglas.php: rulesets
+      NUEVOS subidos (firestore 6919cb3d con TODO lo de hoy · storage
+      9e8a2bda) pero el release da 403 (el SA sigue sin
+      firebaserules.releases.update) → VERIFICADO POR API que el release
+      EN VIVO aún es el 4d2fad49 (pre-fix ||). Riesgo conocido declarado
+      en readme.md (Sección Seguridad) y Reporte_QA.md §7.
+    - 2) DUPLICADOS POR DUEÑO (RF-L3 en S10): FirebaseServicio gana
+      llaveFolio(dueno,proveedorSlug,folio) → f_<dueño>_<proveedor>_<folio>
+      y llaveTerna(dueno,monto,fecha,slug) → t_<dueño>_<monto>_<fecha>_
+      <proveedor> (monto con '.'→'p' para que 48.5 y 485 no colisionen);
+      registrarLookups Y buscarDuplicado usan LOS MISMOS métodos; la
+      llave t_<...> anterior colisionaba entre empresas (el folio 001 de
+      la empresa A marcaba duplicada la factura de la B y su set() fallaba
+      en silencio). buscarDuplicado gana el parámetro correo (MainActivity
+      pasa Sesion.correo(this)). firestore.rules: get del lookup SOLO
+      para su dueño, PERO permitido cuando resource==null (si no, el
+      «no hay duplicado» llegaría como PERMISSION_DENIED). SPRINT10_v1.md
+      §4 documenta el formato nuevo; las facturas de prueba con llave
+      vieja se re-siembran sin más.
+    - 3) RUTAS PORTABLES (nota de entrega 6.5): api/config.php define
+      PYTHON_BIN/SWIPL_BIN/GCC_BIN desde getenv(CPP_PYTHON_BIN/CPP_SWIPL_
+      BIN/CPP_GCC_BIN) con omisión 'python'/'swipl'/'gcc' del PATH (en
+      este equipo se persistieron con setx y los 3 ya resolvían por
+      PATH, verificado) · desplegar.ps1 usa $PSScriptRoot y destino
+      $env:CPP_WWW (omisión Laragon) · test_c5/s7/s8/s9/s10.ps1 usan
+      $raiz = Split-Path $PSScriptRoot -Parent (viven en pruebas\) y
+      resuelven swipl/python de PATH/env con fallbacks · android/build.cmd
+      y lanzar_b13.cmd usan %~dp0 (y respetan un JAVA_HOME existente) ·
+      herramientas/repara_strings.ps1 portable · INSTALACION.md §1 sin la
+      columna «Estado en tu equipo» · 40+ menciones C:\CPP de los
+      documentos pasaron a rutas relativas. VERIFICADO: git grep de
+      'C:\CPP' y 'C:/Users' sobre *.ps1 *.php *.cmd = 0 resultados.
+    - 4) MVP AL DÍA: MVP_CPP.md §14 «Estado de la v1 (actualización del
+      29/10/2026)» — tabla función por función (camino teléfono/servidor,
+      archivo principal, estado), por qué cambió la arquitectura (22/10),
+      enlace a docs/Arquitectura.md y pendientes declarados (RF-M8 y que
+      «Enviar factura» no usa api/procesar.php) · Bitacora.txt Sección 1
+      REESCRITA (resumía el Sprint 5 pese al encabezado 24/10).
+    - 5) DEMO DEL CAMINO SERVIDOR: docs/DEMO.md NUEVO — la MISMA factura
+      (factura_01, 4,850, F-1001) por los DOS caminos con el MISMO
+      veredicto (APROBADA · 27.3), comandos exactos (arrancar Laragon,
+      recompilar el C si hace falta, desplegar.ps1, login+POST+procesar
+      con respuestas esperadas) + test_s9.ps1 RE-CORRIDO contra el código
+      actual desde pruebas\: 14/14 OK (29/10, commit base 66de852;
+      Apache+MySQL de Laragon arrancados a mano por la sesión; mysqld
+      escuchando 3306 una sola instancia). La OPCIÓN de conectar
+      «Enviar factura» a procesar.php quedó declarada como deuda v1.1
+      (la revisión la marca como «solo si alcanza el tiempo»).
+    - 6) RAÍZ ORDENADA + IA: git mv (historia conservada) de TODA la
+      documentación a docs\ —Arquitectura, Manuales, Reporte_QA,
+      Informe_Final, Acta_Capacitacion, SPRINT*, propuestas, Explicacion,
+      ESTA Bitacora y Progreso.docx— y de test_*.ps1 a pruebas\
+      (scripts ajustados para subir un nivel); .ui.txt a herramientas\.
+      Enlaces corregidos en readme (docs/…), INSTALACION (docs/, .\
+      desplegar.ps1), Manual_Tecnico §3 (mapa nuevo del repo),
+      Reporte_QA §10 (.\pruebas\…), SPRINT2/4/5/9/10; readme.md gana la
+      sección «7. Uso de IA» (herramienta: Cline; qué hizo la IA y qué
+      decidió el autor; trazabilidad vía Bitacora/Explicacion/checkpoints).
+      correcciones.txt había sido borrado por el usuario, pero se RESTAURÓ
+      a petición suya (fuera del commit); correcciones2.docx sigue SIN
+      trackear (documento del revisor).
+    - Validación de la sesión: APK BUILD SUCCESSFUL (assembleDebug 42 s,
+      b29.log) con los cambios Java · php -l OK config/procesar ·
+      desplegar.ps1 portable corrido y ordenes.php respondiendo 401
+      (autenticación) · C9 14/14. Dejados corriendo Apache+MySQL para
+      siguientes pruebas (el revisor pide la demo en vivo).
+
 ────────────────────────────────────────────────────────────────────────────────
 SECCIÓN 4 · QUÉ FUNCIONA HOY (guía rápida de uso)
 ────────────────────────────────────────────────────────────────────────────────
@@ -1157,16 +1074,16 @@ SECCIÓN 4 · QUÉ FUNCIONA HOY (guía rápida de uso)
   MODO SIN SERVIDOR (S10, actual — SIN Laragon, SIN IP; guía completa en
   SPRINT10_v1.md):
     - Preparar UNA vez (php.exe de Laragon solo como intérprete):
-        php C:\CPP\api\habilitar_email_auth.php   (Email/Password, API v2)
-        php C:\CPP\api\semilla_firebase.php       (usuarios demo + cuentas)
+        php api\habilitar_email_auth.php   (Email/Password, API v2)
+        php api\semilla_firebase.php       (usuarios demo + cuentas)
     - Usuarios demo (clave demo, hoy fuera del repo): admin@ · capturista@ · revisor@ ·
       proveedor@cpp.demo (Firebase Auth + perfil Firestore usuarios/{uid}).
-    - Checkpoint: powershell -File C:\CPP\test_s10.ps1   (C10 7/7, 20/10).
+    - Checkpoint: powershell -File .\pruebas\test_s10.ps1   (C10 7/7, 20/10).
     - App 0.14.0-v1 (vc 21): login por correo → proveedor «➕ Subir
       cuenta» → el cliente la ve al instante en «💰 Cuentas por pagar» y
       paga CON comprobante (Storage) → factura = foto + pipeline EN EL
       TELÉFONO (ML Kit) → Firestore. APK: android\app\build\outputs\apk\
-      debug\app-debug.apk (compilar: cd C:\CPP\android && .\gradlew.bat
+      debug\app-debug.apk (compilar: cd android && .\gradlew.bat
       :app:assembleDebug).
 
   ── Modo histórico S1-S9 (demo académica con Laragon) ──
@@ -1196,14 +1113,14 @@ SECCIÓN 4 · QUÉ FUNCIONA HOY (guía rápida de uso)
               capturista/admin — sin foto del comprobante no hay pago (S8.3).
     - Imágenes recibidas quedan en C:\laragon\www\cpp\uploads\
 
-  App Android (Android Studio → Open → C:\CPP\android):
+  App Android (Android Studio → Open → <repo>\android):
     - Emulador → Servidor: 10.0.2.2 · Móvil físico → IP LAN del PC.
     - Arranca en LOGIN (RF-M1); la sesión dura 8 h o hasta «Cerrar sesión».
     - «🏬 Soy proveedor» (S6): elegir proveedor de la lista pública → buzón
       en vivo (Firestore); push FCM aunque la app esté cerrada (Android 13+
       pide permiso de notificaciones al abrir el buzón).
     - APK: android\app\build\outputs\apk\debug\app-debug.apk (0.13.1-v1, vc 20)
-      (compilar: cd C:\CPP\android && .\gradlew.bat :app:assembleDebug)
+      (compilar: cd android && .\gradlew.bat :app:assembleDebug)
     - Al ENVIAR la foto la app llama sola a procesar.php y muestra el
       veredicto (✅/⚠️/⏳ + riesgo); «📋 Ver facturas» → lista con badges
       (RF-M5); «⚙️ Administración» (solo admin) → CRUD de usuarios/órdenes.
@@ -1211,8 +1128,8 @@ SECCIÓN 4 · QUÉ FUNCIONA HOY (guía rápida de uso)
   Guías detalladas: INSTALACION.md (S1) · SPRINT2_ANDROID.md (S2) ·
                     SPRINT4_DEMO.md (S4) · SPRINT5_v1.md (S5: login/roles) ·
                     SPRINT9_v1.md (S9: duplicados/OCR/filtros/alertas).
-  Checkpoints re-ejecutables: powershell -File C:\CPP\test_c5.ps1 (15) ·
-                           C:\CPP\test_s9.ps1 (14 — duplicados y trío exigen
+  Checkpoints re-ejecutables: powershell -File .\pruebas\test_c5.ps1 (15) ·
+                           .\pruebas\test_s9.ps1 (14 — duplicados y trío exigen
                            BD limpia: ver su encabezado).
 
 
@@ -1250,7 +1167,7 @@ SECCIÓN 6 · ENTORNO DEL EQUIPO (referencias)
     - Laragon ............. C:\laragon (PHP 8.1.10)
     - MySQL (Laragon) ..... C:\laragon\bin\mysql\mysql-8.0.30-winx64
                             datos: C:\laragon\data\mysql-8 · root sin contraseña
-    - Web root del proyecto C:\laragon\www\cpp  (copia de C:\CPP)
+    - Web root del proyecto C:\laragon\www\cpp  (copia de la raíz del repo)
     - Android Studio ...... JBR 21 · Gradle 8.13 · emulador API 30+
     - Rutas verificadas el 30/09/2026 (S3) — ya fijadas en api/config.php:
         Python 3.12.10 . C:\Users\acaba\AppData\Local\Programs\Python\Python312
@@ -1318,6 +1235,32 @@ SECCIÓN 7 · SIGUIENTE PASO (empezar por aquí en la próxima sesión)
         9) ✔ HECHO (24/10 pm): documentación formal — Arquitectura.md,
            Manual_Tecnico.md, Manual_Usuario.md y Reporte_QA.md
            (entregables 3/6/7/8 del cronograma de Progreso.docx).
+        10) ✔ HECHO (29/10): correcciones de la 3ª revisión (correcciones2.docx)
+            — comprobantes INMUTABLES en Storage + carpeta por orden,
+            proveedor sin tocar proveedorUid/clienteCorreo, cliente solo
+            estado pagada|pendiente, duplicados facturasLookup POR
+            DUEÑO, rutas PORTABLES (config.php/.ps1/.cmd/desplegar),
+            MVP_CPP.md §14 + Sección 1 de esta bitácora reescrita,
+            docs/DEMO.md + C9 re-corrido 14/14, raíz ordenada docs/ y
+            pruebas/ + «Uso de IA» en readme. SIGUE (USUARIO): activar
+            el RELEASE de las reglas (IAM → rol «Firebase Rules Admin»
+            → php herramientas\publicar_reglas.php o pegar en consola;
+            hoy sigue vivo el 4d2fad49 pre-fix) y re-probar en el
+            teléfono; luego RF-M8 y retro H4.
+        11) ✔ HECHO (29/10 pm): reglas EN VIVO vía Firebase CLI —
+            `npm i -g firebase-tools` + `firebase login` +
+            `firebase use --add` (crea el .firebaserc de la raíz) y
+            `firebase deploy --only firestore:rules` → Deploy complete:
+            el release pre-fix 4d2fad49 ya NO corre (se cierra el
+            «Riesgo conocido» del readme). DECISIÓN DOCUMENTADA:
+            storage.rules NO se publica — Firebase exige plan Blaze
+            (tarjeta de crédito) para activar Storage en proyectos
+            creados después de Oct/2024 y NO se cuenta con el medio
+            económico para contratarlo (proyecto académico; no es un
+            olvido): el archivo queda diseñado, versionado y listo;
+            aclarado en storage.rules, INSTALACION §8.4, readme
+            §Seguridad, Manual_Tecnico §4, Arquitectura §4.2 y SPRINT10
+            §5. SIGUE: re-probar en el teléfono; luego RF-M8 y retro H4.
 
       Notas de entorno: tras desplegar.ps1, OPcache puede servir PHP viejo
       2-3 s (reintentar). mysqld de Laragon se arrancó a mano el 01/10, el
@@ -1331,33 +1274,38 @@ SECCIÓN 7 · SIGUIENTE PASO (empezar por aquí en la próxima sesión)
 SECCIÓN 8 · MAPA DEL REPOSITORIO
 ────────────────────────────────────────────────────────────────────────────────
 
-    C:\CPP\
-    ├── readme.md, propuestas.txt, PRD_CPP.md, MVP_CPP.md  → documentación
-    ├── INSTALACION.md ......... guía Sprint 1 (BD + API)
-    ├── SPRINT2_ANDROID.md ..... guía Sprint 2 (app)
-    ├── SPRINT4_DEMO.md ........ guía Sprint 4 (demo C4 paso a paso)
-    ├── SPRINT5_v1.md .......... guía Sprint 5 (login/roles/CRUD + C5)
-    ├── SPRINT9_v1.md .......... guía Sprint 9 (duplicados/OCR/filtros/
-                                 alertas + cómo correr C9 y C5 con BD limpia)
-    ├── test_c5.ps1 ............ checkpoint C5 re-ejecutable (15 pruebas)
-    ├── test_s7.ps1 / test_s8.ps1  checkpoints C7 (15) y C8 (13)
-    ├── test_s9.ps1 ............ checkpoint C9 (14: duplicados, texto_ocr,
-    │                          vencimientos, pago con comprobante)
+    <repo>\  (raíz; docs\ y pruebas\ desde las correcciones 29/10)
+    ├── readme.md ............. visión general + arquitectura + «Uso de IA»
+    ├── PRD_CPP.md / MVP_CPP.md  requisitos y alcance (+ §14 estado de la v1)
+    ├── INSTALACION.md ......... guía de instalación (Laragon + Firebase §8)
+    ├── firestore.rules / storage.rules / firebase.json  ← seguridad versionada
     ├── desplegar.ps1 .......... publica api+database+motores en www\cpp
-    ├── Bitacora.txt ........... ESTE ARCHIVO (memoria/estado del proyecto)
-    ├── Explicacion.txt ........ guía didáctica de todo el proyecto
+    │                           (portable: $PSScriptRoot + CPP_WWW)
+    ├── docs\ .................. TODA la documentación (git mv 29/10):
+    │      Bitacora.txt (ESTE ARCHIVO) · Explicacion.txt (guía didáctica)
+    │      Arquitectura.md · Manual_Tecnico.md · Manual_Usuario.md
+    │      Reporte_QA.md · Informe_Final.md · Acta_Capacitacion.md
+    │      propuestas.txt · Progreso.docx · SPRINT2/4/5/9/10 · DEMO.md
+    ├── pruebas\ ............... test_c5 (15) · test_s7/s8 · test_s9 (14:
+    │                           duplicados, texto_ocr, vencimientos, pago
+    │                           con comprobante) · test_s10 (C10 7/7)
     ├── api\ ................... config, db, responder, facturas.php,
-    │                          ordenes.php, procesar.php (S4) + S5:
-    │                          sesion.php, autenticar.php, usuarios.php
+    │                           ordenes.php, procesar.php (S4) + S5:
+    │                           sesion.php, autenticar.php, usuarios.php
+    │                           + CLI Firebase: semilla_firebase.php,
+    │                           habilitar_email_auth.php
     ├── database\ .............. seed.sql (esquema v1.0) + migrar_v1.sql
-    │                          (MVP→v1.0 sin perder datos)
+    │                           (MVP→v1.0 sin perder datos)
     ├── uploads\ ............... imágenes recibidas (se llena en runtime)
-    ├── android\ ............... app 0.8.0-v1: LoginActivity (entrada),
-    │                          MainActivity (token+rol), ListadoActivity
-    │                          con badges, AdminActivity (CRUD), Sesion
+    ├── herramientas\ .......... publicar_reglas.php · repara_strings.ps1
+    │                           · s10_strings_frag.xml · .ui.txt
+    ├── android\ ............... app 0.19.0-v1 (vc 29): LoginActivity,
+    │                           MainActivity+Motores (pipeline en el
+    │                           teléfono), Listado, Pagos, Proveedor,
+    │                           Candado, RecordatorioWorker, Sesion
     └── motores\ ............... spike/ (pruebas + fotos demo §9.2) + los 3
-                                 motores: procesar_factura.py,
-                                 clasificador_riesgo.c/.exe, regla.pl
+                                motores: procesar_factura.py,
+                                clasificador_riesgo.c/.exe, regla.pl
 
 
 ────────────────────────────────────────────────────────────────────────────────

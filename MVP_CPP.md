@@ -300,4 +300,66 @@ Notas:
 
 ---
 
-*Fin del documento — MVP_CPP v1.0 · derivado de `PRD_CPP.md` (que a su vez proviene de `propuestas.txt` y `readme.md`)*
+## 14. Estado de la v1 (actualización del 29/10/2026)
+
+> Esta sección NO reescribe el MVP original (que quedó cerrado el 01/10):
+> declara dónde vive HOY cada función prometida. El documento original
+> describía un sistema donde PHP orquestaba todo en un servidor local.
+
+### 14.1 Por qué cambió la arquitectura
+
+El 22/10 el producto cambió de rumbo con dos decisiones del autor: (1)
+**las pruebas ya no deben depender de Laragon** y (2) **las órdenes las
+sube el proveedor** a un correo de cliente, sin IPs. Desde el Sprint 10 la
+app habla **directo con Firebase** (Auth/Firestore/Storage) y el pipeline
+corre **EN EL TELÉFONO** (`Motores.java`: ML Kit para OCR + réplicas
+exactas de la fórmula del C y de las reglas del Prolog). La pila
+PHP+MySQL+Python+C+Prolog quedó como **camino servidor** (demo académica
+de los motores originales) y sigue re-ejecutable. Diseño completo y
+justificación de las 10 decisiones: `docs/Arquitectura.md`.
+
+### 14.2 Función por función: qué camino la cubre y dónde está
+
+| Función prometida | Camino | Archivo principal | Estado |
+|---|---|---|---|
+| Captura por cámara (RF-M2) | Teléfono | `android/…/MainActivity.java` | ✔ |
+| Elegir de galería (RF-M3) | Teléfono | `MainActivity.java` | ✔ (adelantado del plan) |
+| Envío de imagen (RF-M4) | Teléfono (JPEG→Storage) | `FirebaseServicio.java` | ✔ simplificado (multipart → v1.1) |
+| Listado con badges (RF-M5/H4) | Teléfono | `ListadoActivity.java` | ✔ |
+| Filtros del tablero (RF-M6) | Teléfono | `ListadoActivity.java` (chips) | ✔ |
+| Alertas de vencimiento (RF-M7) | Teléfono | `RecordatorioWorker.java` + `PagosActivity` | ✔ |
+| Cola offline (RF-M8) | — | — | ⏳ **pendiente** (único RF del Incremento 1) |
+| API REST (RF-B1..B3, B5) | Servidor | `api/facturas.php`, `api/procesar.php` | ✔ (demo académica) |
+| CRUD usuarios/órdenes (RF-B4) | Servidor | `api/usuarios.php`, `api/ordenes.php` | ✔ |
+| Login y roles (RF-M1, RF-B6) | Teléfono (Firebase Auth) · Servidor (S5: token 8 h) | `LoginActivity.java` · `api/sesion.php` | ✔ |
+| Base de datos (RF-D1..D4) | Ambos (MySQL servidor · Firestore teléfono) | `database/seed.sql` | ✔ |
+| OCR de campos (RF-O*) | Teléfono (ML Kit) · Servidor (pytesseract) | `Motores.java` · `motores/procesar_factura.py` | ✔ (mismas regex del spike) |
+| Riesgo (RF-R*) | Teléfono · Servidor (C/GCC) | `Motores.java` · `motores/clasificador_riesgo.c` | ✔ (misma fórmula) |
+| Conciliación reglas 0-5 (RF-L1/L2) | Teléfono · Servidor (Prolog) | `Motores.java` · `motores/regla.pl` | ✔ (cláusula por cláusula) |
+| Duplicados (RF-L3) | Teléfono | `FirebaseServicio.java` (`facturasLookup` por dueño y proveedor, 29/10) | ✔ |
+| Datos OCR completos (RF-D5) | Ambos | `procesar_factura.py` (texto crudo) | ✔ |
+| Avisos y cuenta de proveedor (RF-F1..F7) | Teléfono | Firebase + `ProveedorActivity` | ✔ |
+| Cuentas por pagar / comprobante (RF-P1..P3) | Teléfono | `PagosActivity.java` | ✔ (pago solo con foto, S8.3) |
+
+Verificación vigente: 10/10 checkpoints superados; el **C9 fue re-corrido
+el 29/10 contra el código actual: 14/14 OK** (`pruebas\test_s9.ps1`,
+commit base `66de852`), y el guion de demo de los DOS caminos con la misma
+factura está en `docs/DEMO.md`.
+
+### 14.3 Pendiente declarado
+
+1. **RF-M8 (cola offline)** — único requisito del Incremento 1 sin entregar.
+2. **«Enviar factura» de la app NO usa `api/procesar.php`**: va SIEMPRE
+   por el camino principal (Firebase + pipeline en el teléfono). El
+   camino servidor se demuestra con `docs/DEMO.md` y `pruebas\test_s9.ps1`;
+   conectar el botón también al servidor (Volley ya está) queda como
+   deuda v1.1.
+3. El CRUD de administración (AdminActivity) NO se migró a Firestore: se
+   descartó en S10.3 (una cuenta por empresa; el registro público solo
+   crea el rol más pequeño). El CRUD completo vive en el camino servidor.
+4. Reglas de seguridad: los rulesets corregidos están subidos; **activar
+   el release es paso del propietario** (ver `docs/Reporte_QA.md` §7).
+
+---
+
+*Fin del documento — MVP_CPP v1.0 · derivado de `PRD_CPP.md` (que a su vez proviene de `docs/propuestas.txt` y `readme.md`)*

@@ -15,7 +15,7 @@
    `mysql -u root < database\migrar_v1.sql` — sube `password_hash` a
    VARCHAR(255) y crea la tabla `sesiones`. Si partes de cero, importa
    `database\seed.sql` (ya trae el esquema v1.0).
-3. Publica el backend: `powershell -File C:\CPP\desplegar.ps1`
+3. Publica el backend: `powershell -File .\desplegar.ps1`
 4. Prueba rápida: `GET http://localhost/cpp/api/facturas.php` → **401
    NO_AUTENTICADO** (¡eso es lo correcto ahora!).
 
@@ -59,7 +59,7 @@ Usuarios semilla (contraseña **demo1234**): `admin` · `capturista` · `revisor
 
 ## 4. Checkpoint C5 (script listo: `test_c5.ps1`)
 
-`powershell -ExecutionPolicy Bypass -File C:\CPP\test_c5.ps1` — 15 pruebas:
+`powershell -ExecutionPolicy Bypass -File .\pruebas\test_c5.ps1` — 15 pruebas:
 logins de los 3 roles, clave mala, sin token, 403 por rol (capturista al CRUD,
 revisor enviando), crear usuario + duplicado, crear orden, login del usuario
 nuevo (bcrypt), protección del último admin, **regresión del trío §9.2

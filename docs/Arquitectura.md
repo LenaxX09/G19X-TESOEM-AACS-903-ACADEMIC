@@ -111,7 +111,10 @@ Build por consola: `android\build.cmd` (Gradle 8.13, JBR 21, `minSdk 24`,
 - **Firestore** y **Storage** con **reglas de seguridad** versionadas en la
   raíz del repo (`firestore.rules`, `storage.rules`) y `firebase.json` para
   `firebase deploy` (o `herramientas/publicar_reglas.php`, que publica por
-  API con la cuenta de servicio).
+  API con la cuenta de servicio). Estado (29/10): `firestore.rules`
+  PUBLICADO en vivo con el CLI; `storage.rules` SIN publicar por decisión
+  económica — Storage exige plan Blaze (tarjeta) en proyectos
+  post-Oct/2024 (`INSTALACION.md` §8.4).
 - La **cuenta de servicio** (Admin) solo la usan los scripts PHP CLI
   (semilla, habilitar auth, publicar reglas); la app NUNCA la ve.
   `google-services.json` (app) sí va en el repo: solo identifica el
@@ -250,8 +253,9 @@ de 8 h). Esquema: `database/seed.sql` + `database/migrar_v1.sql`.
 - RF-M8 (cola offline): único requisito del Incremento 1 pendiente (8/9).
 - Verificación de correo al registrarse (deuda v1.1).
 - Camino servidor: imagen multipart (hoy Base64) y token cifrado en prefs.
-- Publicar reglas por defecto (el script `herramientas/publicar_reglas.php`
-  ya lo hace por API cuando el SA tiene el rol «Firebase Rules Admin»).
+- Publicar `storage.rules` — Firestore ya está publicado en vivo (29/10,
+  `firebase deploy --only firestore:rules`); Storage queda pendiente por
+  decisión económica (plan Blaze / tarjeta, proyectos post-Oct/2024).
 
 *Fin del documento — Arquitectura.md v1.0 · derivado del repositorio CPP.*
 

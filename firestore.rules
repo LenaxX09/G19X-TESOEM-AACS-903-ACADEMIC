@@ -1,6 +1,7 @@
 rules_version = '2';
 
-// firestore.rules — CPP v1 (correcciones 22/10/2026 · fix update 24/10/2026)
+// firestore.rules — CPP v1 (correcciones 22/10/2026 · fix update 24/10/2026
+// · comprobantes/lookups por dueño 29/10/2026)
 //
 // Publicar: consola Firebase → Firestore Database → Reglas → pegar este
 // archivo → Publicar (o `firebase deploy --only firestore:rules`).
@@ -74,12 +75,20 @@ service cloud.firestore {
           && request.resource.data.estado == 'pendiente';
       allow update: if autenticado()
           && (
-              // El proveedor dueño administra su cuenta (reabrir, interés…)
+              // El proveedor dueño administra su cuenta (reabrir, interés…),
+              // pero NO puede cambiar a QUIÉN pertenece (correcciones 29/10):
+              // proveedorUid y clienteCorreo son INMUTABLES también para él.
               soyProveedorDe(resource.data)
+                  && request.resource.data.proveedorUid
+                        == resource.data.proveedorUid
+                  && request.resource.data.clienteCorreo
+                        == resource.data.clienteCorreo
               // El cliente SOLO marca/desmarca el pago de SU cuenta
+              // (correcciones 29/10: estado limitado a pagada|pendiente).
               || (soyClienteDe(resource.data)
                   && request.resource.data.diff(resource.data).affectedKeys()
-                       .hasOnly(['estado', 'pagadaEn', 'comprobanteUrl']))
+                       .hasOnly(['estado', 'pagadaEn', 'comprobanteUrl'])
+                  && request.resource.data.estado in ['pagada', 'pendiente'])
           );
       allow delete: if autenticado() && soyProveedorDe(resource.data);
     }
@@ -93,10 +102,15 @@ service cloud.firestore {
     }
 
     // ── facturasLookup/{id}: pre-check de duplicados (RF-L3) ────────────────
-    // Lecturas PUNTUALES por id (f_<folio> / t_<monto_fecha_slug>); nunca
-    // se lista.
+    // Correcciones 29/10: la llave incluye al DUEÑO (f_<dueño>_<proveedor>_
+    // <folio> / t_<dueño>_<monto>_<fecha>_<proveedor>) → un folio repetido en
+    // OTRA empresa ya no es «duplicado». Solo el dueño lee SU lookup; cuando
+    // el documento NO existe (resource == null) la lectura se PERMITE para
+    // que la búsqueda pueda responder «no hay duplicado» (si se negara, el
+    // SDK devolvería PERMISSION_DENIED en vez de «inexistente»).
     match /facturasLookup/{id} {
-      allow get: if autenticado();
+      allow get: if autenticado()
+          && (resource == null || resource.data.dueno == miCorreo());
       allow create: if autenticado()
           && request.resource.data.dueno == miCorreo();
       allow list, update, delete: if false;

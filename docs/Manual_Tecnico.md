@@ -32,21 +32,27 @@ apunta a los archivos reales del repositorio.
 ## 3. Estructura del repositorio
 
 ```
-C:\CPP\
-├── Arquitectura.md · Manual_Tecnico.md · Manual_Usuario.md · Reporte_QA.md   ← documentación formal
-├── PRD_CPP.md (requisitos) · MVP_CPP.md (alcance/sprints) · propuestas.txt
-├── INSTALACION.md (guía de instalación) · README.md (visión general)
-├── Bitacora.txt (historial del proyecto) · Explicacion.txt (explicación académica)
-├── SPRINT2/4/5/9/10_*.md (guías por sprint) · correcciones.txt (revisiones)
+<repo>\
+├── readme.md (visión general) · PRD_CPP.md (requisitos) · MVP_CPP.md (alcance/sprints)
+├── INSTALACION.md (guía de instalación)
+├── firestore.rules · storage.rules · firebase.json   ← seguridad versionada
+├── desplegar.ps1       → publica la API en el www de Laragon (raíz portable: $PSScriptRoot)
+├── docs\               → TODA la documentación del proyecto:
+│      Arquitectura.md · Manual_Tecnico.md · Manual_Usuario.md · Reporte_QA.md
+│      Informe_Final.md · Acta_Capacitacion.md · propuestas.txt
+│      Bitacora.txt (historial) · Explicacion.txt (explicación académica)
+│      SPRINT2/4/5/9/10_*.md (guías por sprint) · DEMO.md (guion de demo)
+├── pruebas\            → test_c5.ps1 · test_s7/s8/s9/s10.ps1 (checkpoints re-ejecutables)
 ├── android\            → app Android (Java) + build.cmd + gradlew.bat
 ├── api\                → API PHP (camino servidor) + scripts CLI de Firebase
 ├── database\           → seed.sql + migrar_v1.sql (respaldos NO van al repo)
 ├── motores\            → procesar_factura.py · clasificador_riesgo.c/.exe · regla.pl · requirements.txt · spike\
-├── herramientas\       → publicar_reglas.php · repara_strings.ps1 · s10_strings_frag.xml
-├── firestore.rules · storage.rules · firebase.json   ← seguridad versionada
-├── test_c5.ps1 · test_s7/s8/s9/s10.ps1               ← checkpoints re-ejecutables
-└── desplegar.ps1       → publica la API en el www de Laragon
+└── herramientas\       → publicar_reglas.php · repara_strings.ps1 · s10_strings_frag.xml
 ```
+
+> Correcciones 29/10: la raíz se ordenó en `docs\` (documentación) y
+> `pruebas\` (checkpoints). `correcciones.txt` (2ª revisión) permanece
+> en la raíz a decisión del autor, fuera de los commits nuevos.
 
 ## 4. Puesta en marcha — camino PRINCIPAL (Firebase, sin Laragon)
 
@@ -58,24 +64,25 @@ C:\CPP\
    `.gitignore`).
 3. **Auth por correo** (sin consola): `php api\habilitar_email_auth.php`
    (API v2, una sola vez).
-4. **Reglas de seguridad** (§8.4): publicar `firestore.rules` y
-   `storage.rules` — consola, `firebase deploy --only firestore:rules,storage`
-   (usa el `firebase.json` de la raíz) o
-   `php herramientas\publicar_reglas.php` (por API; requiere UNA vez el rol
-   «Firebase Rules Admin» para la cuenta de servicio en la consola IAM).
+4. **Reglas de seguridad** (§8.4): publicar `firestore.rules` —
+   `firebase deploy --only firestore:rules` (así se publicó el 29/10) o
+   pegarlo en la consola. `storage.rules` queda SIN publicar por decisión
+   económica: Storage exige el plan Blaze (tarjeta) en proyectos
+   post-Oct/2024 y no se cuenta con el medio para contratarlo (§8.4);
+   el archivo queda diseñado y versionado para cuando Storage se active.
 5. **Datos demo** (re-ejecutable):
    ```powershell
    $env:CPP_DEMO_CLAVE = 'la-clave-que-configuraste'   # NUNCA en el repo
    php api\semilla_firebase.php    # usuarios demo + 3 cuentas OC-101/102/103
    ```
-6. **Checkpoint**: `powershell -File test_s10.ps1` → **C10: 7/7 OK**.
+6. **Checkpoint**: `powershell -File .\pruebas\test_s10.ps1 (desde la raíz)` → **C10: 7/7 OK**.
 7. Instalar el APK (`§6`) y entrar con `cliente@cpp.demo` /
    `proveedor@cpp.demo`.
 
 ## 5. Puesta en marcha — camino SERVIDOR (Laragon, demo académica)
 
 1. Copiar el repo a `C:\laragon\www\cpp` (o apuntar el Document Root a
-   `C:\CPP`) e iniciar Apache+MySQL.
+   la carpeta del repo) e iniciar Apache+MySQL.
 2. Importar `database\seed.sql` en phpMyAdmin (BD `cpp`; aplicar además
    `migrar_v1.sql` para los sprints 5-9).
 3. Revisar `api\config.php` (credenciales MySQL y rutas de `python`,
@@ -91,11 +98,11 @@ Detalle completo, solución de problemas y KPIs: `INSTALACION.md` §1-§7.
 ## 6. Compilación de la app Android
 
 ```powershell
-C:\CPP\android\build.cmd        # usa el JBR 21 de Android Studio
+android\build.cmd        # usa el JBR 21 de Android Studio
 # BUILD_OK → APK en android\app\build\outputs\apk\debug\app-debug.apk
 ```
 
-Equivalente: `cd C:\CPP\android ; .\gradlew.bat :app:assembleDebug`.
+Equivalente: `cd android ; .\gradlew.bat :app:assembleDebug`.
 Versión actual: **0.19.0-v1 (versionCode 29)**. Instalar: `adb install -r
 app-debug.apk` (o copiar el APK al teléfono).
 

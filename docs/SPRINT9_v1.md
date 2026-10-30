@@ -22,13 +22,13 @@ comprobante y pasa sola a PAGADAS.
    ```
    mysql -u root cpp < database\migrar_v1.sql
    ```
-3. Publicar el backend: `powershell -File C:\CPP\desplegar.ps1`
-4. Compilar el APK: `cd C:\CPP\android && build.cmd` (usa el JBR 21).
+3. Publicar el backend: `powershell -File .\desplegar.ps1`
+4. Compilar el APK: `cd android && build.cmd` (usa el JBR 21).
 
 ## 2. Probar el checkpoint C9 (re-ejecutable)
 
 ```powershell
-powershell -File C:\CPP\test_s9.ps1
+powershell -File .\pruebas\test_s9.ps1
 ```
 
 **Importante:** la detección de duplicados es GLOBAL. Para que la regresión
@@ -38,8 +38,8 @@ del trío §9.2 salga exacta (test_c5.ps1) la base debe estar limpia:
 # respaldo + limpieza (como en la demo del 01/10)
 mysqldump -u root cpp facturas > database\backup.sql
 mysql   -u root cpp -e "TRUNCATE TABLE facturas;"
-powershell -File C:\CPP\test_c5.ps1   # trío exacto: 27.3 / 53.0 MONTO_EXCEDE / PROVEEDOR_NO_COINCIDE
-powershell -File C:\CPP\test_s9.ps1   # 14 pruebas
+powershell -File .\pruebas\test_c5.ps1   # trío exacto: 27.3 / 53.0 MONTO_EXCEDE / PROVEEDOR_NO_COINCIDE
+powershell -File .\pruebas\test_s9.ps1   # 14 pruebas
 ```
 
 ## 3. Probar a mano en el móvil (0.13.0-v1)

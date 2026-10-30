@@ -1,7 +1,7 @@
 # PRD — Plataforma Inteligente para la Gestión de Cuentas por Pagar (CPP)
 
 > **Documento de Requisitos del Producto (Product Requirements Document)**
-> Generado a partir de `propuestas.txt` (estrategia técnica y plan por fases) y `readme.md` (descripción general del proyecto).
+> Generado a partir de `docs/propuestas.txt` (estrategia técnica y plan por fases) y `readme.md` (descripción general del proyecto).
 
 | Campo | Detalle |
 |---|---|
@@ -10,7 +10,7 @@
 | **Versión del PRD** | 1.0 |
 | **Fecha** | 23/09/2026 |
 | **Estado** | Borrador — pendiente de aprobación |
-| **Documentos base** | `propuestas.txt`, `readme.md` |
+| **Documentos base** | `docs/propuestas.txt`, `readme.md` |
 
 ---
 

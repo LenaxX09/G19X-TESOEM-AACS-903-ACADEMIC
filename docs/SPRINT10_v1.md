@@ -56,19 +56,19 @@ Solo se necesita:
 
 1. `php.exe` en el PATH (o el de Laragon `C:\laragon\bin\php\*\php.exe`:
    se usa el .exe como intérprete, **sin iniciar Laragon**).
-2. La clave de servicio en `C:\CPP\api\firebase-service-account.json`
+2. La clave de servicio en `api\firebase-service-account.json`
    (SECRETO, fuera de git — consola de Firebase → ⚙️ Configuración del
    proyecto → Cuentas de servicio → Generar clave JSON).
 3. Habilitar el login por correo (API **v2**, verificado en vivo 20/10):
    ```
-   php C:\CPP\api\habilitar_email_auth.php
+   php api\habilitar_email_auth.php
    ```
 4. Sembrar los datos demo (re-ejecutable) — la clave demo NUNCA viaja en
    el repo (correcciones 22/10): pásala por variable de entorno (o
    parámetro):
    ```
    $env:CPP_DEMO_CLAVE = 'la-clave-que-configuraste'
-   php C:\CPP\api\semilla_firebase.php
+   php api\semilla_firebase.php
    ```
    Crea en Auth (con la clave que configuraste): `cliente@cpp.demo` (la EMPRESA
    cliente, con su empresa en el perfil) y `proveedor@cpp.demo`; BORRA
@@ -80,8 +80,8 @@ Solo se necesita:
 
 ```powershell
 # define antes la clave demo (no vive en el repo): $env:CPP_DEMO_CLAVE = '…'
-powershell -File C:\CPP\test_s10.ps1            # solo verifica (7 pruebas)
-powershell -File C:\CPP\test_s10.ps1 -Semilla   # re-siembra y verifica
+powershell -File .\pruebas\test_s10.ps1            # solo verifica (7 pruebas)
+powershell -File .\pruebas\test_s10.ps1 -Semilla   # re-siembra y verifica
 ```
 
 - T1 Email/Password habilitado + **login demo real** (signInWithPassword
@@ -169,15 +169,24 @@ Con datos móviles/WiFi (nada de `adb reverse` ni teclear IP):
     `existeCorreo()` lo consulta 1-a-1 porque las reglas NO dejan listar
     `usuarios`.
   - `facturasLookup/{id}`: índice anti-duplicados (RF-L3) que escribe
-    `guardarFactura` — por folio (`f_<folio>`) y por terna
-    (`t_<monto_fecha_slug>`); solo lecturas PUNTUALES (`facturas` ya no
-    se puede listar entre clientes).
+    `guardarFactura`. Correcciones 29/10: la llave incluye al DUEÑO y al
+    proveedor — por folio (`f_<dueño>_<proveedor>_<folio>`) y por terna
+    (`t_<dueño>_<monto>_<fecha>_<proveedor>`), construidas SIEMPRE con
+    `FirebaseServicio.llaveFolio()/llaveTerna()` (escribir y buscar usan
+    el mismo método). Solo lecturas PUNTUALES del dueño (la regla permite
+    el `get` aunque el documento no exista, para que «no hay duplicado»
+    no llegue como PERMISSION_DENIED). Un folio repetido en OTRA empresa
+    ya NO es duplicado; las facturas de prueba con la llave vieja
+    (`f_<folio>` / `t_<monto_fecha_slug>`) se re-siembran sin más.
   - (del S6, cerradas por las reglas) `clientes`, `proveedores` y
     `notificaciones` solo las toca la cuenta de servicio del camino
     servidor. El buzón FCM del S6 se retiró de la app (correcciones
     24/10): el proveedor vive de `ordenes` en tiempo real y los avisos
     S10 son locales (RecordatorioWorker).
-- Storage: `facturas/<timestamp>.jpg` y `comprobantes/<ordenId>.jpg`.
+- Storage: `facturas/<timestamp>.jpg` y
+  `comprobantes/<ordenId>/<timestamp>.jpg` (correcciones 29/10: un
+  archivo NUEVO por pago — storage.rules permite create y CIERRA update,
+  así nadie reemplaza el comprobante de otra persona).
 - Los motores originales (`motores/*.py/.c/.pl`) quedan como REFERENCIA
   académica y para la demo con Laragon; `Motores.java` replica sus reglas
   con los mismos resultados. `regla.pl` sigue con 10 argumentos.
@@ -196,7 +205,10 @@ Con datos móviles/WiFi (nada de `adb reverse` ni teclear IP):
   `ordenes` se corrigió (correcciones 24/10: decía `autenticado() || …`
   y el `||` suelto dejaba editar CUALQUIER orden a cualquiera con sesión;
   ahora `autenticado() && (proveedor dueño || cliente con hasOnly)`).
-  Publicación: consola, `herramientas/publicar_reglas.php` (API con la
-  cuenta de servicio) o `firebase deploy` (el `firebase.json` de la raíz
-  apunta a las dos reglas). Queda como deuda v1.1 la verificación de
+  Publicación: `firestore.rules` publicado EN VIVO el 29/10 con
+  `firebase deploy --only firestore:rules` (Firebase CLI, cuenta dueña).
+  `storage.rules` queda SIN publicar por decisión económica: Storage
+  exige el plan Blaze (tarjeta) en proyectos post-Oct/2024 y no se
+  cuenta con el medio para contratarlo (INSTALACION.md §8.4, Bitácora
+  entrada 11). Queda como deuda v1.1 la verificación de
   correo al registrarse.

@@ -144,8 +144,8 @@ cuenta en la consola → expulsión en vivo en segundos).
 
 ## 7. Pruebas de seguridad y revisiones externas
 
-**Dos rondas de revisión del repositorio** por un agente lector externo
-(`correcciones.txt` conserva la segunda):
+**Tres rondas de revisión del repositorio** por un agente lector externo
+(`correcciones2.docx` conserva la tercera):
 
 - **1ª revisión → correcciones 22/10**: reglas de Firestore/Storage nuevas
   (rol inmutable, `usuarios` sin listar, facturas/órdenes ajenas ilegibles,
@@ -161,11 +161,32 @@ cuenta en la consola → expulsión en vivo en segundos).
   cerradas; `escucharOrdenesTodas` eliminada y `escucharFacturas` sin
   «todas»; `firebase.json` + `herramientas/publicar_reglas.php`;
   documentación de colecciones y contratos (`SPRINT10_v1.md` §4).
+- **3ª revisión → correcciones 29/10** (6 puntos): `storage.rules` con
+  **comprobantes inmutables** (`comprobantes/<ordenId>/<timestamp>.jpg`:
+  create sí, update no — nadie reemplaza el comprobante ajeno) y la app
+  sube un archivo NUEVO por pago; `firestore.rules` exige que el
+  **proveedor no cambie `proveedorUid`/`clienteCorreo`** de una orden y que
+  el **cliente solo ponga `estado` en `pagada|pendiente`**;
+  **duplicados POR DUEÑO** (`facturasLookup` con llaves
+  `f_<dueño>_<proveedor>_<folio>` / `t_<dueño>_<monto>_<fecha>_<proveedor>`,
+  legibles solo por su dueño, `get` permitido cuando el documento no
+  existe); **rutas portables** (`api/config.php` con env vars, `.ps1` con
+  `$PSScriptRoot`, `.cmd` con `%~dp0`, `desplegar.ps1` con `CPP_WWW` —
+  verificado con `git grep`: 0 rutas de equipo en `*.ps1/*.php/*.cmd`);
+  raíz ordenada en `docs/` y `pruebas/` + sección «Uso de IA» en el
+  readme; `MVP_CPP.md` actualizado con el estado real de la v1 y
+  `DEMO.md` con el guion de los dos caminos + **C9 re-corrido 14/14 el
+  29/10** (commit base `66de852` + correcciones del día).
 - **Publicación de reglas**: los rulesets corregidos fueron **subidos y
-  verificados por API** (firestore con el fix y storage); la activación del
-  release en la consola requiere el rol «Firebase Rules Admin» para la
-  cuenta de servicio — paso del propietario documentado en
-  `INSTALACION.md` §8.4 y `Bitacora.txt` §1.
+  verificados por API** (29/10, tras los 3 ajustes de seguridad:
+  Firestore `6919cb3d…` y Storage `9e8a2bda…`), pero la **activación del
+  release requiere el rol «Firebase Rules Admin»** para la cuenta de
+  servicio (`firebase-adminsdk-fbsvc@cpp-facturas.iam.gserviceaccount.com`)
+  — paso del propietario en la consola IAM (o pegar los archivos en la
+  consola Firebase). **Verificado 29/10 por API: el release EN VIVO sigue
+  siendo el `4d2fad49` (anterior al fix del `||`)** — hasta que el
+  propietario active el nuevo, la regla que manda en producción es la
+  vieja (riesgo conocido, documentado también en el readme).
 - **Secretos**: cuenta de servicio y clave demo fuera de git
   (verificado con `git ls-files`); instrucción de rotación de la clave demo
   vieja en `INSTALACION.md` §8.3.
@@ -182,6 +203,8 @@ cuenta en la consola → expulsión en vivo en segundos).
 | 22/10 | Comentarios con doble encoding (UTF-8) en 2 archivos Java | Reparación de encoding |
 | 24/10 | Regla Firestore con `||` suelto (escalada de permisos en `ordenes`) | Paréntesis corregidos + ruleset subido (§7) |
 | 24/10 | Código muerto S6 escribiendo en colecciones cerradas | Bloque retirado (decisión: cambiar código, no abrir reglas) |
+| 29/10 | Comprobantes de Storage reemplazables por cualquier cuenta (`update` abierto) | `comprobantes/<ordenId>/<timestamp>.jpg` + create-only en `storage.rules` |
+| 29/10 | Duplicados GLOBALES: el folio de otra empresa marcaba «duplicada» la factura ajena | Llaves de `facturasLookup` POR DUEÑO y lectura restringida al dueño |
 
 ## 9. Estado final y pendientes
 
@@ -193,10 +216,17 @@ formal completa (`Arquitectura.md`, `Manual_Tecnico.md`,
 **Pendientes (declarados, no ocultos)**:
 
 1. RF-M8 (cola offline) — único RF del Incremento 1 pendiente.
-2. Activar el release de las reglas en la consola (paso del propietario,
-   §7) o pegarlas a mano.
-3. Vuelta completa proveedor↔cliente en el Motorola físico (guion
-   `SPRINT10_v1.md` §3 en dos sesiones).
+2. **Activar el release de las reglas** en la consola (paso del
+   propietario, §7): rol «Firebase Rules Admin» a
+   `firebase-adminsdk-fbsvc@cpp-facturas.iam.gserviceaccount.com` y
+   re-correr `php herramientas\publicar_reglas.php` (o pegar los archivos
+   en la consola). Mientras tanto el release en vivo es el viejo
+   `4d2fad49`.
+3. Probar el flujo de duplicados por dueño en el teléfono (2 cuentas de
+   cliente) y la vuelta completa proveedor↔cliente en el Motorola físico
+   (guion `SPRINT10_v1.md` §3 en dos sesiones) — con las reglas ya
+   activas; si algo da PERMISSION_DENIED, revisar la regla antes de
+   abrirla.
 4. Deuda v1.1: verificación de correo al registrarse; multipart; token
    cifrado (camino servidor).
 
@@ -204,15 +234,15 @@ formal completa (`Arquitectura.md`, `Manual_Tecnico.md`,
 
 ```powershell
 # Camino principal (sin Laragon; necesita api\firebase-service-account.json y la clave demo)
-$env:CPP_DEMO_CLAVE = '…' ; powershell -File C:\CPP\test_s10.ps1        # C10: 7/7
+$env:CPP_DEMO_CLAVE = '…' ; powershell -File .\pruebas\test_s10.ps1        # C10: 7/7
 
 # Camino servidor (con Laragon: Apache + MySQL + BD cpp restaurada)
-powershell -File C:\CPP\test_c5.ps1                                      # 15/15
-powershell -File C:\CPP\test_s9.ps1                                      # 14/14
+powershell -File .\pruebas\test_c5.ps1                                      # 15/15
+powershell -File .\pruebas\test_s9.ps1                                      # 14/14
 
 # Compilación y sintaxis
-C:\CPP\android\build.cmd                                                 # BUILD_OK
-php -l C:\CPP\herramientas\publicar_reglas.php                           # sin errores
+android\build.cmd                                                 # BUILD_OK
+php -l herramientas\publicar_reglas.php                           # sin errores
 ```
 
 *Fin del documento — Reporte_QA.md v1.0.*

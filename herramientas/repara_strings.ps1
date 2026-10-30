@@ -2,11 +2,12 @@
 # 1) invierte el doble-encode (UTF8 leido como CP1252 y regrabado como UTF8)
 # 2) restaura lineas con emoji danado: bloque S9/S10 (frag) o version limpia de HEAD
 $ErrorActionPreference = 'Stop'
-$p    = 'C:\CPP\android\app\src\main\res\values\strings.xml'
-$head = "$env:TEMP\strings_head.xml"
-$frag = 'C:\CPP\s10_strings_frag.xml'
+$raiz  = Split-Path $PSScriptRoot -Parent
+$p     = "$raiz\android\app\src\main\res\values\strings.xml"
+$head  = "$env:TEMP\strings_head.xml"
+$frag  = "$raiz\herramientas\s10_strings_frag.xml"
 
-cmd /c "git -C C:\CPP show HEAD:android/app/src/main/res/values/strings.xml > `"$head`""
+cmd /c "git -C "$raiz" show HEAD:android/app/src/main/res/values/strings.xml > `"$head`""
 
 # 1) reversa del doble encode
 $mal    = [IO.File]::ReadAllText($p, [Text.Encoding]::UTF8)

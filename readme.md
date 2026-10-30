@@ -30,7 +30,7 @@ App Android (Java) + Firebase: **Auth** (correo/contraseña) · **Firestore**
 teléfono. El riesgo y la conciliación los calcula `Motores.java` (réplica
 regla por regla de `clasificador_riesgo.c` y `regla.pl`). Es el camino de
 producción de la v1: no hay IP que teclear ni MySQL que levantar
-(ver `SPRINT10_v1.md`).
+(ver `docs/SPRINT10_v1.md`).
 
 ### Camino SERVIDOR — Laragon (demo académica de los motores originales)
 
@@ -71,13 +71,23 @@ PHP) y DÓNDE viven los datos (Firestore vs MySQL).
 
 ### Seguridad
 
-- `firestore.rules` y `storage.rules` (raíz del repo) cierran Firestore y
-  Storage: el `rol` de `usuarios/{uid}` es **inmutable**, no se puede
-  listar `usuarios` (el proveedor consulta `clientesPorCorreo`), y las
-  facturas/órdenes ajenas no se pueden leer. Las de **Firestore** son las
-  obligatorias (datos reales, gratis de publicar); las de **Storage**
-  (fotos) son opcionales: los proyectos nuevos piden plan Blaze/tarjeta
-  para entrar a esa sección (ver `INSTALACION.md` §8.4).
+- `firestore.rules` (raíz del repo, **publicado en vivo el 29/10**) cierra
+  Firestore: el `rol` de `usuarios/{uid}` es **inmutable**, no se puede
+  listar `usuarios` (el proveedor consulta `clientesPorCorreo`), las
+  facturas/órdenes ajenas no se pueden leer, el proveedor no puede cambiar
+  a quién pertenece una orden y el cliente solo marca/desmarca el pago.
+  `storage.rules` (raíz, **sin publicar** — ver nota de abajo) haría los
+  comprobantes **inmutables** (create sí, update no; cada pago crea
+  `comprobantes/<ordenId>/<timestamp>.jpg`).
+- **Estado de las reglas (29/10)**: `firestore.rules` PUBLICADO en vivo
+  con `firebase deploy --only firestore:rules` — el release pre-fix
+  `4d2fad49` ya NO corre (riesgo anterior cerrado). `storage.rules`
+  queda DISEÑADO y VERSIONADO pero **sin publicar por decisión
+  económica**: Firebase exige el plan Blaze (tarjeta de crédito) para
+  activar Storage en proyectos creados después de Oct/2024 y no se
+  cuenta con el medio económico para contratarlo (detalle en
+  `INSTALACION.md` §8.4). Sin esa capa, las imágenes quedan con las
+  reglas por defecto del bucket.
 - La clave de las cuentas demo NO vive en el repo: se pasa con la
   variable de entorno `CPP_DEMO_CLAVE` (ver `INSTALACION.md` §8).
 
@@ -123,7 +133,7 @@ principal, sin servidor):
    - **Tu propio Firebase (aislado del nuestro)**: sigue `INSTALACION.md`
      §8 completo — crear proyecto, reemplazar `google-services.json`,
      habilitar Email/Password, sembrar con TU clave, publicar las reglas
-     y correr el checkpoint `test_s10.ps1`.
+     y correr el checkpoint `pruebas\test_s10.ps1`.
 6. **Candado**: al reabrir la app con la sesión abierta pide la
    huella/PIN del teléfono (así se diseñó; «Cerrar sesión» es la válvula
    de escape). El teléfono de prueba debe tener ALGÚN bloqueo de
@@ -131,7 +141,7 @@ principal, sin servidor):
    solo deja reintentar o cerrar sesión.
 
 Para el camino SERVIDOR (Laragon + MySQL + Python + C + Prolog) sigue
-`INSTALACION.md` §1-§5; para el resto de pruebas guiadas, `SPRINT10_v1.md`.
+`INSTALACION.md` §1-§5; para el resto de pruebas guiadas, `docs/SPRINT10_v1.md`.
 
 ## 3. Tecnologías por componente
 
@@ -178,3 +188,25 @@ Objetivos Específicos:
 -Desarrollar las reglas de conciliación (reglas 0-5, originalmente en Prolog) para detectar inconsistencias en los pagos.
 
 -Crear tableros de control en la app móvil con indicadores claros para el usuario.
+
+## 7. Uso de IA
+
+Este proyecto se desarrolló con asistencia de IA, y se declara con claridad:
+
+- **Herramienta**: Cline (agente de código asistido por IA) trabajando sobre
+  el repositorio local, dirigido sesión a sesión por el autor del proyecto.
+- **Para qué se usó**: escribir código y automatizaciones bajo indicaciones
+  concretas (sprints S1-S10: API PHP, app Android, motores Python/C/Prolog,
+  reglas de Firebase, scripts de prueba `pruebas\test_*.ps1`), redactar la
+  documentación derivada (`docs\`) y atender las tres rondas de revisión
+  externa (22/10, 24/10 y 29/10, archivo `correcciones2.docx`).
+- **Qué decidió el autor**: el alcance y prioridad de cada sprint, el modelo
+  de negocio (roles, cuentas por pagar, pago con comprobante, candado
+  biométrico, paleta visual), todas las decisiones de producto aceptadas o
+  rechazadas, la verificación real en el teléfono físico (Motorola) y la
+  rotación de credenciales; los **commits los hace el autor** con mensajes
+  que describen qué cambió.
+- **Trazabilidad**: cada sesión quedó registrada en `docs\Bitacora.txt`
+  (historial fechado) y explicada en `docs\Explicacion.txt`; los checkpoints
+  `pruebas\test_*.ps1` son re-ejecutables por cualquiera para verificar el
+  resultado sin depender de la IA.

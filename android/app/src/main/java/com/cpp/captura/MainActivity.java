@@ -399,7 +399,8 @@ public class MainActivity extends AppCompatActivity {
 
         FirebaseServicio.historialPromedio(Sesion.correo(this), slug, promedio -> runOnUiThread(() -> {
             final double riesgo = Motores.clasificadorRiesgo(c.monto, promedio);
-            FirebaseServicio.buscarDuplicado(c.folio, c.monto, c.fecha, slug,
+            FirebaseServicio.buscarDuplicado(Sesion.correo(this), c.folio, c.monto,
+                    c.fecha, slug,
                     originalId -> runOnUiThread(() ->
                             conciliarYGuardar(orden, c, riesgo, originalId != null, bytes, t0)),
                     e -> runOnUiThread(() -> {

@@ -1,16 +1,16 @@
 # Guía de Instalación — CPP (Sprint 1 «Base» con Laragon + Firebase del Sprint 10)
 
-> Corresponde a la Fase 1 de `propuestas.txt` y al Sprint S1 del `MVP_CPP.md` (sección 8).
+> Corresponde a la Fase 1 de `docs/propuestas.txt` y al Sprint S1 del `MVP_CPP.md` (sección 8).
 > Meta: superar el **checkpoint C1** — *"desde Postman se crea una factura (imagen dummy) y se consulta su estado"*.
 > El camino SIN servidor (app actual, Sprint 10) se prepara en la **sección 8**: Firebase + php.exe, sin Apache ni MySQL.
 
 ## 1. Requisitos
 
-| Software | Uso | Estado en tu equipo |
-|---|---|---|
-| Laragon (o XAMPP) | Apache + MySQL + PHP | ✅ Detectado en `C:\laragon` (PHP 8.1.10) |
-| Navegador / phpMyAdmin | Importar el script SQL | Incluido en Laragon |
-| Postman (opcional) | Probar endpoints | Alternativa: PowerShell (sección 5) |
+| Software | Uso |
+|---|---|
+| Laragon (o XAMPP) | Apache + MySQL + PHP |
+| Navegador / phpMyAdmin | Importar el script SQL (incluido en Laragon) |
+| Postman (opcional) | Probar endpoints · Alternativa: PowerShell (sección 5) |
 
 ## 2. Publicar el proyecto en el servidor web
 
@@ -25,7 +25,7 @@ C:\laragon\www\cpp\
 
 Con Laragon iniciado, la API queda disponible en: `http://localhost/cpp/api/`
 
-> Alternativa sin copiar: en Laragon → Menú → Preferences → Document Root, apunta directamente a `C:\CPP`.
+> Alternativa sin copiar: en Laragon → Menú → Preferences → Document Root, apunta directamente a la carpeta del repositorio.
 
 ## 3. Crear la base de datos (RF-D1..D4)
 
@@ -97,7 +97,7 @@ Si algún día necesitas el otro MySQL84, detén antes el de Laragon.
 ## 7. Estado del proyecto y siguientes pasos
 
 - [x] S1 — Base: BD + seed + API + pruebas (este entregable)
-- [x] S2 — Captura: app Android (cámara + Volley Base64) → ver `SPRINT2_ANDROID.md`; la app apunta a `http://10.0.2.2/cpp/api/facturas.php` desde el emulador (o a la IP LAN del PC desde un móvil físico)
+- [x] S2 — Captura: app Android (cámara + Volley Base64) → ver `docs/SPRINT2_ANDROID.md`; la app apunta a `http://10.0.2.2/cpp/api/facturas.php` desde el emulador (o a la IP LAN del PC desde un móvil físico)
 - [ ] S3 — Motores: `procesar_factura.py`, `clasificador_riesgo.c` (GCC), `regla.pl` (SWI-Prolog)
 - [ ] S4 — Integración: orquestación PHP (`shell_exec`) + listado en Android
 
@@ -109,7 +109,7 @@ Si algún día necesitas el otro MySQL84, detén antes el de Laragon.
 
 > La app actual (S10) entra con **Firebase Auth** y guarda todo en
 > Firestore/Storage: no necesita Laragon. Guía de prueba completa:
-> `SPRINT10_v1.md`.
+> `docs/SPRINT10_v1.md`.
 
 ### 8.1 Crear el proyecto (UNA vez)
 
@@ -117,7 +117,7 @@ Si algún día necesitas el otro MySQL84, detén antes el de Laragon.
    (el real se llama `cpp-facturas`; Google Analytics es opcional).
 2. Agrega una app **Android** con paquete `com.cpp.captura` y descarga
    `google-services.json`.
-3. Coloca ese archivo en `C:\CPP\android\app\google-services.json`
+3. Coloca ese archivo en `android\app\google-services.json`
    (SÍ va en el repo: solo identifica el proyecto, no es secreto).
 4. Crea **Firestore Database** y **Storage** (modo *production*; las
    reglas van en el punto 8.4).
@@ -126,7 +126,7 @@ Si algún día necesitas el otro MySQL84, detén antes el de Laragon.
 
 1. Consola → ⚙️ **Configuración del proyecto → Cuentas de servicio** →
    **Generar nueva clave privada** → guarda el JSON como
-   `C:\CPP\api\firebase-service-account.json`.
+   `api\firebase-service-account.json`.
 2. Ese archivo **nunca** se commitea (ya está en `.gitignore`) y es el que
    usan `habilitar_email_auth.php`, `semilla_firebase.php` y
    `test_s10.ps1`.
@@ -135,11 +135,11 @@ Si algún día necesitas el otro MySQL84, detén antes el de Laragon.
 
 ```powershell
 # php.exe del PATH o de Laragon (solo el intérprete, sin Apache/MySQL)
-php C:\CPP\api\habilitar_email_auth.php   # UNA vez: activa Email/Password (API v2)
+php api\habilitar_email_auth.php   # UNA vez: activa Email/Password (API v2)
 
 # La clave demo NUNCA viaja en el repo (correcciones 22/10): la pasas TÚ
 $env:CPP_DEMO_CLAVE = 'la-clave-que-configuraste'
-php C:\CPP\api\semilla_firebase.php      # usuarios demo + cuentas OC-101/102/103
+php api\semilla_firebase.php      # usuarios demo + cuentas OC-101/102/103
 ```
 
 La semilla crea `cliente@cpp.demo` y `proveedor@cpp.demo` (con TU clave),
@@ -158,19 +158,22 @@ Publica las reglas que viven en la raíz del repo (correcciones 22/10):
 - Consola → **Firestore Database → Reglas** → pega el contenido de
   `firestore.rules` → **Publicar**. (Gratis, sin tarjeta: esto es lo
   IMPORTANTE — protege los datos: roles, facturas, órdenes.)
-- Consola → **Storage → Reglas** → pega el contenido de `storage.rules` →
-  **Publicar**. **OPCIONAL**: en proyectos creados después de Oct/2024
-  Firebase pide plan Blaze (tarjeta) solo para ENTRAR a la sección
-  Storage. Si no quieres meter tarjeta, **omítelo sin miedo**: la app
-  funciona igual (las fotos de facturas/comprobantes quedan con las
-  reglas por defecto del bucket) y solo pierdes esa capa extra de
-  protección para las imágenes.
+- **Storage → OMITIDO POR DECISIÓN (29/10/2026)**: en proyectos creados
+  después de Oct/2024 Firebase exige el plan Blaze (tarjeta de crédito)
+  solo para ENTRAR a la sección Storage, y **no se cuenta con el medio
+  económico para contratarlo**. `storage.rules` queda DISEÑADO y
+  VERSIONADO en el repo pero SIN publicar — es una decisión documentada
+  (Bitácora, entrada 11), no un olvido. La app funciona igual (las fotos
+  de facturas/comprobantes quedan con las reglas por defecto del bucket);
+  solo se pierde esa capa extra de protección para las imágenes. El día
+  que Storage se active: Consola → **Storage → Reglas** → pegar el
+  contenido de `storage.rules` → **Publicar**.
 
 Dos formas más de publicarlas, equivalentes a pegar en la consola
 (correcciones 24/10 — úsalas tras editar `firestore.rules`/`storage.rules`):
 
 - **Sin consola y sin npm**:
-  `php C:\CPP\herramientas\publicar_reglas.php` — sube ambas reglas por
+  `php herramientas\publicar_reglas.php` — sube ambas reglas por
   API con la cuenta de servicio (la misma de la semilla), valida la
   sintaxis antes de tocar nada y verifica cada release. Acepta
   `solo-firestore` / `solo-storage`. **Requisito UNA vez** (descubierto
@@ -179,27 +182,32 @@ Dos formas más de publicarlas, equivalentes a pegar en la consola
   `client_email` de `api/firebase-service-account.json`). Sin ese rol el
   script SUBE los rulesets pero no puede publicar el release (403 IAM) —
   en ese caso queda la opción de pegar a mano.
-- **Con Firebase CLI** (`npm i -g firebase-tools` + `firebase login` una
-  vez): `firebase deploy --only firestore:rules,storage` desde `C:\CPP`
-  — el `firebase.json` de la raíz apunta a los dos archivos.
+- **Con Firebase CLI** (`npm i -g firebase-tools` + `firebase login` +
+  `firebase use --add`, una vez): `firebase deploy --only firestore:rules`
+  desde la raíz del repositorio — **así se publicó el 29/10/2026**
+  (Deploy complete ✅; creó el `.firebaserc`). El comando con `,storage`
+  falla mientras Storage no esté activo («Get started»/Blaze);
+  `--only storage` queda para cuando se active.
 
-Protegen: el `rol` de `usuarios/{uid}` es inmutable, `usuarios` no se
-puede listar (el alta de cuentas consulta `clientesPorCorreo`) y las
-facturas/órdenes ajenas no se leen (Firestore, siempre). Storage —si se
-publica— solo acepta JPEG de usuarios autenticados.
+**Estado (29/10/2026)**: `firestore.rules` PUBLICADO en vivo (ya no corre
+el release pre-fix `4d2fad49`). Protege: el `rol` de `usuarios/{uid}` es
+inmutable, `usuarios` no se puede listar (el alta de cuentas consulta
+`clientesPorCorreo`) y las facturas/órdenes ajenas no se leen. Storage:
+`storage.rules` sin publicar por la decisión económica de arriba — si
+algún día se publica, solo acepta JPEG de usuarios autenticados.
 
 ### 8.5 Checkpoint C10 (re-ejecutable)
 
 ```powershell
 $env:CPP_DEMO_CLAVE = 'la-clave-que-configuraste'   # el login T1 la usa
-powershell -File C:\CPP\test_s10.ps1                 # 7 pruebas → 7/7 OK
-powershell -File C:\CPP\test_s10.ps1 -Semilla        # re-siembra y verifica
+powershell -File .\pruebas\test_s10.ps1                 # 7 pruebas → 7/7 OK
+powershell -File .\pruebas\test_s10.ps1 -Semilla        # re-siembra y verifica
 ```
 
 ## 9. Motores del camino servidor (Python)
 
 ```powershell
-pip install -r C:\CPP\motores\requirements.txt   # pytesseract + Pillow
+pip install -r motores\requirements.txt   # pytesseract + Pillow
 ```
 
 Además instala **Tesseract-OCR** (en `C:\Program Files\Tesseract-OCR`) y

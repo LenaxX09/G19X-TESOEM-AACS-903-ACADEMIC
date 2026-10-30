@@ -10,7 +10,7 @@
 ## 1. Qué contiene
 
 ```
-C:\CPP\android\
+android\
 ├── app\src\main\java\com\cpp\captura\MainActivity.java   → cámara + órdenes + envío
 ├── app\src\main\res\layout\activity_main.xml             → pantalla Captura (MVP §6.3)
 ├── app\src\main\AndroidManifest.xml                      → INTERNET, CAMERA, cleartext, FileProvider
@@ -30,7 +30,7 @@ Flujo de la app:
 
 ## 2. Ejecutar desde Android Studio
 
-1. Android Studio → **Open** → carpeta `C:\CPP\android` (usa Gradle 8.13 + AGP 8.13, JDK: su JBR 21).
+1. Android Studio → **Open** → carpeta `android` (usa Gradle 8.13 + AGP 8.13, JDK: su JBR 21).
 2. Elige un emulador (API 30+) o tu móvil con **Depuración USB**.
 3. Run ▶ sobre `MainActivity`.
 
@@ -56,13 +56,13 @@ netsh advfirewall firewall add rule name="CPP Apache 80" dir=in action=allow pro
 ## 3. Compilar el APK por consola
 
 ```powershell
-cd C:\CPP\android
+cd android
 .\build.cmd <hash>        # el hash sale de: dir "$env:USERPROFILE\.gradle\wrapper\dists\gradle-8.13-bin"
 # o directamente:
 .\gradlew.bat :app:assembleDebug
 ```
 
-APK resultante: `C:\CPP\android\app\build\outputs\apk\debug\app-debug.apk`
+APK resultante: `android\app\build\outputs\apk\debug\app-debug.apk`
 (instalable con `adb install -r app-debug.apk`).
 
 ## 4. Prueba del checkpoint C2 (5 minutos)

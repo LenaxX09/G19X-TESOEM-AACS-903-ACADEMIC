@@ -7,7 +7,7 @@
 
 1. Laragon iniciado (Apache + **mysqld de Laragon**, nunca los servicios MySQL8x).
 2. Importar `database\seed.sql` si la BD está vacía (phpMyAdmin, root sin contraseña).
-3. Publicar el backend: `powershell -File C:\CPP\desplegar.ps1`
+3. Publicar el backend: `powershell -File .\desplegar.ps1`
    (sincroniza `api\`, `database\` y `motores\` —incluido el .exe— a `C:\laragon\www\cpp`).
 4. Prueba rápida: abrir `http://localhost/cpp/api/ordenes.php` → JSON con 3 órdenes.
 
@@ -43,7 +43,7 @@ Regenerar B: `python motores\spike\generar_fotos_demo.py`
 ## 4. Demo sin móvil (todo por HTTP / PowerShell)
 
 ```powershell
-$b64  = [Convert]::ToBase64String([IO.File]::ReadAllBytes('C:\CPP\motores\spike\fotos\factura_01.jpg'))
+$b64  = [Convert]::ToBase64String([IO.File]::ReadAllBytes('motores\spike\fotos\factura_01.jpg'))
 $body = @{orden_id=1; imagen_base64=$b64} | ConvertTo-Json -Compress
 $id   = (Invoke-RestMethod 'http://localhost/cpp/api/facturas.php' -Method Post `
           -Body $body -ContentType 'application/json').datos.factura_id

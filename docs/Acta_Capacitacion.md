@@ -48,7 +48,7 @@
 |---|---|---|
 | 1 | Preparar Firebase (Auth, Firestore, Storage) | `INSTALACION.md` §8.1-§8.2 |
 | 2 | Sembrar cuentas demo y re-sembrar | `INSTALACION.md` §8.3 · `test_s10.ps1 -Semilla` |
-| 3 | Publicar reglas de seguridad | `INSTALACION.md` §8.4 · `herramientas\publicar_reglas.php` |
+| 3 | Publicar reglas de seguridad (Firestore) | `INSTALACION.md` §8.4 · `firebase deploy --only firestore:rules` |
 | 4 | Verificar el sistema (C10) | `test_s10.ps1` → 7/7 |
 | 5 | Consola: resetear clave / borrar cuenta | Sesión vigilada: el teléfono expulsa al usuario en vivo (S10.7) |
 | 6 | Soporte nivel 1-2-3 y mantenimiento | `Manual_Tecnico.md` §10 |

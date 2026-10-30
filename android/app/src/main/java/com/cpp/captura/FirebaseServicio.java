@@ -215,10 +215,15 @@ public final class FirebaseServicio {
         return lista;
     }
 
-    /** S10: sube el comprobante de pago a Storage y devuelve su URL https. */
+    /** S10: sube el comprobante de pago a Storage y devuelve su URL https.
+     *  Correcciones 29/10: nombre ÚNICO por pago dentro de la carpeta de la
+     *  orden (comprobantes/<ordenId>/<timestamp>.jpg) — cada pago crea su
+     *  archivo; nadie puede reemplazar el comprobante de otra persona
+     *  (storage.rules: create sí, update no). */
     public static void subirComprobante(String ordenId, byte[] jpeg,
                                         Consumer<String> alUrl, Consumer<String> err) {
-        subirImagen("comprobantes/" + ordenId + ".jpg", jpeg, alUrl, err);
+        subirImagen("comprobantes/" + ordenId + "/"
+                        + System.currentTimeMillis() + ".jpg", jpeg, alUrl, err);
     }
 
     /** S10: sube la foto de una factura conciliada a Storage. */
@@ -264,8 +269,11 @@ public final class FirebaseServicio {
 
     /**
      * REGLAS + RF-L3: deja constancia de la factura en facturasLookup
-     * (f_<folio> y t_<monto_fecha_slug>) para que el pre-check de
-     * duplicados funcione con lecturas PUNTUALES, sin listar facturas.
+     * (f_<dueño>_<proveedor>_<folio> y t_<dueño>_<monto>_<fecha>_<proveedor>)
+     * para que el pre-check de duplicados funcione con lecturas PUNTUALES,
+     * sin listar facturas. Correcciones 29/10: la llave incluye al DUEÑO
+     * (quién subió la factura) y al proveedor — el mismo folio en OTRA
+     * empresa ya no cuenta como duplicado.
      * Best-effort: si falla, la factura ya quedó guardada.
      */
     private static void registrarLookups(FirebaseFirestore db, String facturaId,
@@ -277,16 +285,32 @@ public final class FirebaseServicio {
             String slugProv = (String) f.get("proveedorSlug");
             String dueno = (String) f.get("subidoPor");
             if (folio != null && !folio.isEmpty()) {
-                escribirLookup(db, "f_" + slug(folio), facturaId, dueno);
+                escribirLookup(db, llaveFolio(dueno, slugProv, folio), facturaId, dueno);
             }
             if (fecha != null && slugProv != null && !slugProv.isEmpty() && monto != null) {
-                String terna = (String.valueOf(monto) + "_" + fecha + "_" + slugProv)
-                        .replaceAll("[^A-Za-z0-9_]", "");
-                escribirLookup(db, "t_" + terna, facturaId, dueno);
+                escribirLookup(db, llaveTerna(dueno, monto, fecha, slugProv),
+                        facturaId, dueno);
             }
         } catch (Exception e) {
             Log.w(TAG, "lookup duplicado: " + e.getMessage());
         }
+    }
+
+    /**
+     * Correcciones 29/10: las DOS llaves de facturasLookup se construyen
+     * SIEMPRE con estos métodos (aquí se escriben y en buscarDuplicado se
+     * buscan) para que escritura y lectura no se desalineen.
+     */
+    private static String llaveFolio(String dueno, String proveedorSlug, String folio) {
+        return "f_" + slug(dueno + "_" + proveedorSlug + "_" + folio);
+    }
+
+    private static String llaveTerna(String dueno, Object monto, String fecha,
+                                     String proveedorSlug) {
+        // El punto del monto se cambia por 'p' (4850.0 -> 4850p0) para que
+        // montos distintos no colisionen al quitar caracteres no alfanuméricos.
+        String montoTxt = String.valueOf(monto).replace('.', 'p');
+        return "t_" + slug(dueno + "_" + montoTxt + "_" + fecha + "_" + proveedorSlug);
     }
 
     private static void escribirLookup(FirebaseFirestore db, String id,
@@ -447,39 +471,45 @@ public final class FirebaseServicio {
     /**
      * S10 + REGLAS: pre-check de duplicados (RF-L3) con lecturas PUNTUALES
      * al índice facturasLookup (facturas ya no se puede listar): mismo
-     * folio (f_<folio>) o la misma terna monto+fecha+proveedorSlug
-     * (t_<monto_fecha_slug>). Devuelve el id de la ORIGINAL o null.
+     * folio (f_<dueño>_<proveedor>_<folio>) o la misma terna
+     * monto+fecha+proveedorSlug (t_<dueño>_<monto>_<fecha>_<proveedor>).
+     * Correcciones 29/10: la llave incluye al DUEÑO (correo de Sesion) —
+     * el mismo folio en OTRA empresa ya no es «duplicado». Devuelve el id
+     * de la ORIGINAL o null.
      */
-    public static void buscarDuplicado(String folio, double monto, String fecha,
-                                       String proveedorSlug,
+    public static void buscarDuplicado(String correo, String folio, double monto,
+                                       String fecha, String proveedorSlug,
                                        Consumer<String> alOriginal, Consumer<String> err) {
         FirebaseFirestore db = FirebaseFirestore.getInstance();
         if (folio != null && !folio.isEmpty()) {
-            db.collection("facturasLookup").document("f_" + slug(folio)).get()
+            db.collection("facturasLookup")
+                    .document(llaveFolio(correo, proveedorSlug, folio)).get()
                     .addOnSuccessListener(d -> {
                         if (d.exists()) {
                             alOriginal.accept(d.getString("facturaId"));
                             return;
                         }
-                        duplicadoPorTerna(db, monto, fecha, proveedorSlug, alOriginal, err);
+                        duplicadoPorTerna(db, correo, monto, fecha, proveedorSlug,
+                                alOriginal, err);
                     })
                     .addOnFailureListener(e ->
-                            duplicadoPorTerna(db, monto, fecha, proveedorSlug, alOriginal, err));
+                            duplicadoPorTerna(db, correo, monto, fecha, proveedorSlug,
+                                    alOriginal, err));
         } else {
-            duplicadoPorTerna(db, monto, fecha, proveedorSlug, alOriginal, err);
+            duplicadoPorTerna(db, correo, monto, fecha, proveedorSlug, alOriginal, err);
         }
     }
 
-    private static void duplicadoPorTerna(FirebaseFirestore db, double monto, String fecha,
+    private static void duplicadoPorTerna(FirebaseFirestore db, String dueno,
+                                          double monto, String fecha,
                                           String proveedorSlug,
                                           Consumer<String> alOriginal, Consumer<String> err) {
         if (fecha == null || proveedorSlug == null || proveedorSlug.isEmpty()) {
             alOriginal.accept(null);
             return;
         }
-        String id = "t_" + (String.valueOf(monto) + "_" + fecha + "_" + proveedorSlug)
-                .replaceAll("[^A-Za-z0-9_]", "");
-        db.collection("facturasLookup").document(id).get()
+        db.collection("facturasLookup")
+                .document(llaveTerna(dueno, monto, fecha, proveedorSlug)).get()
                 .addOnSuccessListener(d -> alOriginal.accept(
                         d.exists() ? d.getString("facturaId") : null))
                 .addOnFailureListener(e -> err.accept(e.getMessage()));

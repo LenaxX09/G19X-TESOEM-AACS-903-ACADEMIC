@@ -1,12 +1,17 @@
-# desplegar.ps1 — Sprint 4: publica el backend en el Document Root de Laragon.
+# desplegar.ps1 - Sprint 4: publica el backend en el Document Root de Laragon.
 #
 # Copia api\ (con el nuevo procesar.php), database\ y motores\ (los 3 motores
-# + el .exe compilado) a C:\laragon\www\cpp. uploads\ NO se toca (ahí viven
+# + el .exe compilado) al Document Root. uploads\ NO se toca (ahí viven
 # las imágenes recibidas en runtime).
 #
-# Uso:  powershell -File C:\CPP\desplegar.ps1        (o .\desplegar.ps1)
-$origen  = 'C:\CPP'
-$destino = 'C:\laragon\www\cpp'
+# Correcciones 29/10: rutas PORTABLES - el origen es la carpeta donde vive
+# este script ($PSScriptRoot, vale en cualquier equipo/carpeta) y el destino
+# se puede cambiar con la variable de entorno CPP_WWW (omisión: Laragon).
+#
+# Uso:  powershell -File .\desplegar.ps1          (desde la raíz del repo)
+#       $env:CPP_WWW = 'D:\www\cpp'; .\desplegar.ps1
+$origen  = $PSScriptRoot
+$destino = if ($env:CPP_WWW) { $env:CPP_WWW } else { 'C:\laragon\www\cpp' }
 
 if (-not (Test-Path $destino)) {
     New-Item -ItemType Directory -Path $destino | Out-Null
