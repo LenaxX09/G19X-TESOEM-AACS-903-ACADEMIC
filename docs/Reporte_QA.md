@@ -177,16 +177,20 @@ cuenta en la consola → expulsión en vivo en segundos).
   readme; `MVP_CPP.md` actualizado con el estado real de la v1 y
   `DEMO.md` con el guion de los dos caminos + **C9 re-corrido 14/14 el
   29/10** (commit base `66de852` + correcciones del día).
-- **Publicación de reglas**: los rulesets corregidos fueron **subidos y
-  verificados por API** (29/10, tras los 3 ajustes de seguridad:
-  Firestore `6919cb3d…` y Storage `9e8a2bda…`), pero la **activación del
-  release requiere el rol «Firebase Rules Admin»** para la cuenta de
-  servicio (`firebase-adminsdk-fbsvc@cpp-facturas.iam.gserviceaccount.com`)
-  — paso del propietario en la consola IAM (o pegar los archivos en la
-  consola Firebase). **Verificado 29/10 por API: el release EN VIVO sigue
-  siendo el `4d2fad49` (anterior al fix del `||`)** — hasta que el
-  propietario active el nuevo, la regla que manda en producción es la
-  vieja (riesgo conocido, documentado también en el readme).
+- **Publicación de reglas — estado final (29/10 pm)**: `firestore.rules`
+  PUBLICADO EN VIVO con el Firebase CLI (`firebase deploy --only
+  firestore:rules`, cuenta dueña del proyecto → **Deploy complete ✅**):
+  el release pre-fix `4d2fad49` ya NO corre — el riesgo conocido queda
+  CERRADO (Bitácora, entrada 11). `storage.rules` queda SIN publicar
+  por **decisión económica documentada**: activar Storage exige el plan
+  Blaze (tarjeta de crédito) en proyectos creados después de Oct/2024 y
+  el equipo **no cuenta con el medio económico para contratarlo**
+  (proyecto académico). El archivo queda diseñado y versionado en el
+  repo, listo para el día que Storage se active (consola → Storage →
+  Reglas → pegar y Publicar, o `php herramientas\publicar_reglas.php
+  solo-storage` dándole antes el rol «Firebase Rules Admin» a la cuenta
+  de servicio en IAM). Omisión declarada, no un olvido
+  (`INSTALACION.md` §8.4).
 - **Secretos**: cuenta de servicio y clave demo fuera de git
   (verificado con `git ls-files`); instrucción de rotación de la clave demo
   vieja en `INSTALACION.md` §8.3.
@@ -216,12 +220,11 @@ formal completa (`Arquitectura.md`, `Manual_Tecnico.md`,
 **Pendientes (declarados, no ocultos)**:
 
 1. RF-M8 (cola offline) — único RF del Incremento 1 pendiente.
-2. **Activar el release de las reglas** en la consola (paso del
-   propietario, §7): rol «Firebase Rules Admin» a
-   `firebase-adminsdk-fbsvc@cpp-facturas.iam.gserviceaccount.com` y
-   re-correr `php herramientas\publicar_reglas.php` (o pegar los archivos
-   en la consola). Mientras tanto el release en vivo es el viejo
-   `4d2fad49`.
+2. **Publicar `storage.rules`** cuando Storage se active: exige el plan
+   Blaze (tarjeta de crédito) y no se cuenta con el medio económico
+   para contratarlo — omisión documentada (§7, `INSTALACION.md` §8.4,
+   Bitácora entrada 11); el archivo queda versionado en el repo.
+   `firestore.rules` ya está publicado en vivo (29/10).
 3. Probar el flujo de duplicados por dueño en el teléfono (2 cuentas de
    cliente) y la vuelta completa proveedor↔cliente en el Motorola físico
    (guion `SPRINT10_v1.md` §3 en dos sesiones) — con las reglas ya

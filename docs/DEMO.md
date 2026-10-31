@@ -38,7 +38,11 @@ las creadas en el registro; semilla: `php api\semilla_firebase.php`).
    Prolog) → panel **✅ APROBADA · riesgo 27.3 %**.
 5. Cliente paga: toca la cuenta → «📷 Adjuntar comprobante y pagar» →
    foto del comprobante → pasa sola a **PAGADAS** (sin evidencia no hay
-   pago).
+   pago). ⚠️ Storage está omitido por decisión económica (plan Blaze —
+   `INSTALACION.md` §8.4): si la subida de la foto falla en vivo,
+   muestra el AVISO de la app (la cuenta queda «por pagar»: el pago no
+   se marca sin comprobante) y sigue con el paso 6 — el veredicto del
+   pipeline (paso 4) NO depende de Storage y la factura queda guardada.
 6. (Opcional) Repite con `factura_06.jpg` → ⚠️ MONTO_EXCEDE_ORDEN, y
    reenvía `factura_01.jpg` → ⚠️ FACTURA_DUPLICADA (regla 0, RF-L3).
 

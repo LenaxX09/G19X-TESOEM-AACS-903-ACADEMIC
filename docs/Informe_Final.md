@@ -86,8 +86,11 @@ foto original · dos revisiones externas de seguridad corregidas al 100 %.
 1. RF-M8 — cola offline (único RF del Incremento 1 pendiente).
 2. Verificación de correo al registrarse.
 3. Camino servidor: imagen multipart (hoy Base64) y token cifrado en prefs.
-4. Activación del release de reglas en la consola (paso del propietario;
-   los rulesets correctos ya están subidos y verificados por API).
+4. Publicar `storage.rules` cuando Storage se active: exige el plan Blaze
+   (tarjeta de crédito) y no se cuenta con el medio económico para
+   contratarlo — omisión documentada; el archivo queda versionado en el
+   repo (`INSTALACION.md` §8.4). `firestore.rules` ya está publicado en
+   vivo (29/10, `firebase deploy --only firestore:rules`).
 
 ## 7. Cierre técnico
 

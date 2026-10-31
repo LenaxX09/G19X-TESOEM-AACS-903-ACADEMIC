@@ -106,10 +106,14 @@ Con datos móviles/WiFi (nada de `adb reverse` ni teclear IP):
 3. En el teléfono del **cliente** la cuenta aparece SOLA (oyente en vivo).
 4. **Pagar**: POR PAGAR → tocar la cuenta → «📷 Adjuntar comprobante y
    pagar» → galería → el comprobante sube a Storage y la cuenta pasa sola
-   a PAGADAS (la lista del proveedor también se actualiza sola).
+   a PAGADAS (la lista del proveedor también se actualiza sola). ⚠️ Con
+   Storage omitido (Blaze — INSTALACION §8.4) la subida puede fallar: la
+   app AVISA y la cuenta queda «por pagar» (sin evidencia no hay pago);
+   anota qué pasó al probarlo en el teléfono.
 5. **Enviar factura**: elegir cuenta → foto/galería → «📤 Enviar factura» →
    OCR + riesgo + conciliación corren EN EL TELÉFONO y el veredicto ✅/⚠️
-   se guarda en Firestore + Storage («📋 Ver facturas»).
+   se guarda en Firestore («📋 Ver facturas»). La foto va a Storage; si no
+   está disponible, la factura se guarda SIN imagen y con aviso (31/10).
 6. **Recordatorios de pago** (S10.4): con la sesión de `cliente@cpp.demo`
    abierta, al entrar a la pantalla principal deben llegar DOS avisos —
    «OC-102 vence en 3 días» y «OC-103 está VENCIDA» (OC-101 está a 10 días

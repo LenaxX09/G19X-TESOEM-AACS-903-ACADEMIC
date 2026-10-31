@@ -1,7 +1,8 @@
 <?php
 /**
- * publicar_reglas.php — publica firestore.rules y storage.rules en el
- * proyecto Firebase (cpp-facturas) SIN consola y SIN Firebase CLI
+ * publicar_reglas.php — publica firestore.rules (y storage.rules solo
+ * si se pide) en el proyecto Firebase (cpp-facturas) SIN consola y SIN
+ * Firebase CLI
  * (correcciones 24/10: «corrige los paréntesis… y publica las reglas»).
  *
  * Usa la MISMA API REST que la consola (Firebase Rules API) con la cuenta
@@ -14,9 +15,17 @@
  * siguen devolviendo access_token; la semilla NO está afectada).
  *
  * USO (CLI, sin Apache ni MySQL):
- *   php publicar_reglas.php                  # publica AMBAS reglas
- *   php publicar_reglas.php solo-firestore   # solo firestore.rules
- *   php publicar_reglas.php solo-storage     # solo storage.rules
+ *   php publicar_reglas.php                  # SOLO firestore.rules (omisión 31/10)
+ *   php publicar_reglas.php solo-firestore   # ídem, explícito
+ *   php publicar_reglas.php solo-storage     # solo storage.rules (cuando haya Blaze)
+ *   php publicar_reglas.php ambas            # las dos (cuando Storage esté activo)
+ *
+ * DECISIÓN (29-31/10/2026): por OMISIÓN este script publica únicamente
+ * firestore.rules. Storage exige el plan Blaze (tarjeta de crédito)
+ * en proyectos creados después de Oct/2024 y no se cuenta con el
+ * medio económico para contratarlo (proyecto académico): storage.rules
+ * queda DISEÑADO y VERSIONADO pero sin publicar (INSTALACION.md §8.4).
+ * Usa «solo-storage»/«ambas» el día que Storage se active.
  *
  * Por cada producto (firestore → release «cloud.firestore», storage →
  * release «firebase.storage»):
@@ -171,12 +180,15 @@ if (!fb_configurado()) {
     exit(1);
 }
 echo 'Proyecto: ' . fb_proyecto() . "\n";
-$solo = (string)($argv[1] ?? '');
+// Omisión 31/10: sin argumentos publica SOLO firestore.rules — Storage
+// exige el plan Blaze (tarjeta) y no hay medio económico para contratarlo
+// (decisión documentada: cabecera e INSTALACION.md §8.4).
+$solo = (string)($argv[1] ?? 'solo-firestore');
 $ok   = true;
 if ($solo !== 'solo-storage') {
     $ok = pr_publicar('cloud.firestore', 'firestore.rules') && $ok;
 }
-if ($solo !== 'solo-firestore') {
+if ($solo === 'solo-storage' || $solo === 'ambas') {
     $ok = pr_publicar('firebase.storage', 'storage.rules') && $ok;
 }
 exit($ok ? 0 : 1);

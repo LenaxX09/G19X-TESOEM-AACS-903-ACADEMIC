@@ -86,8 +86,9 @@ PHP) y DÓNDE viven los datos (Firestore vs MySQL).
   económica**: Firebase exige el plan Blaze (tarjeta de crédito) para
   activar Storage en proyectos creados después de Oct/2024 y no se
   cuenta con el medio económico para contratarlo (detalle en
-  `INSTALACION.md` §8.4). Sin esa capa, las imágenes quedan con las
-  reglas por defecto del bucket.
+  `INSTALACION.md` §8.4). Sin Blaze no hay bucket: si la subida de una
+  imagen falla, la factura se guarda SIN foto (con aviso) y el pago
+  queda «por pagar» — nunca se marca pagada sin evidencia.
 - La clave de las cuentas demo NO vive en el repo: se pasa con la
   variable de entorno `CPP_DEMO_CLAVE` (ver `INSTALACION.md` §8).
 

@@ -52,7 +52,9 @@ import java.util.Map;
  *      del C), buscarDuplicado() hace el pre-check RF-L3 en Firestore y
  *      conciliar() aplica las reglas del Prolog → veredicto ✅/⚠️.
  *   4. La foto va a Firebase Storage y el resultado a Firestore `facturas`
- *      (el listado y los pagos se alimentan de ahí).
+ *      (el listado y los pagos se alimentan de ahí). Si Storage no está
+ *      disponible (omisión Blaze), la factura se guarda SIN foto y con
+ *      aviso — el veredicto nunca se pierde (correcciones 31/10).
  */
 public class MainActivity extends AppCompatActivity {
 
@@ -420,36 +422,56 @@ public class MainActivity extends AppCompatActivity {
 
         String veredicto = Motores.conciliar(mo, c, riesgo, duplicado);
 
-        FirebaseServicio.subirFotoFactura(bytes, url -> runOnUiThread(() -> {
-            Map<String, Object> factura = new HashMap<>();
-            factura.put("folio", c.folio == null ? "" : c.folio);
-            factura.put("proveedor", c.proveedor);
-            factura.put("proveedorSlug", FirebaseServicio.slug(c.proveedor));
-            factura.put("fecha", c.fecha);
-            factura.put("monto", c.monto);
-            factura.put("riesgo", riesgo);
-            factura.put("veredicto", veredicto);
-            factura.put("motivo", veredicto.startsWith("DISCREPANCIA:")
-                    ? veredicto.substring(veredicto.indexOf(':') + 1) : "");
-            factura.put("ordenId", orden.id);
-            factura.put("ordenCodigo", orden.codigo);
-            factura.put("subidoPor", Sesion.correo(this));
-            factura.put("fotoUrl", url);
-            factura.put("creado", FieldValue.serverTimestamp());
+        Map<String, Object> factura = new HashMap<>();
+        factura.put("folio", c.folio == null ? "" : c.folio);
+        factura.put("proveedor", c.proveedor);
+        factura.put("proveedorSlug", FirebaseServicio.slug(c.proveedor));
+        factura.put("fecha", c.fecha);
+        factura.put("monto", c.monto);
+        factura.put("riesgo", riesgo);
+        factura.put("veredicto", veredicto);
+        factura.put("motivo", veredicto.startsWith("DISCREPANCIA:")
+                ? veredicto.substring(veredicto.indexOf(':') + 1) : "");
+        factura.put("ordenId", orden.id);
+        factura.put("ordenCodigo", orden.codigo);
+        factura.put("subidoPor", Sesion.correo(this));
+        factura.put("creado", FieldValue.serverTimestamp());
 
-            FirebaseServicio.guardarFactura(factura,
-                    id -> runOnUiThread(() -> {
-                        finEnvio(true);
-                        mostrarVeredicto(veredicto, riesgo, t0);
-                    }),
-                    e -> runOnUiThread(() -> {
-                        finEnvio(false);
-                        mostrarError("No se pudo guardar la factura: " + e);
-                    }));
-        }), e -> runOnUiThread(() -> {
-            finEnvio(false);
-            mostrarError("No se pudo subir la foto: " + e);
-        }));
+        // Omisión de Storage (31/10 — sin Blaze no hay bucket; INSTALACION §8.4):
+        // si la foto NO puede subir, la factura se GUARDA IGUAL con fotoUrl
+        // vacía — el veredicto, el listado y los pagos NO dependen de Storage.
+        // Solo se pierde la imagen y se avisa (el pago con comprobante sigue
+        // EXIGIENDO su foto: sin evidencia no hay cuenta pagada).
+        FirebaseServicio.subirFotoFactura(bytes,
+                url -> runOnUiThread(() -> {
+                    factura.put("fotoUrl", url);
+                    guardarFacturaConAviso(factura, veredicto, riesgo, t0, null);
+                }),
+                e -> runOnUiThread(() -> {
+                    factura.put("fotoUrl", "");
+                    guardarFacturaConAviso(factura, veredicto, riesgo, t0,
+                            "Foto sin subir (Storage omitido por Blaze): "
+                                    + "factura guardada SIN imagen.");
+                }));
+    }
+
+    /** Guarda la factura en Firestore y muestra el veredicto. avisoFoto != null
+     *  significa que la foto no subió (Storage omitido): la factura se guardó
+     *  igual y se le avisa al usuario (correcciones 31/10). */
+    private void guardarFacturaConAviso(Map<String, Object> factura, String veredicto,
+                                        double riesgo, long t0, String avisoFoto) {
+        FirebaseServicio.guardarFactura(factura,
+                id -> runOnUiThread(() -> {
+                    finEnvio(true);
+                    mostrarVeredicto(veredicto, riesgo, t0);
+                    if (avisoFoto != null) {
+                        Toast.makeText(this, avisoFoto, Toast.LENGTH_LONG).show();
+                    }
+                }),
+                e -> runOnUiThread(() -> {
+                    finEnvio(false);
+                    mostrarError("No se pudo guardar la factura: " + e);
+                }));
     }
 
     private void mostrarVeredicto(String veredicto, double riesgo, long t0) {

@@ -108,7 +108,8 @@ Si algún día necesitas el otro MySQL84, detén antes el de Laragon.
 ## 8. Firebase — camino SIN servidor del Sprint 10 (app v1)
 
 > La app actual (S10) entra con **Firebase Auth** y guarda todo en
-> Firestore/Storage: no necesita Laragon. Guía de prueba completa:
+> Firestore: no necesita Laragon. Storage queda OMITIDO por decisión
+> económica (plan Blaze — §8.4). Guía de prueba completa:
 > `docs/SPRINT10_v1.md`.
 
 ### 8.1 Crear el proyecto (UNA vez)
@@ -119,8 +120,12 @@ Si algún día necesitas el otro MySQL84, detén antes el de Laragon.
    `google-services.json`.
 3. Coloca ese archivo en `android\app\google-services.json`
    (SÍ va en el repo: solo identifica el proyecto, no es secreto).
-4. Crea **Firestore Database** y **Storage** (modo *production*; las
-   reglas van en el punto 8.4).
+4. Crea SOLO **Firestore Database** (modo *production*; las reglas van
+   en el punto 8.4). **Storage NO se crea**: en proyectos creados
+   después de Oct/2024 Firebase exige el plan Blaze (tarjeta de crédito)
+   solo para entrar a la sección Storage, y **no se cuenta con el medio
+   económico para contratarlo** — omisión documentada en §8.4 (las
+   reglas quedan versionadas en el repo, sin publicar).
 
 ### 8.2 Cuenta de servicio (para los scripts PHP — SECRETO)
 
@@ -163,9 +168,11 @@ Publica las reglas que viven en la raíz del repo (correcciones 22/10):
   solo para ENTRAR a la sección Storage, y **no se cuenta con el medio
   económico para contratarlo**. `storage.rules` queda DISEÑADO y
   VERSIONADO en el repo pero SIN publicar — es una decisión documentada
-  (Bitácora, entrada 11), no un olvido. La app funciona igual (las fotos
-  de facturas/comprobantes quedan con las reglas por defecto del bucket);
-  solo se pierde esa capa extra de protección para las imágenes. El día
+  (Bitácora, entrada 11), no un olvido. Efecto real: sin Blaze el bucket
+  de Storage no llega a crearse, así que las subidas de imágenes pueden
+  fallar — la app NO se rompe: la factura se guarda con veredicto (sin
+  foto, con aviso) y el pago con comprobante AVISA el error y la cuenta
+  queda «por pagar» (nunca se marca pagada sin evidencia). El día
   que Storage se active: Consola → **Storage → Reglas** → pegar el
   contenido de `storage.rules` → **Publicar**.
 
@@ -173,10 +180,12 @@ Dos formas más de publicarlas, equivalentes a pegar en la consola
 (correcciones 24/10 — úsalas tras editar `firestore.rules`/`storage.rules`):
 
 - **Sin consola y sin npm**:
-  `php herramientas\publicar_reglas.php` — sube ambas reglas por
-  API con la cuenta de servicio (la misma de la semilla), valida la
-  sintaxis antes de tocar nada y verifica cada release. Acepta
-  `solo-firestore` / `solo-storage`. **Requisito UNA vez** (descubierto
+  `php herramientas\publicar_reglas.php` — publica por API con la
+  cuenta de servicio (la misma de la semilla), valida la sintaxis
+  antes de tocar nada y verifica cada release. Desde el 31/10 publica
+  SOLO `firestore.rules` (Storage omitido por la decisión económica de
+  arriba); acepta `solo-storage` / `ambas` para cuando Storage se
+  active. **Requisito UNA vez** (descubierto
   24/10): dale a la cuenta de servicio el rol **«Firebase Rules Admin»**
   (Consola Google Cloud → IAM → Conceder acceso → pega el
   `client_email` de `api/firebase-service-account.json`). Sin ese rol el

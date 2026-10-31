@@ -105,6 +105,10 @@ te pedirá permiso de notificaciones: concédelo).
 3. El comprobante sube a la nube y la cuenta pasa SOLA a **PAGADAS**; tu
    proveedor lo ve al instante.
 
+> Si la subida falla (el almacenamiento en la nube está desactivado por
+> ahora), la app te avisa y la cuenta queda **por pagar**: ninguna cuenta
+> se marca pagada sin su comprobante. Inténtalo de nuevo más tarde.
+
 **Cuenta vencida**: si la fecha límite pasó, la app te dirá que el pago
 está **CERRADO** y que debes hablar con tu proveedor para llegar a un
 acuerdo (él la reabrirá, con o sin interés, y volverás a poder pagar).

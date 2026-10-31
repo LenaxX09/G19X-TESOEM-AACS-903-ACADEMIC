@@ -357,8 +357,11 @@ factura está en `docs/DEMO.md`.
 3. El CRUD de administración (AdminActivity) NO se migró a Firestore: se
    descartó en S10.3 (una cuenta por empresa; el registro público solo
    crea el rol más pequeño). El CRUD completo vive en el camino servidor.
-4. Reglas de seguridad: los rulesets corregidos están subidos; **activar
-   el release es paso del propietario** (ver `docs/Reporte_QA.md` §7).
+4. Reglas de seguridad: `firestore.rules` PUBLICADO en vivo (29/10,
+   `firebase deploy --only firestore:rules`); `storage.rules` queda sin
+   publicar por decisión económica — Storage exige el plan Blaze
+   (tarjeta de crédito) y no se cuenta con el medio para contratarlo
+   (ver `docs/Reporte_QA.md` §7 e `INSTALACION.md` §8.4).
 
 ---
 

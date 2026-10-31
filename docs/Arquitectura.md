@@ -190,10 +190,12 @@ de 8 h). Esquema: `database/seed.sql` + `database/migrar_v1.sql`.
 | Secretos | Cuenta de servicio y clave demo FUERA del repo (`.gitignore`); clave demo por `CPP_DEMO_CLAVE` o parámetro |
 | Camino servidor | Login con token de 8 h, bcrypt, control por rol (401/403), saneo de parámetros en `shell_exec` (R3) |
 
-> Nota de operación (24/10): la corrección del `allow update` de `ordenes`
-> (paréntesis `||` → `&&`) está en el repo y su ruleset fue subido por API;
-> la activación del release en la consola queda como paso del propietario
-> del proyecto (ver `Reporte_QA.md` §7).
+> Nota de operación (actualizada 29/10): la corrección del `allow update`
+> de `ordenes` (paréntesis `||` → `&&`) está EN VIVO — `firestore.rules`
+> se publicó el 29/10 con `firebase deploy --only firestore:rules`
+> (Deploy complete ✅). `storage.rules` sigue sin publicar por la decisión
+> económica de §4.2 (Storage exige plan Blaze/tarjeta y no hay medio
+> para contratarlo); ver `Reporte_QA.md` §7.
 
 ## 8. Decisiones de arquitectura (con justificación)
 

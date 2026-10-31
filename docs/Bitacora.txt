@@ -55,12 +55,12 @@ SECCIÓN 1 · RESUMEN DEL ESTADO ACTUAL (30 segundos)
        comprobante ajeno; la app sube un archivo NUEVO por pago) y
        firestore.rules exige que el proveedor NO cambie proveedorUid/
        clienteCorreo de una orden y que el cliente solo ponga estado en
-       pagada|pendiente. Rulesets NUEVOS subidos por API (firestore
-       6919cb3d · storage 9e8a2bda), pero el release EN VIVO sigue siendo
-       el VIEJO 4d2fad49 (pre-fix): activarlo es PASO DEL PROPIETARIO
-       (IAM → rol «Firebase Rules Admin» → re-correr herramientas\
-       publicar_reglas.php, o pegar en consola). Riesgo conocido
-       declarado en readme.md y Reporte_QA.md §7.
+       pagada|pendiente. Rulesets subidos por API (firestore 6919cb3d ·
+       storage 9e8a2bda) y esa misma tarde (entrada 11) firestore.rules
+       PUBLICADO EN VIVO con el Firebase CLI (Deploy complete ✅): el
+       release pre-fix 4d2fad49 ya NO corre. storage.rules NO se publica
+       — DECISIÓN ECONÓMICA: Storage exige el plan Blaze (tarjeta) y no
+       se cuenta con el medio para contratarlo (INSTALACION.md §8.4).
     2) DUPLICADOS POR DUEÑO: llaves f_<dueño>_<proveedor>_<folio> y
        t_<dueño>_<monto>_<fecha>_<proveedor> construidas SIEMPRE con
        FirebaseServicio.llaveFolio()/llaveTerna(); MainActivity pasa
@@ -1261,6 +1261,27 @@ SECCIÓN 7 · SIGUIENTE PASO (empezar por aquí en la próxima sesión)
             aclarado en storage.rules, INSTALACION §8.4, readme
             §Seguridad, Manual_Tecnico §4, Arquitectura §4.2 y SPRINT10
             §5. SIGUE: re-probar en el teléfono; luego RF-M8 y retro H4.
+        12) ✔ HECHO (31/10): OMISIÓN DE STORAGE hecha consistente en todo
+            el repo (respuesta al punto 1 de correcciones2.docx):
+            INSTALACION §8.1 ya NO pide crear Storage (solo Firestore;
+            Blaze/tarjeta y sin medio económico para contratarlo),
+            herramientas\publicar_reglas.php publica por OMISIÓN solo
+            firestore.rules (nuevas opciones solo-storage/ambas para
+            cuando Storage se active) y el estado de las reglas se
+            actualizó donde seguía viejo (Reporte_QA §7 y §9,
+            Arquitectura §7, Informe_Final §6, MVP_CPP §14.3 y la
+            Sección 1 de esta bitácora): firestore PUBLICADO 29/10,
+            storage OMITIDO por decisión económica. Además, RESILIENCIA
+            en la app (31/10): MainActivity ya NO aborta el guardado
+            cuando la foto no sube — la factura se guarda con fotoUrl
+            vacía y aviso (veredicto/listado NO dependen de Storage);
+            el pago con comprobante sigue EXIGIENDO la foto (sin
+            evidencia no hay pago). Efecto real documentado en readme
+            §Seguridad, INSTALACION §8.4, DEMO.md paso 5, SPRINT10 §3 y
+            Manual_Usuario §5.2 (adiós a la frase «queda con las reglas
+            por defecto del bucket», que asumía un bucket que sin Blaze
+            no existe). SIGUE: re-probar en
+            el teléfono; luego RF-M8 y retro H4.
 
       Notas de entorno: tras desplegar.ps1, OPcache puede servir PHP viejo
       2-3 s (reintentar). mysqld de Laragon se arrancó a mano el 01/10, el
