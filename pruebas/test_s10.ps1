@@ -16,14 +16,16 @@
 #                todas pendientes (OC-101/102/103) - subidas por el proveedor
 #   T6 Datos M7: 1 cuenta VENCIDA y 1 que vence en <=3 dias (alertas rojas)
 # USO:
-#   powershell -File C:\CPP\test_s10.ps1             # solo verifica (lectura)
-#   powershell -File C:\CPP\test_s10.ps1 -Semilla    # re-siembra demo antes
+#   powershell -File .\pruebas\test_s10.ps1             # solo verifica (lectura)
+#   powershell -File .\pruebas\test_s10.ps1 -Semilla    # re-siembra demo antes
 #   (en ambos casos: -Clave '...' o $env:CPP_DEMO_CLAVE = '...')
-# Regla del proyecto: ASCII puro.
+# Regla del proyecto: ASCII puro. Correcciones 29/10: rutas portables
+# ($PSScriptRoot = pruebas\, raiz del repo un nivel arriba).
 # -----------------------------------------------------------------------------
 param([switch]$Semilla, [string]$Clave)
 
-$apiDir = 'C:\CPP\api'
+$raiz   = Split-Path $PSScriptRoot -Parent
+$apiDir = Join-Path $raiz 'api'
 
 # ---------- clave demo (correcciones 22/10): -Clave o CPP_DEMO_CLAVE ----------
 $claveDemo = $Clave
@@ -88,7 +90,7 @@ try {
     $on = ($cfg.signIn.email.enabled -eq $true)
     if (-not $on) {
         Paso 'T1 Email/Password habilitado + login demo' $false `
-            ("signIn.email.enabled=" + $cfg.signIn.email.enabled + " => corre php C:\CPP\api\habilitar_email_auth.php")
+            ("signIn.email.enabled=" + $cfg.signIn.email.enabled + " => corre php " + (Join-Path $apiDir 'habilitar_email_auth.php'))
     } elseif (-not $claveDemo) {
         # El login real necesita la clave demo: fuera del repo (correcciones 22/10).
         Paso 'T1 Email/Password habilitado + login demo' $false `
@@ -183,6 +185,6 @@ if ($okCount -eq $total -and $total -eq 7) {
     Write-Host '     Entra con cliente@cpp.demo / la clave que configuraste (CPP_DEMO_CLAVE).'
     exit 0
 } else {
-    Write-Host ("C10: " + $okCount + "/" + $total + " - si faltan datos corre: powershell -File C:\CPP\test_s10.ps1 -Semilla")
+    Write-Host ("C10: " + $okCount + "/" + $total + " - si faltan datos corre: powershell -File .\pruebas\test_s10.ps1 -Semilla")
     exit 1
 }

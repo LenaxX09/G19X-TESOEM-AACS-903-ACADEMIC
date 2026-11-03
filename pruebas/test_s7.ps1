@@ -6,7 +6,9 @@
 # Requisitos: Apache + MySQL de Laragon activos, migrar_v1.sql aplicado y
 # desplegar.ps1 ya corrido.
 # Regla del proyecto: este .ps1 va en ASCII puro (PowerShell 5.1 sin BOM).
+# Correcciones 29/10: rutas portables ($PSScriptRoot = pruebas\, raiz arriba).
 # -----------------------------------------------------------------------------
+$raiz = Split-Path $PSScriptRoot -Parent
 $base = 'http://localhost/cpp/api'
 
 function Invoke-Cpp([string]$metodo, [string]$url, $body, [string]$token) {
@@ -72,7 +74,7 @@ $t3b = Invoke-Cpp Get "$base/ordenes.php?id=2" $null $tokProv
 Paso 'T3b detalle de orden ajena' 'ORDEN_DE_OTRO_PROVEEDOR' $t3b
 
 # ---------- T4: el proveedor ENVIA una factura a SU orden (RF-F6) ----------
-$b64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\CPP\motores\spike\fotos\factura_01.jpg"))
+$b64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes("$raiz\motores\spike\fotos\factura_01.jpg"))
 $t4 = Invoke-Cpp Post "$base/facturas.php" @{ orden_id = 1; imagen_base64 = $b64 } $tokProv
 Paso 'T4 proveedor envia factura a SU orden' 'OK' $t4
 

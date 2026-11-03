@@ -4,7 +4,10 @@
 # pipeline contra http://localhost/cpp/api
 # Requisitos: Apache + MySQL de Laragon activos y desplegar.ps1 ya corrido.
 # Regla del proyecto: este .ps1 va en ASCII puro (PowerShell 5.1 sin BOM).
+# Correcciones 29/10: rutas portables - $PSScriptRoot es pruebas\, la raiz
+# del repo queda un nivel arriba (vale en cualquier equipo/carpeta).
 # ---------------------------------------------------------------
+$raiz  = Split-Path $PSScriptRoot -Parent
 $base = 'http://localhost/cpp/api'
 
 function Invoke-Cpp([string]$metodo, [string]$url, $body, [string]$token) {
@@ -85,7 +88,7 @@ Paso 'T8c proteger ultimo admin' 'ULTIMO_ADMIN' $t8c
 
 # ---------- T9: regresion del pipeline (guion 9.2) como capturista ----------
 function Enviar-Foto([string]$foto, [int]$ordenId, [string]$token) {
-    $b64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\CPP\motores\spike\fotos\$foto"))
+    $b64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes("$raiz\motores\spike\fotos\$foto"))
     $r = Invoke-Cpp Post "$base/facturas.php" @{ orden_id = $ordenId; imagen_base64 = $b64 } $token
     if ($r.codigo -ne 'OK') { return $r }
     return Invoke-Cpp Get ("$base/procesar.php?id=" + $r.datos.factura_id) $null $token

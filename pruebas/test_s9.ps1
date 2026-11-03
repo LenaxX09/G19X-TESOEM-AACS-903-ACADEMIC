@@ -8,7 +8,9 @@
 # su seccion 7) y desplegar.ps1 corrido. Regla del proyecto: ASCII puro.
 # NOTA: T1 asume que ya existe una factura con folio F-1001 procesada (p. ej.
 # tras correr test_c5.ps1); si la BD esta vacia, sube una primero.
+# Correcciones 29/10: rutas portables ($PSScriptRoot = pruebas\, raiz arriba).
 # -----------------------------------------------------------------------------
+$raiz = Split-Path $PSScriptRoot -Parent
 $base = 'http://localhost/cpp/api'
 
 function Invoke-Cpp([string]$metodo, [string]$url, $body, [string]$token) {
@@ -44,7 +46,7 @@ function Paso([string]$id, [string]$esperado, $real) {
 # ---------- T1: subir una factura YA registrada -> FACTURA_DUPLICADA ----------
 $cap = Invoke-Cpp Post "$base/sesion.php" @{ usuario = 'capturista'; password = 'demo1234' } $null
 $tokCap = $cap.datos.token
-$b64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes('C:\CPP\motores\spike\fotos\factura_01.jpg'))
+$b64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes("$raiz\motores\spike\fotos\factura_01.jpg"))
 $r1 = Invoke-Cpp Post "$base/facturas.php" @{ orden_id = 1; imagen_base64 = $b64 } $tokCap
 $idDup = $r1.datos.factura_id
 $p1 = Invoke-Cpp Get ("$base/procesar.php?id=" + $idDup) $null $tokCap
@@ -99,10 +101,15 @@ $t7 = Invoke-Cpp Post "$base/pagos.php" @{ accion = 'despagar'; id = $ej.id } $t
 Paso "T7 despagar #$($ej.id)" 'OK' $t7
 
 # ---------- T8: regla.pl por CLI - la regla 0 de duplicados ----------
-$swipl = 'C:\Program Files\swipl\bin\swipl.exe'
-$v1 = (& $swipl C:\CPP\motores\regla.pl 1 F-9999 100.00 2026-09-20 PAPELERIA 10.0 5000.00 PAPELERIA 2026-09-10 si) -join ''
-$v2 = (& $swipl C:\CPP\motores\regla.pl 1 F-9999 100.00 2026-09-20 PAPELERIA 10.0 5000.00 PAPELERIA 2026-09-10 no) -join ''
-$v3 = (& $swipl C:\CPP\motores\regla.pl 1 F-9999 100.00 2026-09-20 PAPELERIA 10.0 5000.00 PAPELERIA 2026-09-10) -join ''
+# Correcciones 29/10: swipl se resuelve del PATH o de CPP_SWIPL_BIN
+# (omision clasica de instalador: C:\Program Files\swipl\bin\swipl.exe).
+$swipl = $env:CPP_SWIPL_BIN
+if (-not $swipl) { $c = Get-Command swipl -ErrorAction SilentlyContinue; if ($c) { $swipl = $c.Source } }
+if (-not $swipl -and (Test-Path 'C:\Program Files\swipl\bin\swipl.exe')) { $swipl = 'C:\Program Files\swipl\bin\swipl.exe' }
+if (-not $swipl) { Write-Host '[FAIL] T8 swipl no encontrado (PATH, CPP_SWIPL_BIN o Program Files)' }
+$v1 = (& $swipl "$raiz\motores\regla.pl" 1 F-9999 100.00 2026-09-20 PAPELERIA 10.0 5000.00 PAPELERIA 2026-09-10 si) -join ''
+$v2 = (& $swipl "$raiz\motores\regla.pl" 1 F-9999 100.00 2026-09-20 PAPELERIA 10.0 5000.00 PAPELERIA 2026-09-10 no) -join ''
+$v3 = (& $swipl "$raiz\motores\regla.pl" 1 F-9999 100.00 2026-09-20 PAPELERIA 10.0 5000.00 PAPELERIA 2026-09-10) -join ''
 if ($v1 -eq 'DISCREPANCIA:FACTURA_DUPLICADA') { Write-Host '[OK ] T8a dup=si  -> FACTURA_DUPLICADA' }
 else { Write-Host ('[FAIL] T8a dup=si dio: ' + $v1) }
 if ($v2 -eq 'APROBADA') { Write-Host '[OK ] T8b dup=no  -> APROBADA' }
@@ -111,8 +118,12 @@ if ($v3 -eq 'DISCREPANCIA:ARGUMENTOS_INVALIDOS') { Write-Host '[OK ] T8c 9 args 
 else { Write-Host ('[FAIL] T8c contrato viejo dio: ' + $v3) }
 
 # ---------- T9: el OCR devuelve el campo "texto" (RF-D5) ----------
-$py = 'C:\Users\acaba\AppData\Local\Programs\Python\Python312\python.exe'
-$j9 = (& $py C:\CPP\motores\procesar_factura.py C:\CPP\motores\spike\fotos\factura_01.jpg) -join '' | ConvertFrom-Json
+# Correcciones 29/10: python se resuelve del PATH o de CPP_PYTHON_BIN
+# (espejo de api/config.php, que ya no lleva rutas de equipo).
+$py = $env:CPP_PYTHON_BIN
+if (-not $py) { $c = Get-Command python -ErrorAction SilentlyContinue; if ($c) { $py = $c.Source } }
+if (-not $py) { Write-Host '[FAIL] T9 python no encontrado (PATH o CPP_PYTHON_BIN)' }
+$j9 = (& $py "$raiz\motores\procesar_factura.py" "$raiz\motores\spike\fotos\factura_01.jpg") -join '' | ConvertFrom-Json
 if ($j9.texto -and $j9.texto.Length -gt 50) {
     Write-Host ("[OK ] T9 OCR con campo texto ({0} caracteres)" -f $j9.texto.Length)
 } else {
