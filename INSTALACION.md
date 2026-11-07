@@ -41,7 +41,15 @@ C:\laragon\bin\mysql\mysql-8.x-winx64\bin\mysql.exe -u root < C:\laragon\www\cpp
 
 ## 4. Configuración
 
-Revisa `api\config.php` solo si tu MySQL tiene contraseña o puerto distinto. Ahí también quedarán, en el Sprint 4, las rutas de `python`, `swipl` y el binario C (mitigación riesgo R4).
+Revisa `api\config.php` solo si tu MySQL tiene contraseña o puerto distinto. Ahí SE RESUELVEN (ya implementado, correcciones 29/10) las rutas de `python`, `swipl` y el binario C (mitigación riesgo R4) mediante variables de entorno — sin editar código:
+
+```powershell
+setx CPP_PYTHON_BIN "C:\Python312\python.exe"      # omisión: python (del PATH)
+setx CPP_SWIPL_BIN  "C:\Program Files\swipl\bin\swipl.exe"   # omisión: swipl
+setx CPP_GCC_BIN    "C:\MinGW\bin\gcc.exe"         # omisión: gcc
+```
+
+`api\config.php` (líneas 53-55) las lee con `getenv(...)`; `pruebas\test_s9.ps1` usa las mismas (`CPP_SWIPL_BIN`/`CPP_PYTHON_BIN` o el PATH, con `[FAIL]` claro si faltan). `docs\DEMO.md` §55 las resume.
 
 > Si vas a subir fotos grandes, en `php.ini` sube `post_max_size` y `upload_max_filesize` a `16M` (la imagen viaja en Base64, que la infla ~40 %).
 
@@ -169,12 +177,14 @@ Publica las reglas que viven en la raíz del repo (correcciones 22/10):
   económico para contratarlo**. `storage.rules` queda DISEÑADO y
   VERSIONADO en el repo pero SIN publicar — es una decisión documentada
   (Bitácora, entrada 11), no un olvido. Efecto real: sin Blaze el bucket
-  de Storage no llega a crearse, así que las subidas de imágenes pueden
-  fallar — la app NO se rompe: la factura se guarda con veredicto (sin
-  foto, con aviso) y el pago con comprobante AVISA el error y la cuenta
-  queda «por pagar» (nunca se marca pagada sin evidencia). El día
-  que Storage se active: Consola → **Storage → Reglas** → pegar el
-  contenido de `storage.rules` → **Publicar**.
+  de Storage no llega a crearse, así que la FOTO DE LA FACTURA no sube —
+  la app NO se rompe: la factura se guarda con veredicto (sin foto, con
+  aviso). El **PAGO CON COMPROBANTE ya NO depende de Storage** (03/11):
+  la foto del comprobante se guarda COMO DOCUMENTO de Firestore (colección
+  `comprobantes`, ≤1000 px/calidad 70 en Base64, create-only: solo la crea
+  el cliente de esa orden) y la app la lee igual — nunca se marca pagada
+  sin evidencia. El día que Storage se active: Consola → **Storage →
+  Reglas** → pegar el contenido de `storage.rules` → **Publicar**.
 
 Dos formas más de publicarlas, equivalentes a pegar en la consola
 (correcciones 24/10 — úsalas tras editar `firestore.rules`/`storage.rules`):
@@ -198,10 +208,13 @@ Dos formas más de publicarlas, equivalentes a pegar en la consola
   falla mientras Storage no esté activo («Get started»/Blaze);
   `--only storage` queda para cuando se active.
 
-**Estado (29/10/2026)**: `firestore.rules` PUBLICADO en vivo (ya no corre
-el release pre-fix `4d2fad49`). Protege: el `rol` de `usuarios/{uid}` es
-inmutable, `usuarios` no se puede listar (el alta de cuentas consulta
-`clientesPorCorreo`) y las facturas/órdenes ajenas no se leen. Storage:
+**Estado (29/10/2026 · comprobantes 03/11)**: `firestore.rules` PUBLICADO
+en vivo (ya no corre el release pre-fix `4d2fad49`). Protege: el `rol` de
+`usuarios/{uid}` es inmutable, `usuarios` no se puede listar (el alta de
+cuentas consulta `clientesPorCorreo`) y las facturas/órdenes ajenas no se
+leen. Desde el 03/11 protege también `comprobantes` (la foto del pago):
+solo la crea el cliente de esa orden y nadie la cambia ni la borra — esa
+regla NUEVA se PUBLICÓ el 03/11 con el CLI (Deploy complete ✅). Storage:
 `storage.rules` sin publicar por la decisión económica de arriba — si
 algún día se publica, solo acepta JPEG de usuarios autenticados.
 

@@ -1,6 +1,6 @@
 ﻿================================================================================
   EXPLICACIÓN DEL PROYECTO CPP — Todo lo construido, explicado paso a paso
-  Última actualización: 17/10/2026 · Editor: Cline (sesión 16: Sprint 9 «Inteligencia del tablero» — duplicados, OCR completo, filtros y alertas de vencimiento; C9 14/14 + fix S8.3 del pago con comprobante)
+  Última actualización: 03/11/2026 · Editor: Cline (sesión 19: 4ª tanda de correcciones2.docx — comprobante de pago EN FIRESTORE sin Storage · duplicados/historial por el negocio de la orden · docs alineadas · app 0.20.0-v1 BUILD OK)
 ================================================================================
 
 ██████ INSTRUCCIÓN PARA CLINE (cómo mantener este archivo) ████████████████████
@@ -230,7 +230,8 @@ usuario root sin contraseña). Ver el puerto ocupado:
 
 Meta del sprint: que una foto REAL tomada con el celular llegue al servidor
 y apareciera como "Pendiente" en MySQL. Eso es el checkpoint C2. ✔ LOGRADO
-Todo el proyecto Android vive en C:\CPP\android (app "com.cpp.captura").
+Todo el proyecto Android vive en android\ dentro de la raíz del
+repositorio (app "com.cpp.captura").
 
 3.1 QUÉ HACE LA APP, EN PALABRAS SIMPLES
 ────────────────────────────────────────
@@ -294,7 +295,7 @@ PC (ipconfig → IPv4, ej. 192.168.1.20) + regla de firewall para el puerto
   minSdk 24 = corre desde Android 7.0 (cubre los celulares del perfil
   PyME/bodega) · targetSdk/compileSdk 36 · Volley 1.2.1 ·
   versión de la app: 0.2.0-sprint2.
-  Compilar APK por consola: cd C:\CPP\android && .\gradlew.bat
+  Compilar APK por consola: cd android && .\gradlew.bat
   :app:assembleDebug → app\build\outputs\apk\debug\app-debug.apk
   (build.cmd automatiza esto usando el JBR 21 que trae Android Studio).
   Ajuste fino: Volley arrastra kotlin-stdlib viejos que chocan con otros
@@ -577,7 +578,8 @@ duración. Botón «📋 Ver facturas» abre el listado. Versión 0.4.0-sprint4
 
 8.5 EL DESEMPLIEGUE (desplegar.ps1) — y un hallazgo importante
 ──────────────────────────────────────────────────────────────
-El servidor web NO lee C:\CPP sino su copia en C:\laragon\www\cpp… y esa
+El servidor web NO lee la raíz del repositorio sino su copia en
+C:\laragon\www\cpp… y esa
 copia ¡NO TENÍA la carpeta motores\! (en S1 solo se publicaron api\ y
 database\). Sin motores\ junto a api\, las rutas relativas de config.php
 apuntarían a la nada. desplegar.ps1 sincroniza api + database + motores
@@ -845,7 +847,8 @@ usuarios que cree el admin ya nacen con bcrypt.
 
 11.6 CÓMO SE VERIFICÓ (checkpoint C5, 15/15 OK)
 ───────────────────────────────────────────────
-Guion re-ejecutable: powershell -File C:\CPP\test_c5.ps1. Prueba logins
+Guion re-ejecutable: powershell -File .\pruebas\test_c5.ps1 (desde
+la raíz del repositorio). Prueba logins
 de los 3 roles, clave mala (401), llamadas sin token (401), capturista
 al CRUD (403), revisor enviando (403), crear usuario + duplicado (409),
 crear orden, login del usuario NUEVO (bcrypt funcionando), protección
@@ -1287,9 +1290,11 @@ Dos pedidos del usuario cambiaron la arquitectura de un plumazo:
     facturas (los veredictos del pipeline) · notificaciones y
     proveedores (las del S6). Los oyentes (addSnapshotListener)
     repintan la pantalla solos cuando algo cambia.
-  · STORAGE: las fotos — facturas/<timestamp>.jpg y el comprobante
-    de pago comprobantes/<ordenId>.jpg. Pagar = adjuntar la foto:
-    sin evidencia no hay pago (igual que S8.3/S9.1).
+   · STORAGE: OMITIDO por decisión económica desde el 31/10 (Blaze;
+     INSTALACION.md §8.4) — la FOTO DE LA FACTURA es opcional (sin ella
+     la factura se guarda igual, con aviso). Desde el 03/11 el
+     COMPROBANTE DE PAGO vive en Firestore (ver 16.7). Pagar sigue
+     siendo adjuntar la foto: sin evidencia no hay pago.
   · ADMIN por REST: la clave de servicio (SECRETO, fuera de git)
     permite a los scripts PHP de CONSOLA crear usuarios y sembrar
     datos sin Laragon (semilla_firebase.php).
@@ -1315,14 +1320,14 @@ y para la demo con Laragon.
 16.4 PROBAR SIN LARAGON (verificado en vivo el 20/10)
 ─────────────────────────────────────────────────────
 Solo se necesita php.exe como intérprete (ni Apache ni MySQL):
-  php C:\CPP\api\habilitar_email_auth.php  ← UNA vez: activa
+  php api\habilitar_email_auth.php        ← UNA vez: activa
       Email/Password. FIX 20/10: la API v1 de config YA NO EXISTE
       (404 de Google); se usa la v2 (PATCH .../v2/projects/{p}/config).
       Sin esto la app NO podía entrar.
-  php C:\CPP\api\semilla_firebase.php      ← re-ejecutable: 4 usuarios
+  php api\semilla_firebase.php            ← re-ejecutable: 4 usuarios
       demo (clave demo, fuera del repo) + perfiles + 3 cuentas para
       capturista@cpp.demo (una vence en 3 días ⏰ y una vencida 🚨).
-  powershell -File C:\CPP\test_s10.ps1     ← checkpoint C10 (7
+  powershell -File .\pruebas\test_s10.ps1   ← checkpoint C10 (7
       pruebas, incluye un login REAL por REST). Resultado: 7/7 OK.
 En el móvil: entrar con capturista@cpp.demo / la clave demo → ver las
 cuentas → pagar con comprobante; con proveedor@cpp.demo → «➕ Subir
@@ -1347,6 +1352,41 @@ motores portados al teléfono (ML Kit + Java), el servidor dejó de ser
 necesario y la app pudo hablar directo con la nube. El historial S1-S9
 no se pierde: documenta CÓMO se construyó el pipeline que ahora corre
 en el móvil, y sigue siendo ejecutable con Laragon para la demo
+16.7 EL COMPROBANTE DE PAGO VIVE EN FIRESTORE (03/11 — sin Storage)
+────────────────────────────────────────────────────────────────
+¿POR QUÉ? El pago con comprobante es del TÍTULO del proyecto
+(RF-P1..P3), pero Storage exige el plan Blaze y sin bucket la cuenta
+quedaba «por pagar» cada vez que la foto no podía subir. Firestore no
+pide Blaze y un documento admite hasta 1 MB: una foto reducida SÍ cabe.
+
+¿CÓMO FUNCIONA?
+  1. El cliente elige la foto → la app la reduce a ≤1000 px de lado
+     mayor con calidad JPEG 70 (~100-250 KB).
+  2. FirebaseServicio.guardarComprobante() la convierte a Base64 y crea
+     un documento en la colección `comprobantes` con ordenId,
+     clienteCorreo, proveedorUid y fecha. Si el texto pasara de 900,000
+     caracteres NO se escribe y se avisa (tope defensivo).
+  3. La orden queda pagada con comprobanteUrl = «fs:<id del documento>»
+     (antes era la URL https de Storage; el prefijo distingue el origen).
+  4. Para VERLA: si comprobanteUrl empieza con «fs:» se lee el documento
+     y los bytes se convierten en imagen con BitmapFactory.decodeByteArray;
+     si empieza con «https» se usa el ImageRequest de siempre (pagos
+     viejos). El PROVEEDOR también la ve: su ficha de cuenta pagada
+     ahora muestra la imagen (dialog_pago.xml).
+  5. REGLAS (firestore.rules): solo el CLIENTE de esa orden puede crear
+     el comprobante (y sus campos deben calzar con la orden, cotejado con
+     get()); lo leen el cliente y el proveedor; NADIE lo cambia ni lo
+     borra — la evidencia del pago es inmutable, igual que el
+     create-only de storage.rules. La regla se PUBLICÓ el mismo día
+     03/11 (Deploy complete ✅).
+
+MISMO PROVEEDOR AL GUARDAR Y AL BUSCAR (mismo día): la llave de
+duplicados y el promedio de historial usan AHORA el NEGOCIO DE LA ORDEN
+(factura.ordenProveedorSlug). Antes la llave se escribía con lo que leyó
+el OCR («PAPELERIA CENTRAL SA DE CV») y se buscaba con la orden
+(«Papelería Central»): llaves distintas → la misma factura enviada dos
+veces NO salía duplicada y el riesgo se calculaba sin historial.
+
 académica de la escuela.
 
  HISTORIAL DE EXPLICACIONES POR SESIÓN (agregar una entrada por sesión)
@@ -1528,6 +1568,21 @@ académica de la escuela.
      Verificado: php -l, motores por CLI, migración §7, despliegue,
      regresión C5 15/15 con trío §9.2 exacto (BD respaldada y limpia) y
      C9 14/14 (test_s9.ps1 nuevo). APK 0.13.0-v1 (vc 19): BUILD
+
+  SESIÓN 19 — 03/11/2026, 2ª parte (4ª tanda de correcciones2.docx)
+     El revisor devolvió el docx con 3 tareas nuevas («Nuevo en este
+     corte»). Hechas las tres: (1) el comprobante de pago vive EN
+     FIRESTORE (colección comprobantes: JPEG ≤1000 px/q70 en Base64,
+     create-only) y comprobanteUrl pasa a «fs:<id>» — el pago ya NO
+     depende de Storage; el proveedor VE el comprobante en su ficha;
+     (2) duplicados e historial usan el NEGOCIO DE LA ORDEN
+     (factura.ordenProveedorSlug): escribir y buscar la misma llave
+     aunque el OCR lea «S.A. de C.V.»; (3) documentación alineada
+     (readme, MVP_CPP §14, INSTALACION §8.4, Bitacora §1;
+     correcciones.txt fuera de la raíz). App 0.20.0-v1 (vc 30) BUILD
+     SUCCESSFUL (b31.log) y firestore.rules RE-PUBLICADO con la regla
+     de comprobantes (Deploy complete ✅). FALTA: probar el ciclo en el
+     teléfono. Explicado en: PARTE 16 §16.7.
      SUCCESSFUL (b11.log, 31 s). Ajuste S9.1 al cierre: POR PAGAR sin
      ninguna foto (se paga adjuntando el comprobante) → 0.13.1-v1 (vc 20,
      b12.log). Explicado en: PARTE 15.
@@ -1547,6 +1602,24 @@ académica de la escuela.
      (checkpoint C10: 7/7), limpieza de la era IP/servidor en la app
      (campo usuario muerto del login + 6 strings), SPRINT10_v1.md y
      esta documentación. Explicado en: PARTE 16.
+
+  SESIÓN 18 — 03/11/2026 (verificación de la 3ª revisión, correcciones2.docx)
+     El usuario pidió releer Bitacora+Explicacion, leer correcciones2.docx y
+     ejecutar su «lo que sigue». Hallazgo: los 6 puntos ya estaban hechos
+     (sesión 29/10, registrada solo en Bitacora; las sesiones 29/10-31/10 no
+     agregaron entrada aquí). Esta sesión VERIFICÓ cada punto contra el repo:
+     comprobantes create-only en comprobantes/<ordenId>/<timestamp>.jpg,
+     firestore.rules (propietario inmutable + cliente solo pagada|pendiente,
+     y publicado en vivo el 29/10), llaves de duplicados POR DUEÑO
+     (llaveFolio/llaveTerna al escribir y buscar), rutas portables (0 rutas
+     de equipo en *.ps1/*.php/*.cmd), MVP_CPP.md §14, docs/DEMO.md y raíz
+     ordenada con «Uso de IA». Re-corrido en vivo: php -l, desplegar.ps1
+     portable, C9 14/14 y C5 15/15 con el trío §9.2 exacto. LECCIÓN para la
+     demo: C9 y C5 usan AMBOS el folio F-1001 — si se corren seguidos hay
+     que vaciar `facturas` entre ambos (si no, el pre-check de duplicados
+     marca el trío como FACTURA_DUPLICADA); respaldo previo en
+     database\backup_*.sql (fuera de git). Sin cambios de código: solo la
+     Bitacora y esta Explicacion se actualizaron.
 
 ══════════════════════════════ FIN DE LA EXPLICACIÓN ══════════════════════════
   Archivos hermanos: Bitacora.txt (estado/avances) · INSTALACION.md (S1)

@@ -1,4 +1,9 @@
-param([string]$ruta = "C:\Users\acaba\Desktop\Prueba_Telefono_0311\ui.xml")
+# Portable (correcciones 07/11): la ruta por omisión NO apunta al escritorio
+# de un equipo concreto — si no se pasa -ruta, se busca ui.xml junto a este
+# script y, si no está, en %TEMP% (donde lo deja un:
+#   adb exec-out uiautomator dump /sdcard/uidump.xml + adb pull ... )
+param([string]$ruta = (Join-Path (Split-Path $PScriptRoot -Parent) "ui.xml"))
+if (-not (Test-Path $ruta)) { $ruta = Join-Path $env:TEMP "ui.xml" }
 [xml]$doc = Get-Content $ruta -Encoding UTF8
 $ns = New-Object System.Xml.XmlNamespaceManager($doc.NameTable)
 $ns.AddNamespace("a", "http://schemas.android.com/apk/res/android")

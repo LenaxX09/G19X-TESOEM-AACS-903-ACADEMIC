@@ -209,6 +209,7 @@ cuenta en la consola → expulsión en vivo en segundos).
 | 24/10 | Código muerto S6 escribiendo en colecciones cerradas | Bloque retirado (decisión: cambiar código, no abrir reglas) |
 | 29/10 | Comprobantes de Storage reemplazables por cualquier cuenta (`update` abierto) | `comprobantes/<ordenId>/<timestamp>.jpg` + create-only en `storage.rules` |
 | 29/10 | Duplicados GLOBALES: el folio de otra empresa marcaba «duplicada» la factura ajena | Llaves de `facturasLookup` POR DUEÑO y lectura restringida al dueño |
+| 07/11 | Capturas de pantalla PNG dañadas (redirección `>` de PowerShell re-encodea binarios) | `adb shell screencap -p` EN el teléfono + `adb pull` (binario-seguro) |
 
 ## 9. Estado final y pendientes
 
@@ -225,11 +226,33 @@ formal completa (`Arquitectura.md`, `Manual_Tecnico.md`,
    para contratarlo — omisión documentada (§7, `INSTALACION.md` §8.4,
    Bitácora entrada 11); el archivo queda versionado en el repo.
    `firestore.rules` ya está publicado en vivo (29/10).
-3. Probar el flujo de duplicados por dueño en el teléfono (2 cuentas de
-   cliente) y la vuelta completa proveedor↔cliente en el Motorola físico
-   (guion `SPRINT10_v1.md` §3 en dos sesiones) — con las reglas ya
-   activas; si algo da PERMISSION_DENIED, revisar la regla antes de
-   abrirla.
+3. ~~Probar en el teléfono pagar y desmarcar con las reglas nuevas~~ →
+   **HECHO 07/11** (Motorola Edge 50 Fusion, v0.20.0-v1): pagar adjuntando
+   `pruebas/comprobante_demo.jpg` (la foto queda como DOCUMENTO de
+   `comprobantes` con `comprobanteUrl=fs:<id>`, sin Storage), la cuenta
+   pasa a PAGADAS, la FOTO del comprobante se ve al abrir la cuenta pagada
+   (`leerComprobante`) y «↩ Devolver a por pagar» la regresa a POR PAGAR —
+   todo con las reglas PUBLICADAS activas y ningún PERMISSION_DENIED (el
+   documento de `comprobantes` queda en Firestore: es create-only, nadie
+   lo borra — comportamiento correcto). Evidencias:
+   `pruebas/instala_0711/07_pago_comprobante_visible.png` y
+   `08_tras_desmarcar.png`. **Nota UX (no bloqueante)**: el candado S10.5
+   pide la huella al volver del selector de fotos (la app queda >1 s en
+   segundo plano al elegir el comprobante): por diseño; con la huella del
+   dueño son ~2 s. SIGUEN pendientes: duplicados por dueño con 2 cuentas
+   de cliente y la vuelta completa proveedor↔cliente (guion
+   `SPRINT10_v1.md` §3 en dos sesiones) — requieren una 2ª cuenta de
+   cliente CON orden asignada y sesión de proveedor; el envío doble de una
+   factura con encabezado distinto (2ª vez «duplicada») está garantizado
+   en código (`ordenProveedorSlug` escrito y consultado con el MISMO slug
+   del negocio de la orden: `MainActivity` 400/438 + `FirebaseServicio`
+   `llaveFolio`) y **PROBADO A MANO el 07/11** en el Motorola: GALERÍA →
+   `Download/factura_01.jpg` (F-1001, $4,850) → ENVIAR (1ª vez:
+   «PROVEEDOR_NO_COINCIDE», se guarda con sus lookups) y de nuevo → 2ª vez
+   «Motivo: FACTURA_DUPLICADA · esa factura ya se había subido antes» —
+   el candado pidió la huella del dueño al volver de la galería, como
+   está diseñado. Evidencias: `09_duplicados_1er_envio.png` y
+   `10_duplicados_2do_envio.png` (lista con ambas F-1001).
 4. Deuda v1.1: verificación de correo al registrarse; multipart; token
    cifrado (camino servidor).
 
