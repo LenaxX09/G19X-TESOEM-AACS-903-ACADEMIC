@@ -153,8 +153,9 @@ SECCIÓN 1 · RESUMEN DEL ESTADO ACTUAL (30 segundos)
                Sección 4). PAGO CON COMPROBANTE: desde el 03/11 la foto
                se guarda COMO DOCUMENTO en Firestore (colección
                comprobantes, JPEG en Base64) — app 0.20.0-v1 y REGLAS ya
-               publicadas (03/11); falta probarlo en el teléfono
-               (Siguiente).
+               publicadas (03/11) y PROBADO EN EL TELÉFONO el 07/11
+               (pagar + ver el comprobante + devolver a por pagar, cero
+               PERMISSION_DENIED — evidencias pruebas\instala_0711).
    Publicado : firestore.rules EN VIVO (29/10 y RE-PUBLICADO hoy 03/11
                con la regla de comprobantes —
                Deploy complete ✅; el release pre-fix 4d2fad49 ya NO
@@ -163,38 +164,37 @@ SECCIÓN 1 · RESUMEN DEL ESTADO ACTUAL (30 segundos)
                (INSTALACION.md §8.4); desde el 03/11 NADA del ciclo de
                pago depende de Storage (la foto de la factura es
                opcional: sin ella la factura se guarda igual, con aviso).
-   Probado   : 03/11 (2ª parte) — APK 0.20.0-v1 (vc 30) BUILD SUCCESSFUL
-               (b31.log); las 3 tareas nuevas de correcciones2.docx
-               CODIFICADAS pero SIN probar en el teléfono. Antes (03/11
-               mañana): 6/6 puntos de la 3ª revisión verificados · C9
-               14/14 · C5 15/15 (trío §9.2 exacto; ambos usan F-1001 →
-               vaciar facturas ENTRE corridas) · php -l y desplegar.ps1
-               portables OK.
-   Siguiente  : 0) ✔ HECHO (03/11 pm): firestore.rules RE-PUBLICADO con
-                la regla de comprobantes (Deploy complete ✅). 1) Prueba
-                EN EL TELÉFONO con la 0.20.0:
-                a) el cliente paga y el proveedor VE el comprobante; b)
-                enviar DOS VECES una foto con encabezado «S.A. de C.V.» →
-                la 2ª debe salir FACTURA_DUPLICADA; c) duplicados con 2
-                cuentas de cliente (si sale PERMISSION_DENIED revisar la
-                regla, no abrirla). 2) USUARIO: commitear (mensaje
-                sugerido abajo). 3) RF-M8 cola offline (cierra v1.0).
-                4) Retro H4 con usuarios ajenos. 5) Deuda v1.1:
+   Probado   : 07/11 — 0.20.0-v1 compilada (b32.log), INSTALADA en el
+               Motorola Edge 50 Fusion y probada EN VIVO: login, orden
+               OC-001 cargada, pagar con comprobante (fs:<id>) +
+               desmarcar, la FOTO del comprobante visible en PAGADAS y
+               doble envío → FACTURA_DUPLICADA (detalle: Sección 3, 5ª
+               tanda; evidencias pruebas\instala_0711). Antes (03/11):
+               APK BUILD SUCCESSFUL (b31.log, codificada) · 6/6 puntos de
+               la 3ª revisión · C9 14/14 · C5 15/15 (trío §9.2 exacto;
+               ambos usan F-1001 → vaciar facturas ENTRE corridas) ·
+               php -l y desplegar.ps1 portables OK.
+   Siguiente  : 1) Prueba EN EL TELÉFONO con la 0.20.0:
+                a) ✔ HECHO (07/11): el cliente paga adjuntando
+                comprobante y la FOTO se ve en PAGADAS — falta verlo
+                también con SESIÓN DE PROVEEDOR; b) ✔ HECHO (07/11):
+                doble envío → la 2ª sale FACTURA_DUPLICADA; c) PENDIENTE:
+                duplicados con 2 cuentas de cliente (si sale
+                PERMISSION_DENIED revisar la regla, no abrirla) —
+                requiere 2ª cuenta con orden asignada. 2) ✔ HECHO (07/11):
+                commiteado y pusheado. 3) RF-M8 cola offline (cierra
+                v1.0). 4) Retro H4 con usuarios ajenos. 5) Deuda v1.1:
                 verificación de correo; conectar «Enviar factura» también
                 al camino servidor.
-   Git        : f06b3ba «ultima actualizacion» (USUARIO, 31/10) sigue
-                siendo el ÚLTIMO commit. SIN COMMITEAR: los 4 .ps1
-                portables de pruebas\ (test_c5/s7/s9/s10) · el borrado de
-                correcciones.txt · y los cambios de HOY (app 0.20.0-v1:
-                FirebaseServicio/Pagos/Proveedor/MainActivity,
-                firestore.rules, build.gradle, b31.log, deploy_0311.log
-                + docs: readme/MVP_CPP/INSTALACION/DEMO/SPRINT10/
-                Arquitectura/Bitacora/Explicacion).
-                correcciones2.docx (del revisor) sigue SIN trackear a
-                propósito. Mensaje sugerido: «4ª tanda correcciones2:
-                comprobante de pago en Firestore sin Storage + duplicados
-                e historial por el negocio de la orden + docs alineadas
-                (app 0.20.0-v1)».
+   Git        : 07/11 — TODO COMMITEADO y PUSHEADO a origin/main:
+                4850e6d «4ª tanda correcciones2 (03/11): comprobante de
+                pago EN FIRESTORE (sin Storage) + duplicados/historial por
+                negocio de la orden; v0.20.0-v1» · 5275324 «5ª tanda
+                correcciones2 (07/11): pago y duplicados PROBADOS en el
+                Motorola + evidencias en pruebas\instala_0711» · 96b7042
+                «elimina correcciones.txt de la raiz». correcciones2.docx
+                (del revisor) sigue SIN trackear A PROPÓSITO (decisión del
+                usuario 07/11); capturas con el correo del dueño tapado.
 
 
 ────────────────────────────────────────────────────────────────────────────────
