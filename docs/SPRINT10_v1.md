@@ -10,9 +10,9 @@ Guía rápida del Sprint 10 de la v1.0. Lo nuevo, en una línea cada cosa:
 | Login sin IP | Sesión con **Firebase Auth** (correo+contraseña); `google-services.json` apunta al proyecto cpp-facturas. `Sesion` ya no guarda servidor ni token propio | `LoginActivity.java`, `Sesion.java` |
 | Órdenes sin IP: las sube el PROVEEDOR | «➕ Subir cuenta (lo que le deben a tu negocio)» → Firestore `ordenes` {clienteCorreo, monto, fechaLimite}; el cliente la ve **al instante** (oyente en vivo) y la paga con su comprobante | `ProveedorActivity.java`, `PagosActivity.java` |
 | Pipeline EN EL TELÉFONO | `Motores.java`: OCR con **ML Kit** + riesgo (fórmula del C) + conciliación (réplica de `regla.pl`, reglas 0–5) + pre-check de duplicados (RF-L3) contra Firestore | `Motores.java`, `MainActivity.java` |
-| Fotos en la nube | Foto de la factura y comprobante de pago van a **Firebase Storage** (`facturas/`, `comprobantes/`); el veredicto queda en Firestore `facturas` (listado en vivo) | `FirebaseServicio.java`, `ListadoActivity.java` |
+| Fotos en la nube | El COMPROBANTE de pago vive en **Firestore** (colección `comprobantes`, JPEG en Base64 — 03/11, sin Storage); la foto de la factura iría a Storage (PENDIENTE por Blaze; sin ella la factura se guarda igual, con aviso) | `FirebaseServicio.java`, `PagosActivity.java` |
 
-App resultante: **0.19.0-v1 (versionCode 29)** — S10.7 (21/10):
+App resultante: **0.20.0-v1 (versionCode 30)** — correcciones 03/11: comprobante de pago EN FIRESTORE (sin Storage) y duplicados/historial por el NEGOCIO de la orden. S10.7 (21/10):
 **sesión vigilada** — si BORRAN la cuenta en Firebase (Auth o perfil
 `usuarios/{uid}`), el teléfono se entera EN VIVO (oyente de Firestore
 sobre el perfil + AuthStateListener) y vuelve al login con «Tu cuenta
@@ -105,11 +105,12 @@ Con datos móviles/WiFi (nada de `adb reverse` ni teclear IP):
    fecha límite (AAAA-MM-DD).
 3. En el teléfono del **cliente** la cuenta aparece SOLA (oyente en vivo).
 4. **Pagar**: POR PAGAR → tocar la cuenta → «📷 Adjuntar comprobante y
-   pagar» → galería → el comprobante sube a Storage y la cuenta pasa sola
-   a PAGADAS (la lista del proveedor también se actualiza sola). ⚠️ Con
-   Storage omitido (Blaze — INSTALACION §8.4) la subida puede fallar: la
-   app AVISA y la cuenta queda «por pagar» (sin evidencia no hay pago);
-   anota qué pasó al probarlo en el teléfono.
+   pagar» → galería → desde el 03/11 el comprobante se guarda COMO
+   DOCUMENTO en Firestore (colección `comprobantes`, JPEG en Base64 —
+   SIN Storage, que sigue omitido por Blaze: INSTALACION §8.4) y la
+   cuenta pasa sola a PAGADAS (la lista del proveedor también se
+   actualiza sola y su ficha MUESTRA el comprobante). `firestore.rules`
+   ya quedó re-publicado (03/11, regla nueva: Deploy complete ✅).
 5. **Enviar factura**: elegir cuenta → foto/galería → «📤 Enviar factura» →
    OCR + riesgo + conciliación corren EN EL TELÉFONO y el veredicto ✅/⚠️
    se guarda en Firestore («📋 Ver facturas»). La foto va a Storage; si no

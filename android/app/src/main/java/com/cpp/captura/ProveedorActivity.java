@@ -3,12 +3,15 @@ package com.cpp.captura;
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -20,6 +23,9 @@ import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.android.volley.RequestQueue;
+import com.android.volley.toolbox.ImageRequest;
+import com.android.volley.toolbox.Volley;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
@@ -39,7 +45,9 @@ import java.util.Map;
  * cliente le debe → se guarda en Firestore (`ordenes`: clienteCorreo, monto,
  * fechaLimite) → el cliente lo ve AL INSTANTE en «💰 Cuentas por pagar»
  * (oyente en tiempo real, sin push de servidor) y lo paga adjuntando su
- * comprobante a Storage; aquí la lista se actualiza sola cuando eso pasa.
+ * comprobante — desde el 03/11 la foto vive COMO DOCUMENTO en Firestore
+ * (sin Storage); la lista se actualiza sola cuando eso pasa y en la ficha
+ * de la cuenta el PROVEEDOR VE el comprobante con el que le pagaron.
  *
  * Sin Laragon, sin IP: todo pasa por Firebase.
  */
@@ -49,6 +57,7 @@ public class ProveedorActivity extends AppCompatActivity {
 
     private final List<QueryDocumentSnapshot> cuentas = new ArrayList<>();
     private CuentasAdapter adaptador;
+    private RequestQueue cola;   // baja el comprobante https (pagos viejos)
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,6 +75,7 @@ public class ProveedorActivity extends AppCompatActivity {
         FirebaseServicio.vigilarSesion(this);
 
         setContentView(R.layout.activity_proveedor);
+        cola = Volley.newRequestQueue(this);
 
         ActionBar barraApp = getSupportActionBar();
         if (barraApp != null) {
@@ -247,21 +257,56 @@ public class ProveedorActivity extends AppCompatActivity {
                     String.format(Locale.US, "%.2f", interes))).append('\n');
         }
         info.append("Vence: ").append(texto(d, "fechaLimite"));
-        if ("pagada".equals(texto(d, "estado"))) {
+        boolean pagada = "pagada".equals(texto(d, "estado"));
+        if (pagada) {
             info.append('\n').append(getString(R.string.fila_cuenta_estado_pagada,
                     texto(d, "pagadaEn")));
+        }
+        // S10.6: si está CERRADA (vencida sin reabrir), el proveedor decide.
+        if (esCerrada(d)) {
+            info.append("\n\n").append(getString(R.string.prov_info_cerrada,
+                    texto(d, "clienteCorreo")));
+        }
+
+        // Correcciones 03/11: el proveedor TAMBIÉN ve la FOTO del comprobante
+        // con el que le pagaron (vive en Firestore: «fs:<id>», sin Storage;
+        // una URL https solo corresponde a pagos anteriores al cambio).
+        View v = LayoutInflater.from(this).inflate(R.layout.dialog_pago, null);
+        ImageView img = v.findViewById(R.id.imgFotoPago);
+        TextView txt = v.findViewById(R.id.txtInfoPago);
+        txt.setText(info.toString());
+        String comprobante = texto(d, "comprobanteUrl");
+        if (pagada && !comprobante.isEmpty()) {
+            if (comprobante.startsWith("fs:")) {
+                FirebaseServicio.leerComprobante(comprobante.substring(3),
+                        jpeg -> runOnUiThread(() -> {
+                            Bitmap bm = BitmapFactory.decodeByteArray(jpeg, 0, jpeg.length);
+                            if (bm != null) {
+                                img.setImageBitmap(bm);
+                            }
+                        }),
+                        e -> Toast.makeText(this, "No se pudo cargar el comprobante",
+                                Toast.LENGTH_SHORT).show());
+            } else {
+                ImageRequest foto = new ImageRequest(
+                        comprobante,
+                        bitmap -> img.setImageBitmap(bitmap),
+                        0, 0, ImageView.ScaleType.FIT_CENTER, Bitmap.Config.RGB_565,
+                        error -> Toast.makeText(this, "No se pudo cargar el comprobante",
+                                Toast.LENGTH_SHORT).show());
+                foto.setTag("CPP_S10_IMG");
+                cola.add(foto);
+            }
+        } else {
+            img.setVisibility(View.GONE);
         }
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this, R.style.CPPDialogo)
                 .setTitle(R.string.pagos_cuenta_titulo)
-                .setMessage(info.toString())
+                .setView(v)
                 .setNeutralButton(R.string.cancelar, null);
-
-        // S10.6: si está CERRADA (vencida sin reabrir), el proveedor decide.
         if (esCerrada(d)) {
-            builder.setMessage(info + "\n\n"
-                            + getString(R.string.prov_info_cerrada, texto(d, "clienteCorreo")))
-                    .setPositiveButton(R.string.prov_agregar_interes,
+            builder.setPositiveButton(R.string.prov_agregar_interes,
                             (dlg, w) -> dialogoInteres(d))
                     .setNegativeButton(R.string.prov_reabrir,
                             (dlg, w) -> reabrir(d));

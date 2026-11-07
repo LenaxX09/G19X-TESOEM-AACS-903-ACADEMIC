@@ -1,6 +1,7 @@
 package com.cpp.captura;
 
 import android.content.Context;
+import android.util.Base64;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -34,7 +35,14 @@ import java.util.function.Consumer;
  *                           conciliadas, SIEMPRE filtradas por subidoPor
  *                           (las reglas no dejan leer las ajenas) + el
  *                           índice anti-duplicados `facturasLookup`.
- *   subirFotoFactura()/subirComprobante() → imágenes en Storage.
+ *   subirFotoFactura()/subirComprobante() → imágenes en Storage (Storage
+ *                           OMITIDO por Blaze desde el 31/10; quedan para
+ *                           cuando se active — INSTALACION.md §8.4).
+ *   guardarComprobante()/leerComprobante() → correcciones 03/11: la FOTO
+ *                           del comprobante de pago COMO DOCUMENTO de
+ *                           Firestore (colección `comprobantes`, JPEG en
+ *                           Base64) → el ciclo pagar→ver funciona SIN
+ *                           Storage (RF-P1..P3).
  *   vigilarSesion()/verificarSesion() → S10.7: sesión vigilada.
  *
  * El slug normaliza el nombre del proveedor IGUAL que fb_slug() de PHP
@@ -215,15 +223,76 @@ public final class FirebaseServicio {
         return lista;
     }
 
-    /** S10: sube el comprobante de pago a Storage y devuelve su URL https.
+    /**
+     * S10: sube el comprobante de pago a Storage y devuelve su URL https.
      *  Correcciones 29/10: nombre ÚNICO por pago dentro de la carpeta de la
      *  orden (comprobantes/<ordenId>/<timestamp>.jpg) — cada pago crea su
      *  archivo; nadie puede reemplazar el comprobante de otra persona
-     *  (storage.rules: create sí, update no). */
+     *  (storage.rules: create sí, update no).
+     *  Correcciones 03/11: PagosActivity ya NO llama a este método — con
+     *  Storage omitido (Blaze) el comprobante se guarda como DOCUMENTO con
+     *  guardarComprobante(). Queda listo para el día que Storage se active.
+     */
     public static void subirComprobante(String ordenId, byte[] jpeg,
                                         Consumer<String> alUrl, Consumer<String> err) {
         subirImagen("comprobantes/" + ordenId + "/"
                         + System.currentTimeMillis() + ".jpg", jpeg, alUrl, err);
+    }
+
+    /**
+     * Correcciones 03/11 (RF-P1..P3 SIN Storage): guarda la FOTO del
+     * comprobante COMO DOCUMENTO de Firestore (colección `comprobantes`) —
+     * el cliente puede marcar la cuenta como pagada aunque el proyecto no
+     * tenga bucket (INSTALACION.md §8.4). Devuelve el id del documento para
+     * que la orden quede comprobanteUrl = "fs:<id>". La foto ya viene
+     * reducida (≤1000 px, JPEG 70 ≈ 100-250 KB); tope defensivo de 900,000
+     * caracteres Base64 (~675 KB de foto, muy por debajo del límite de
+     * 1 MB por documento): si se pasa, NO se escribe y se avisa.
+     */
+    public static void guardarComprobante(String ordenId, String clienteCorreo,
+                                          String proveedorUid, byte[] jpeg,
+                                          Consumer<String> alId, Consumer<String> err) {
+        String foto;
+        try {
+            foto = Base64.encodeToString(jpeg, Base64.NO_WRAP);
+        } catch (Exception e) {
+            err.accept(e.getMessage());
+            return;
+        }
+        if (foto.length() > 900_000) {
+            err.accept("la foto sigue pesando demasiado (" + foto.length()
+                    + " caracteres Base64): tómala de nuevo un poco más lejos");
+            return;
+        }
+        Map<String, Object> doc = new HashMap<>();
+        doc.put("ordenId", ordenId);
+        doc.put("clienteCorreo", clienteCorreo);
+        doc.put("proveedorUid", proveedorUid);
+        doc.put("fecha", FieldValue.serverTimestamp());
+        doc.put("fotoBase64", foto);
+        FirebaseFirestore.getInstance().collection("comprobantes").add(doc)
+                .addOnSuccessListener(ref -> alId.accept(ref.getId()))
+                .addOnFailureListener(e -> err.accept(e.getMessage()));
+    }
+
+    /**
+     * Correcciones 03/11: baja el comprobante guardado por guardarComprobante()
+     * (la parte que sigue a «fs:») y lo devuelve como bytes JPEG listos para
+     * BitmapFactory.decodeByteArray. Las reglas dejan leerlo SOLO al cliente
+     * y al proveedor de esa orden (comprobantes: get acotado).
+     */
+    public static void leerComprobante(String id, Consumer<byte[]> alFoto,
+                                       Consumer<String> err) {
+        FirebaseFirestore.getInstance().collection("comprobantes").document(id).get()
+                .addOnSuccessListener(doc -> {
+                    String foto = doc.getString("fotoBase64");
+                    if (foto == null || foto.isEmpty()) {
+                        err.accept("el comprobante no tiene foto");
+                        return;
+                    }
+                    alFoto.accept(Base64.decode(foto, Base64.DEFAULT));
+                })
+                .addOnFailureListener(e -> err.accept(e.getMessage()));
     }
 
     /** S10: sube la foto de una factura conciliada a Storage. */
@@ -282,7 +351,18 @@ public final class FirebaseServicio {
             String folio = (String) f.get("folio");
             Object monto = f.get("monto");
             String fecha = (String) f.get("fecha");
-            String slugProv = (String) f.get("proveedorSlug");
+            // Correcciones 03/11: la llave se arma con el proveedor OFICIAL
+            // (ordenProveedorSlug = slug del NEGOCIO DE LA ORDEN), el MISMO
+            // con el que buscarDuplicado/historialPromedio consultan. El OCR
+            // puede leer «PAPELERIA CENTRAL SA DE CV» cuando la orden dice
+            // «Papelería Central»: si la llave se escribiera con lo leído,
+            // escribir y buscar usarían llaves DISTINTAS y la misma factura
+            // enviada dos veces no saldría duplicada. proveedorSlug queda
+            // como respaldo solo para facturas previas al 03/11.
+            String slugProv = (String) f.get("ordenProveedorSlug");
+            if (slugProv == null || slugProv.isEmpty()) {
+                slugProv = (String) f.get("proveedorSlug");
+            }
             String dueno = (String) f.get("subidoPor");
             if (folio != null && !folio.isEmpty()) {
                 escribirLookup(db, llaveFolio(dueno, slugProv, folio), facturaId, dueno);
@@ -344,13 +424,18 @@ public final class FirebaseServicio {
      * S10 + REGLAS (fix 22/10): promedio histórico del proveedor SOBRE
      * LAS FACTURAS DE ESTE CLIENTE — las reglas de Firestore no dejan
      * leer facturas ajenas, así que la consulta se filtra por subidoPor
-     * (dueño) además de por proveedorSlug. 0 si no hay historial.
+     * (dueño) además de por el proveedor de la ORDEN. 0 si no hay historial.
+     * Correcciones 03/11: filtra por ordenProveedorSlug (el negocio de la
+     * ORDEN), el MISMO campo con el que se ESCRIBEN las facturas nuevas —
+     * antes filtraba por proveedorSlug (lo que leyó el OCR) y el promedio
+     * salía vacío cuando el encabezado traía texto extra («S.A. de C.V.»).
+     * Las facturas previas al 03/11 no traen el campo y no cuentan.
      */
     public static void historialPromedio(String correo, String proveedorSlug,
                                          Consumer<Double> alPromedio) {
         FirebaseFirestore.getInstance().collection("facturas")
                 .whereEqualTo("subidoPor", correo)
-                .whereEqualTo("proveedorSlug", proveedorSlug)
+                .whereEqualTo("ordenProveedorSlug", proveedorSlug)
                 .limit(50).get()
                 .addOnSuccessListener(valor -> {
                     double suma = 0;

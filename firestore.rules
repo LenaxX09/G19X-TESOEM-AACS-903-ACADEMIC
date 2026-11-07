@@ -1,7 +1,8 @@
 rules_version = '2';
 
 // firestore.rules — CPP v1 (correcciones 22/10/2026 · fix update 24/10/2026
-// · comprobantes/lookups por dueño 29/10/2026)
+// · comprobantes/lookups por dueño 29/10/2026 · comprobantes EN FIRESTORE
+// y duplicados por el negocio de la orden 03/11/2026)
 //
 // Publicar: consola Firebase → Firestore Database → Reglas → pegar este
 // archivo → Publicar (o `firebase deploy --only firestore:rules`).
@@ -91,6 +92,30 @@ service cloud.firestore {
                   && request.resource.data.estado in ['pagada', 'pendiente'])
           );
       allow delete: if autenticado() && soyProveedorDe(resource.data);
+    }
+
+    // ── comprobantes/{id}: la FOTO del pago VIVE EN FIRESTORE (03/11) ─────
+    // Sin Storage (INSTALACION.md §8.4: Blaze) el comprobante de pago se
+    // guarda COMO DOCUMENTO: JPEG reducido (≤1000 px, calidad 70) en Base64,
+    // muy por debajo del límite de 1 MB de Firestore. SOLO puede CREARLO el
+    // CLIENTE de esa orden y los datos (ordenId/clienteCorreo/proveedorUid)
+    // deben calzar con la orden; lo leen el cliente y el proveedor de esa
+    // orden; NADIE lo cambia ni lo borra (evidencia del pago, igual que el
+    // create-only de storage.rules).
+    match /comprobantes/{id} {
+      allow get: if autenticado()
+          && (resource.data.clienteCorreo == miCorreo()
+              || resource.data.proveedorUid == request.auth.uid);
+      allow create: if autenticado()
+          && request.resource.data.ordenId is string
+          && exists(/databases/$(database)/documents/ordenes/$(request.resource.data.ordenId))
+          && get(/databases/$(database)/documents/ordenes/$(request.resource.data.ordenId)).data.clienteCorreo
+                == miCorreo()
+          && request.resource.data.clienteCorreo
+                == get(/databases/$(database)/documents/ordenes/$(request.resource.data.ordenId)).data.clienteCorreo
+          && request.resource.data.proveedorUid
+                == get(/databases/$(database)/documents/ordenes/$(request.resource.data.ordenId)).data.proveedorUid;
+      allow list, update, delete: if false;
     }
 
     // ── facturas: cada cliente ve SOLO las suyas ────────────────────────────

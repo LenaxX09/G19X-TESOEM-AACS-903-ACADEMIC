@@ -25,12 +25,15 @@ es el único camino.
 ### Camino PRINCIPAL — sin servidor (lo que corre la app v1)
 
 App Android (Java) + Firebase: **Auth** (correo/contraseña) · **Firestore**
-(`usuarios`, `ordenes`, `facturas`, `clientesPorCorreo`, `facturasLookup`) ·
-**Storage** (`facturas/`, `comprobantes/`) · **ML Kit** para el OCR en el
-teléfono. El riesgo y la conciliación los calcula `Motores.java` (réplica
-regla por regla de `clasificador_riesgo.c` y `regla.pl`). Es el camino de
-producción de la v1: no hay IP que teclear ni MySQL que levantar
-(ver `docs/SPRINT10_v1.md`).
+(`usuarios`, `ordenes`, `facturas`, `clientesPorCorreo`, `facturasLookup` y
+`comprobantes` — la foto del comprobante de pago vive AQUÍ desde la v1,
+como documento JPEG en Base64) · **ML Kit** para el OCR en el teléfono.
+**Storage**: pendiente (plan Blaze — `INSTALACION.md` §8.4); sin él la
+factura se guarda igual (sin foto, con aviso) y el pago con comprobante
+funciona por Firestore. El riesgo y la conciliación los calcula
+`Motores.java` (réplica regla por regla de `clasificador_riesgo.c` y
+`regla.pl`). Es el camino de producción de la v1: no hay IP que teclear
+ni MySQL que levantar (ver `docs/SPRINT10_v1.md`).
 
 ### Camino SERVIDOR — Laragon (demo académica de los motores originales)
 
@@ -55,7 +58,7 @@ originales; `Motores.java` queda como el **modo sin conexión** equivalente.
         │  Duplicados ... Firestore facturasLookup (RF-L3)   │      ├─ Python · procesar_factura.py (OCR)
         │        │                                           │      ├─ C ....... clasificador_riesgo.c
         │        ▼                                           │      └─ Prolog .. regla.pl (conciliación)
-        │  Firebase: Auth · Firestore · Storage              │             │
+        │  Firebase: Auth · Firestore (comprobantes)   │             │
         │                                                    │             ▼
         └────────────────────────────────────────────────────┘   MySQL (facturas/ordenes/usuarios)
 ```
@@ -76,19 +79,21 @@ PHP) y DÓNDE viven los datos (Firestore vs MySQL).
   listar `usuarios` (el proveedor consulta `clientesPorCorreo`), las
   facturas/órdenes ajenas no se pueden leer, el proveedor no puede cambiar
   a quién pertenece una orden y el cliente solo marca/desmarca el pago.
-  `storage.rules` (raíz, **sin publicar** — ver nota de abajo) haría los
-  comprobantes **inmutables** (create sí, update no; cada pago crea
-  `comprobantes/<ordenId>/<timestamp>.jpg`).
-- **Estado de las reglas (29/10)**: `firestore.rules` PUBLICADO en vivo
-  con `firebase deploy --only firestore:rules` — el release pre-fix
-  `4d2fad49` ya NO corre (riesgo anterior cerrado). `storage.rules`
-  queda DISEÑADO y VERSIONADO pero **sin publicar por decisión
-  económica**: Firebase exige el plan Blaze (tarjeta de crédito) para
-  activar Storage en proyectos creados después de Oct/2024 y no se
-  cuenta con el medio económico para contratarlo (detalle en
-  `INSTALACION.md` §8.4). Sin Blaze no hay bucket: si la subida de una
-  imagen falla, la factura se guarda SIN foto (con aviso) y el pago
-  queda «por pagar» — nunca se marca pagada sin evidencia.
+  Desde el **03/11** la colección `comprobantes` (la foto del pago, en
+  Base64) es **create-only**: solo la crea el cliente de esa orden, la leen
+  él y su proveedor, y nadie la cambia ni la borra.
+- **Estado de las reglas (03/11)**: `firestore.rules` PUBLICADO en vivo
+  con `firebase deploy --only firestore:rules` (29/10 y de nuevo el 03/11
+  con la colección `comprobantes` — Deploy complete ✅; el release
+  pre-fix `4d2fad49` ya NO corre). `storage.rules` queda
+  DISEÑADO y VERSIONADO pero **sin publicar por decisión económica**:
+  Firebase exige el plan Blaze (tarjeta de crédito) para activar Storage
+  en proyectos creados después de Oct/2024 y no se cuenta con el medio
+  económico para contratarlo (detalle en `INSTALACION.md` §8.4). Sin Blaze
+  no hay bucket: la factura se guarda SIN foto (con aviso) y, desde el
+  03/11, el comprobante de pago se guarda como DOCUMENTO de Firestore —
+  el ciclo pagar→ver el pago YA NO depende de Storage (nunca se marca
+  pagada sin evidencia).
 - La clave de las cuentas demo NO vive en el repo: se pasa con la
   variable de entorno `CPP_DEMO_CLAVE` (ver `INSTALACION.md` §8).
 
@@ -149,7 +154,7 @@ Para el camino SERVIDOR (Laragon + MySQL + Python + C + Prolog) sigue
 | Componente | Camino principal (sin servidor) | Camino servidor (Laragon) |
 |---|---|---|
 | App móvil | Android nativo (Java), Volley, ML Kit, BiometricPrompt, WorkManager | la misma app (S2-S9 hablaba con la API) |
-| Identidad/datos | Firebase Auth · Firestore · Storage | PHP (API REST) + MySQL |
+| Identidad/datos | Firebase Auth · Firestore (comprobantes de pago incluidos; Storage pendiente por Blaze) | PHP (API REST) + MySQL |
 | OCR | ML Kit EN EL TELÉFONO (`Motores.java`) | Python `motores/procesar_factura.py` (pytesseract) |
 | Riesgo | `Motores.java` (fórmula del C) | C `motores/clasificador_riesgo.c` (GCC) |
 | Conciliación | `Motores.java` (reglas 0-5) | Prolog `motores/regla.pl` (SWI-Prolog) |

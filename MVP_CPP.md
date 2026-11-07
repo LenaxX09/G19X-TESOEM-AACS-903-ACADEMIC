@@ -311,7 +311,8 @@ Notas:
 El 22/10 el producto cambió de rumbo con dos decisiones del autor: (1)
 **las pruebas ya no deben depender de Laragon** y (2) **las órdenes las
 sube el proveedor** a un correo de cliente, sin IPs. Desde el Sprint 10 la
-app habla **directo con Firebase** (Auth/Firestore/Storage) y el pipeline
+app habla **directo con Firebase** (Auth/Firestore; el comprobante de pago
+vive en Firestore) y el pipeline
 corre **EN EL TELÉFONO** (`Motores.java`: ML Kit para OCR + réplicas
 exactas de la fórmula del C y de las reglas del Prolog). La pila
 PHP+MySQL+Python+C+Prolog quedó como **camino servidor** (demo académica
@@ -324,7 +325,7 @@ justificación de las 10 decisiones: `docs/Arquitectura.md`.
 |---|---|---|---|
 | Captura por cámara (RF-M2) | Teléfono | `android/…/MainActivity.java` | ✔ |
 | Elegir de galería (RF-M3) | Teléfono | `MainActivity.java` | ✔ (adelantado del plan) |
-| Envío de imagen (RF-M4) | Teléfono (JPEG→Storage) | `FirebaseServicio.java` | ✔ simplificado (multipart → v1.1) |
+| Envío de imagen (RF-M4) | Teléfono (pipeline local; foto OPCIONAL — Storage pendiente) | `FirebaseServicio.java` | ✔ (sin foto, la factura se guarda igual, 31/10; multipart → v1.1) |
 | Listado con badges (RF-M5/H4) | Teléfono | `ListadoActivity.java` | ✔ |
 | Filtros del tablero (RF-M6) | Teléfono | `ListadoActivity.java` (chips) | ✔ |
 | Alertas de vencimiento (RF-M7) | Teléfono | `RecordatorioWorker.java` + `PagosActivity` | ✔ |
@@ -336,10 +337,10 @@ justificación de las 10 decisiones: `docs/Arquitectura.md`.
 | OCR de campos (RF-O*) | Teléfono (ML Kit) · Servidor (pytesseract) | `Motores.java` · `motores/procesar_factura.py` | ✔ (mismas regex del spike) |
 | Riesgo (RF-R*) | Teléfono · Servidor (C/GCC) | `Motores.java` · `motores/clasificador_riesgo.c` | ✔ (misma fórmula) |
 | Conciliación reglas 0-5 (RF-L1/L2) | Teléfono · Servidor (Prolog) | `Motores.java` · `motores/regla.pl` | ✔ (cláusula por cláusula) |
-| Duplicados (RF-L3) | Teléfono | `FirebaseServicio.java` (`facturasLookup` por dueño y proveedor, 29/10) | ✔ |
+| Duplicados (RF-L3) | Teléfono | `FirebaseServicio.java` (`facturasLookup` por dueño y por el proveedor DE LA ORDEN, 29/10 + 03/11) | ✔ |
 | Datos OCR completos (RF-D5) | Ambos | `procesar_factura.py` (texto crudo) | ✔ |
 | Avisos y cuenta de proveedor (RF-F1..F7) | Teléfono | Firebase + `ProveedorActivity` | ✔ |
-| Cuentas por pagar / comprobante (RF-P1..P3) | Teléfono | `PagosActivity.java` | ✔ (pago solo con foto, S8.3) |
+| Cuentas por pagar / comprobante (RF-P1..P3) | Teléfono | `PagosActivity.java` | ✔ (pago solo con foto; el comprobante vive EN FIRESTORE, sin Storage — 03/11) |
 
 Verificación vigente: 10/10 checkpoints superados; el **C9 fue re-corrido
 el 29/10 contra el código actual: 14/14 OK** (`pruebas\test_s9.ps1`,
@@ -361,7 +362,13 @@ factura está en `docs/DEMO.md`.
    `firebase deploy --only firestore:rules`); `storage.rules` queda sin
    publicar por decisión económica — Storage exige el plan Blaze
    (tarjeta de crédito) y no se cuenta con el medio para contratarlo
-   (ver `docs/Reporte_QA.md` §7 e `INSTALACION.md` §8.4).
+   (ver `docs/Reporte_QA.md` §7 e `INSTALACION.md` §8.4). Desde el
+   **03/11** la FOTO del comprobante de pago vive en **Firestore**
+   (colección `comprobantes`: JPEG reducido en Base64, create-only — solo
+   la crea el cliente de esa orden), así que el ciclo pagar→ver el
+   comprobante NO depende de Storage; las fotos de FACTURA siguen sin
+   subirse (`fotoUrl` vacía) hasta que Storage se active. La regla nueva de
+   `comprobantes` quedó PUBLICADA el 03/11 (Deploy complete ✅).
 
 ---
 

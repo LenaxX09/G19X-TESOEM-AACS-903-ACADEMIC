@@ -12,8 +12,8 @@ android {
         applicationId "com.cpp.captura"
         minSdk 24          // Android 7.0+ (cubre el perfil PyME/bodega del PRD)
         targetSdk 36
-        versionCode 29
-        versionName "0.19.0-v1" // S10.7: sesión vigilada (borran la cuenta en Firebase → regresa al login)
+        versionCode 30
+        versionName "0.20.0-v1" // Correcciones 03/11: comprobante de pago EN FIRESTORE (sin Storage) + duplicados/historial por el negocio de la orden
     }
 
     buildTypes {

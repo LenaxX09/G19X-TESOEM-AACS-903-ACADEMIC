@@ -49,7 +49,9 @@ import java.util.Map;
  *    cliente (el admin ve todas). El vencimiento se calcula EN el teléfono
  *    con la fechaLimite que puso el proveedor (días julianos de Motores):
  *    rojo si quedan ≤3 días o ya venció (RF-M7).
- * ✅ PAGADAS: con el COMPROBANTE que subió el cliente a Firebase Storage.
+ * ✅ PAGADAS: con el COMPROBANTE con el que pagó el cliente — desde el
+ *    03/11 la foto vive COMO DOCUMENTO en Firestore («fs:<id>», sin
+ *    Storage; una URL https solo aparecería en pagos muy viejos).
  *
  * Pagar (S8.3/S9.1) sigue igual de estricto: SIN la foto del comprobante
  * no hay paso a pagadas — el diálogo de pendientes no muestra ninguna foto.
@@ -59,7 +61,10 @@ public class PagosActivity extends AppCompatActivity {
     private static final String MODO_POR_PAGAR = "por_pagar";
     private static final String MODO_PAGADAS = "pagadas";
     private static final int REQ_COMPROBANTE = 2001;
-    private static final int MAX_LADO_COMPROBANTE = 1600;
+    // Correcciones 03/11: 1000 px + JPEG 70 (~100-250 KB) para que la foto
+    // quepa COMODA en un documento de Firestore (límite 1 MB) — el
+    // comprobante ya no pasa por Storage.
+    private static final int MAX_LADO_COMPROBANTE = 1000;
 
     private String modo = MODO_POR_PAGAR;
 
@@ -68,6 +73,9 @@ public class PagosActivity extends AppCompatActivity {
 
     /** Cuenta esperando su comprobante (referencia al documento Firestore). */
     private DocumentReference cuentaPorPagar;
+    /** Dueños de esa orden (la regla de `comprobantes` los coteja con ella). */
+    private String cuentaPorPagarCorreo;
+    private String cuentaPorPagarProveedor;
 
     private AdaptadorPagos adaptador;
     private TextView txtEstado;
@@ -261,16 +269,34 @@ public class PagosActivity extends AppCompatActivity {
         }
         txt.setText(info.toString());
 
-        // La foto del COMPROBANTE se revisa en PAGADAS (URL https de Storage).
-        if (!enPorPagar && !texto(d, "comprobanteUrl").isEmpty()) {
-            ImageRequest foto = new ImageRequest(
-                    texto(d, "comprobanteUrl"),
-                    bitmap -> img.setImageBitmap(bitmap),
-                    0, 0, ImageView.ScaleType.FIT_CENTER, Bitmap.Config.RGB_565,
-                    error -> Toast.makeText(this,
-                            "No se pudo cargar el comprobante", Toast.LENGTH_SHORT).show());
-            foto.setTag("CPP_S10_IMG");
-            cola.add(foto);
+        // La foto del COMPROBANTE se revisa en PAGADAS. Desde el 03/11 vive
+        // EN FIRESTORE («fs:<id>» → documento de comprobantes con JPEG en
+        // Base64, sin Storage); una URL https solo aparecería con pagos
+        // anteriores a ese cambio (Storage legado).
+        String comprobante = texto(d, "comprobanteUrl");
+        if (!enPorPagar && !comprobante.isEmpty()) {
+            if (comprobante.startsWith("fs:")) {
+                FirebaseServicio.leerComprobante(comprobante.substring(3),
+                        jpeg -> runOnUiThread(() -> {
+                            Bitmap bm = BitmapFactory.decodeByteArray(jpeg, 0, jpeg.length);
+                            if (bm != null) {
+                                img.setImageBitmap(bm);
+                            }
+                        }),
+                        e -> Toast.makeText(this,
+                                "No se pudo cargar el comprobante",
+                                Toast.LENGTH_SHORT).show());
+            } else {
+                ImageRequest foto = new ImageRequest(
+                        comprobante,
+                        bitmap -> img.setImageBitmap(bitmap),
+                        0, 0, ImageView.ScaleType.FIT_CENTER, Bitmap.Config.RGB_565,
+                        error -> Toast.makeText(this,
+                                "No se pudo cargar el comprobante",
+                                Toast.LENGTH_SHORT).show());
+                foto.setTag("CPP_S10_IMG");
+                cola.add(foto);
+            }
         }
 
         if (enPorPagar) {
@@ -306,6 +332,10 @@ public class PagosActivity extends AppCompatActivity {
     /** Abre la galería para elegir la FOTO del comprobante de pago. */
     private void elegirComprobante(QueryDocumentSnapshot d) {
         cuentaPorPagar = d.getReference();
+        // Correcciones 03/11: el comprobante se guarda con los dueños de la
+        // ORDEN — la regla de `comprobantes` los verifica contra ella.
+        cuentaPorPagarCorreo = texto(d, "clienteCorreo");
+        cuentaPorPagarProveedor = texto(d, "proveedorUid");
         Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("image/*");
@@ -336,10 +366,20 @@ public class PagosActivity extends AppCompatActivity {
         txtEstado.setText(R.string.pago_enviando_comprobante);
 
         final DocumentReference ref = cuentaPorPagar;
+        final String ordenCliente = cuentaPorPagarCorreo;
+        final String ordenProveedor = cuentaPorPagarProveedor;
         cuentaPorPagar = null;
+        cuentaPorPagarCorreo = null;
+        cuentaPorPagarProveedor = null;
 
-        FirebaseServicio.subirComprobante(ref.getId(), bytes,
-                url -> ref.update(pagos(url))
+        // Correcciones 03/11 (pago SIN Storage): la foto se guarda COMO
+        // DOCUMENTO en la colección `comprobantes` (JPEG ≤1000 px/q70 en
+        // Base64) y la orden queda pagada con comprobanteUrl = «fs:<id>».
+        // Storage queda para cuando se active (INSTALACION.md §8.4); este
+        // ciclo de pago ya NO depende de él.
+        FirebaseServicio.guardarComprobante(ref.getId(), ordenCliente, ordenProveedor,
+                bytes,
+                idDoc -> ref.update(pagos("fs:" + idDoc))
                         .addOnSuccessListener(v -> runOnUiThread(() ->
                                 Toast.makeText(this,
                                         "Comprobante recibido: la cuenta pasó a PAGADAS.",
@@ -348,7 +388,7 @@ public class PagosActivity extends AppCompatActivity {
                                 Toast.makeText(this, "Error: " + e.getMessage(),
                                         Toast.LENGTH_LONG).show())),
                 e -> runOnUiThread(() -> Toast.makeText(this,
-                        "No se pudo subir el comprobante: " + e,
+                        "No se pudo guardar el comprobante: " + e,
                         Toast.LENGTH_LONG).show()));
     }
 
@@ -360,7 +400,8 @@ public class PagosActivity extends AppCompatActivity {
         return cambios;
     }
 
-    /** Copia a caché, decodifica ≤1600 px y comprime JPEG 85 (como facturas). */
+    /** Copia a caché, decodifica ≤1000 px y comprime JPEG 70: así la foto
+     *  del comprobante CABE en un documento de Firestore (~100-250 KB). */
     private byte[] comprimirComprobante(Uri uri) {
         File destino = new File(getCacheDir(), "comprobante_pago.jpg");
         try (InputStream entrada = getContentResolver().openInputStream(uri);
@@ -398,7 +439,7 @@ public class PagosActivity extends AppCompatActivity {
             bitmap = escalado;
         }
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 85, baos);
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 70, baos);
         bitmap.recycle();
         return baos.toByteArray();
     }

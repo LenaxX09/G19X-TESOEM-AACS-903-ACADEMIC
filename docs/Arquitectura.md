@@ -44,7 +44,9 @@ App Android (Java) + **Firebase**, con el pipeline **EN EL TELÉFONO**:
   inmutable desde la app.
 - **Cloud Firestore** guarda perfiles, cuentas y facturas conciliadas
   (colecciones en §5).
-- **Firebase Storage** guarda las imágenes (`facturas/`, `comprobantes/`).
+- **Cloud Firestore** guarda también el COMPROBANTE de pago (colección
+  `comprobantes`, JPEG reducido en Base64 — 03/11). **Firebase Storage**
+  queda PENDIENTE (Blaze, §4.2): sin él la foto de la factura es opcional.
 - **`Motores.java`** (en el teléfono): OCR con **ML Kit**, riesgo (fórmula
   del módulo C) y conciliación (réplica regla por regla de `regla.pl`,
   reglas 0-5) + pre-check de duplicados por lectura puntual al índice
@@ -78,7 +80,7 @@ contratos y mismos veredictos que el camino principal: el trío de pruebas
         │  Duplicados ... Firestore facturasLookup (RF-L3)   │      ├─ Python · procesar_factura.py
         │        │                                           │      ├─ C ....... clasificador_riesgo.c
         │        ▼                                           │      └─ Prolog .. regla.pl
-        │  Firebase: Auth · Firestore · Storage              │             │
+        │  Firebase: Auth · Firestore (comprobantes)   │             │
         │                                                    │             ▼
         └────────────────────────────────────────────────────┘   MySQL (facturas/ordenes/usuarios)
 ```
@@ -97,7 +99,7 @@ contratos y mismos veredictos que el camino principal: el trío de pruebas
 | `ProveedorActivity` | El proveedor sube cuentas y decide sobre vencidas (S10.6) |
 | `RecordatorioWorker` | Recordatorios locales: 3 días / 1 día / vencida (RF-M7, S10.4) |
 | `Motores` | OCR ML Kit + riesgo + conciliación + slug (réplica de los motores) |
-| `FirebaseServicio` | Acceso a Firebase: perfiles, ordenes, facturas, Storage, sesión vigilada (S10.7) |
+| `FirebaseServicio` | Acceso a Firebase: perfiles, ordenes, facturas, comprobantes (03/11), sesión vigilada (S10.7) |
 | `PushServicio` | Receptor FCM (queda para la demo académica; S10 no usa push) |
 | `Sesion` | Sesión persistida + expulsión al login |
 
@@ -127,7 +129,7 @@ Build por consola: `android\build.cmd` (Gradle 8.13, JBR 21, `minSdk 24`,
 | OCR | `procesar_factura.py` (pytesseract + Tesseract 5.4 + modelo `spa`) | ML Kit (on-device) en `Motores.java` |
 | Riesgo | `clasificador_riesgo.c` (GCC): % de riesgo vs historial del proveedor, UMBRAL_RIESGO = 40 | `Motores.clasificadorRiesgo` (misma fórmula; historial = facturas propias en Firestore) |
 | Conciliación | `regla.pl` (SWI-Prolog): APROBADA / DISCREPANCIA:<motivo>, reglas 0-5 | `Motores.conciliar` (réplica de las mismas reglas 0-5) |
-| Duplicados (RF-L3) | Pre-check PHP + regla 0 de Prolog | Pre-check con lecturas puntuales a `facturasLookup` (f_<folio> y t_<monto_fecha_slug>) |
+| Duplicados (RF-L3) | Pre-check PHP + regla 0 de Prolog | Pre-check con lecturas puntuales a `facturasLookup` (f_<dueño>_<proveedor>_<folio> y t_<dueño>_<monto>_<fecha>_<proveedor>) |
 
 **Contratos fijados ANTES de programar** (principio contract-first,
 `MVP_CPP.md` §6.4): cada motor CLI escribe UNA línea JSON/valor en stdout;
@@ -142,11 +144,13 @@ si un motor falla, la factura NO se pierde (queda Pendiente, RNF-5).
 | `usuarios/{uid}` | nombre, correo, rol (cliente\|proveedor), negocio, empresa | la app al registrarse (rol inmutable después) y la semilla |
 | `clientesPorCorreo/{slug}` | directorio público PUNTUAL (uid + correo) para `existeCorreo()` — `usuarios` NO se puede listar | app (alta cliente) y semilla |
 | `ordenes/{id}` | codigo, negocio, proveedorUid, clienteCorreo, monto, fechaEmision, fechaLimite, estado (pendiente\|pagada), pagadaEn, comprobanteUrl, creado, reabierta, interes | el proveedor (crear); el cliente SOLO los campos de pago (estado/pagadaEn/comprobanteUrl); el proveedor reabre/agrega interés |
-| `facturas/{id}` | folio, proveedor, proveedorSlug, fecha, monto, riesgo, veredicto, motivo, ordenId, ordenCodigo, subidoPor, fotoUrl, creado | el cliente al conciliar (el veredicto NO se edita) |
-| `facturasLookup/{id}` | índice anti-duplicados RF-L3: `f_<folio>` y `t_<monto_fecha_slug>` → facturaId, dueno | la app al guardar factura; solo lecturas puntuales |
+| `facturas/{id}` | folio, proveedor, proveedorSlug, ordenProveedorSlug (03/11), fecha, monto, riesgo, veredicto, motivo, ordenId, ordenCodigo, subidoPor, fotoUrl, creado | el cliente al conciliar (el veredicto NO se edita) |
+| `facturasLookup/{id}` | índice anti-duplicados RF-L3: `f_<dueño>_<proveedor>_<folio>` y `t_<dueño>_<monto>_<fecha>_<proveedor>` (proveedor = el NEGOCIO de la orden, 03/11) → facturaId, dueno | la app al guardar factura; solo lecturas puntuales |
+| `comprobantes/{id}` | foto del pago (JPEG ≤1000 px/q70 en Base64) con ordenId, clienteCorreo, proveedorUid, fecha; `comprobanteUrl` de la orden apunta a «fs:<id>» (03/11) | SOLO el cliente de esa orden (create); nadie la cambia ni borra |
 | `clientes`, `proveedores`, `notificaciones` | (del S6, cerradas por las reglas) | solo la cuenta de servicio del camino servidor |
 
-Storage: `facturas/<timestamp>.jpg` y `comprobantes/<ordenId>.jpg`.
+Storage (PENDIENTE — Blaze): quedaría para `facturas/<timestamp>.jpg`;
+los comprobantes ya NO viven ahí (03/11): colección `comprobantes` arriba.
 
 ### 5.2 MySQL (camino servidor, BD `cpp`)
 
@@ -166,15 +170,17 @@ de 8 h). Esquema: `database/seed.sql` + `database/migrar_v1.sql`.
    `clientesPorCorreo`), código, monto y fecha límite → `ordenes` con
    estado `pendiente`.
 3. **Cliente paga**: la cuenta aparece al instante (oyente en vivo); «por
-   pagar» → adjunta comprobante → sube a Storage → marca
+   pagar» → adjunta comprobante → se guarda COMO DOCUMENTO en
+   `comprobantes` (03/11, sin Storage) → marca
    estado/pagadaEn/comprobanteUrl (único cambio permitido al cliente).
 4. **Cuenta vencida** (S10.6): el cliente YA no puede pagarla (pago
    CERRADO); el PROVEEDOR decide: **Reabrir pago** o **Agregar interés**
    (suma al monto y reabre). El recordatorio diario cambia de mensaje.
 5. **Factura**: elegir cuenta → foto/galería → OCR ML Kit → riesgo (con
-   historial propio por proveedorSlug) → pre-check de duplicados →
-   conciliación (reglas 0-5) → veredicto + foto a Firestore/Storage →
-   listado con badges y filtros.
+   historial propio por ordenProveedorSlug — el negocio de la orden,
+   03/11) → pre-check de duplicados → conciliación (reglas 0-5) →
+   veredicto + factura a Firestore (la foto es OPCIONAL: Storage
+   pendiente) → listado con badges y filtros.
 6. **Recordatorios** (S10.4): WorkManager despierta UNA vez al día con red
    y avisa a 3 días, 1 día y vencida (un aviso por cuenta/nivel/día).
 
@@ -184,18 +190,21 @@ de 8 h). Esquema: `database/seed.sql` + `database/migrar_v1.sql`.
 |---|---|
 | Identidad | Firebase Auth (correo/contraseña); la sesión vive en el teléfono |
 | Autorización (datos) | `firestore.rules`: rol y correo inmutables; `usuarios` no se lista (existeCorreo usa `clientesPorCorreo`); facturas/órdenes ajenas ilegibles (las consultas van filtradas por `subidoPor` / `clienteCorreo` / `proveedorUid`, porque Firestore NO filtra resultados: rechaza la consulta completa); el cliente solo toca `estado/pagadaEn/comprobanteUrl` de SU orden (`diff().affectedKeys().hasOnly(...)`); colecciones S6 cerradas; comodín final `/{document=**}` cerrado |
-| Autorización (imágenes) | `storage.rules`: solo usuarios autenticados, solo JPEG < 8 MB, sin borrar |
+| Autorización (comprobante) | `firestore.rules` · `comprobantes` (03/11): create SOLO del cliente de esa orden (campos cotejados contra ella), lo leen cliente y proveedor, nadie lo cambia ni borra |
+| Autorización (imágenes) | `storage.rules` (PENDIENTE de publicar — Blaze): autenticados, solo JPEG < 8 MB, sin borrar |
 | Candado (app) | BiometricPrompt del sistema: huella o PIN del teléfono, obligatorio (S10.5) |
 | Sesión | Vigilada (S10.7): cuenta borrada en Firebase → expulsión en vivo |
 | Secretos | Cuenta de servicio y clave demo FUERA del repo (`.gitignore`); clave demo por `CPP_DEMO_CLAVE` o parámetro |
 | Camino servidor | Login con token de 8 h, bcrypt, control por rol (401/403), saneo de parámetros en `shell_exec` (R3) |
 
-> Nota de operación (actualizada 29/10): la corrección del `allow update`
+> Nota de operación (actualizada 03/11): la corrección del `allow update`
 > de `ordenes` (paréntesis `||` → `&&`) está EN VIVO — `firestore.rules`
 > se publicó el 29/10 con `firebase deploy --only firestore:rules`
-> (Deploy complete ✅). `storage.rules` sigue sin publicar por la decisión
-> económica de §4.2 (Storage exige plan Blaze/tarjeta y no hay medio
-> para contratarlo); ver `Reporte_QA.md` §7.
+> (Deploy complete ✅) y de nuevo el 03/11 con la regla NUEVA de
+> `comprobantes` (Deploy complete ✅). `storage.rules` sigue sin
+> publicar por
+> la decisión económica de §4.2 (Storage exige plan Blaze/tarjeta y no
+> hay medio para contratarlo); ver `Reporte_QA.md` §7.
 
 ## 8. Decisiones de arquitectura (con justificación)
 

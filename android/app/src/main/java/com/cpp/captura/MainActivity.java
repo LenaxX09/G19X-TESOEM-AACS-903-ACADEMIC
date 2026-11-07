@@ -404,7 +404,8 @@ public class MainActivity extends AppCompatActivity {
             FirebaseServicio.buscarDuplicado(Sesion.correo(this), c.folio, c.monto,
                     c.fecha, slug,
                     originalId -> runOnUiThread(() ->
-                            conciliarYGuardar(orden, c, riesgo, originalId != null, bytes, t0)),
+                            conciliarYGuardar(orden, c, riesgo, originalId != null,
+                                    slug, bytes, t0)),
                     e -> runOnUiThread(() -> {
                         finEnvio(false);
                         mostrarError("No se pudo revisar duplicados: " + e);
@@ -413,7 +414,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void conciliarYGuardar(Orden orden, Motores.Campos c, double riesgo,
-                                   boolean duplicado, byte[] bytes, long t0) {
+                                   boolean duplicado, String ordenSlug,
+                                   byte[] bytes, long t0) {
         Motores.Orden mo = new Motores.Orden();
         mo.codigo = orden.codigo;
         mo.negocio = orden.negocio;
@@ -425,7 +427,15 @@ public class MainActivity extends AppCompatActivity {
         Map<String, Object> factura = new HashMap<>();
         factura.put("folio", c.folio == null ? "" : c.folio);
         factura.put("proveedor", c.proveedor);
+        // proveedor/proveedorSlug = lo que leyó el OCR (solo para MOSTRAR).
         factura.put("proveedorSlug", FirebaseServicio.slug(c.proveedor));
+        // Correcciones 03/11: el proveedor OFICIAL para duplicados
+        // (facturasLookup) e historial (riesgo) es el NEGOCIO DE LA ORDEN
+        // (ya pasó por la regla 3 del conciliador), NO el encabezado del
+        // OCR: si el OCR lee «PAPELERIA CENTRAL SA DE CV» y la orden dice
+        // «Papelería Central», la llave escrita y la buscada deben ser la
+        // MISMA o la misma factura dos veces no saldría duplicada.
+        factura.put("ordenProveedorSlug", ordenSlug);
         factura.put("fecha", c.fecha);
         factura.put("monto", c.monto);
         factura.put("riesgo", riesgo);
